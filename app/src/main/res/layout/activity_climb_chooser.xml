@@ -1,0 +1,27 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="16dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="16dp"
+    tools:context=".ClimbChooserActivity" >
+
+    <ListView
+        android:id="@+id/climbListSel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true">
+    </ListView>
+
+    <Button
+        android:id="@+id/showClimbBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/climbListSel"
+        android:layout_alignParentBottom="true"
+        android:layout_alignRight="@+id/climbListSel"
+        android:text="Show Climb" />
+
+</RelativeLayout>
