@@ -18,15 +18,18 @@ import android.widget.SimpleAdapter;
 
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.list.ClimbListActivity;
+import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.TrackFile;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ClimbChooserActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
@@ -178,7 +181,11 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     }
 
     private void showClimb() {
-        Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbViewActivity.class);
+        ClimbController.getInstance().loadClimb(Database.getInstance().getClimb(currentClimbId));
+        ClimbController.getInstance().startAttempt();
+        ClimbController.getInstance().loadPB();
+
+        Intent i = new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
         i.putExtra("id", currentClimbId);
         startActivity(i);
     }

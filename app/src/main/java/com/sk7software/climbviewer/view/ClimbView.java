@@ -16,6 +16,7 @@ import android.view.WindowManager;
 import androidx.annotation.Nullable;
 
 import com.sk7software.climbviewer.ApplicationContextProvider;
+import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.LocationMonitor;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -43,10 +44,6 @@ public class ClimbView extends View {
     private static final int SMOOTH_DIST = 10;
     private static final String TAG = ClimbView.class.getSimpleName();
 
-    public enum PointType {
-        ATTEMPT,
-        PB;
-    }
 
     public ClimbView(Context context) {
         super(context);
@@ -225,9 +222,9 @@ public class ClimbView extends View {
         }
     }
 
+
     public float plotLocation(RoutePoint loc) {
-        //double delta = calcDelta(currentPoint, loc.getEasting(), loc.getNorthing());
-        groundDist = calcDist(loc, PointType.ATTEMPT); //+= delta;
+        groundDist = ClimbController.getInstance().getAttemptDist();
         double xDist = groundDist * scaleFacX + PADDING;
         currentPlotPoint = new PlotPoint();
         currentPoint = loc;
@@ -239,7 +236,7 @@ public class ClimbView extends View {
         if (loc == null) return 0;
 
         //double delta = calcDelta(pbPoint, loc.getEasting(), loc.getNorthing());
-        pbGroundDist = calcDist(loc, PointType.PB);// += delta;
+        pbGroundDist = ClimbController.getInstance().getPbDist();
         double xDist = pbGroundDist * scaleFacX + PADDING;
         pbPlotPoint = new PlotPoint();
         pbPoint = loc;
@@ -272,53 +269,5 @@ public class ClimbView extends View {
             plotPoint.setX(points.get(points.size() - 1).getX());
             plotPoint.setY(points.get(points.size() - 1).getY());
         }
-    }
-
-    private synchronized float calcDist(RoutePoint loc, PointType type) {
-        RoutePoint lastPoint = null;
-        PointF locPt = new PointF((float)loc.getEasting(), (float)loc.getNorthing());
-
-        int minClimbIdx = type == PointType.ATTEMPT ? minAttemptIdx : minPBIdx;
-        int lastIndex = minClimbIdx;
-        float dist = lastIndex < climb.getPoints().size()-1 ?
-                climb.getPoints().get(lastIndex+1).getDistFromStart() :
-                climb.getPoints().get(climb.getPoints().size()-1).getDistFromStart();
-
-        for (int i=minClimbIdx; i<climb.getPoints().size(); i++) {
-            RoutePoint pt = climb.getPoints().get(i);
-
-            if (lastPoint == null) {
-                lastPoint = pt;
-                continue;
-            }
-
-            PointF lastPointPt = new PointF((float)lastPoint.getEasting(), (float)lastPoint.getNorthing());
-            PointF currentPointPt = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
-
-            // Determine if location is between this one and last one
-            Log.d(TAG, "Checking points " + (i-1) + " and " + i);
-            Log.d(TAG, locPt + ":" + lastPointPt + " " + currentPointPt);
-            if (LocationMonitor.pointWithinLineSegment(locPt, lastPointPt, currentPointPt)) {
-                // Find the point on the route
-                PointF nearestPt = LocationMonitor.getXXYY(locPt, lastPointPt, currentPointPt);
-                RoutePoint routePt = new RoutePoint();
-                routePt.setEasting(nearestPt.x);
-                routePt.setNorthing(nearestPt.y);
-                dist = (float) calcDelta(routePt, climb.getPoints().get(lastIndex).getEasting(), climb.getPoints().get(lastIndex).getNorthing());
-                dist+= climb.getPoints().get(lastIndex).getDistFromStart();
-                minClimbIdx = lastIndex;
-                break;
-            }
-
-            lastIndex++;
-            lastPoint = pt;
-        }
-        Log.d(TAG, type.name() + " distance so far: " + dist + " [" + minClimbIdx + "]");
-        if (type == PointType.ATTEMPT) {
-            minAttemptIdx = minClimbIdx;
-        } else {
-            minPBIdx = minClimbIdx;
-        }
-        return dist;
     }
 }

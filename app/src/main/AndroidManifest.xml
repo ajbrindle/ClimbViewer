@@ -18,6 +18,12 @@
         android:theme="@style/Theme.ClimbViewer"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".PursuitActivity"
+            android:exported="true" />
+        <activity
+            android:name=".FullClimbActivity"
+            android:exported="true" />
+        <activity
             android:name=".MapActivity"
             android:exported="true" />
         <!--

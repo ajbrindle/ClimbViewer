@@ -49,7 +49,7 @@ public class ClimbViewActivity extends AppCompatActivity implements ActivityUpda
         climb = Database.getInstance().getClimb(climbId);
 
         // Set cumulative distances
-        setDistances();
+        //setDistances();
 
         attempt = new ClimbAttempt();
         attempt.setDatetime(LocalDateTime.now());
@@ -105,8 +105,7 @@ public class ClimbViewActivity extends AppCompatActivity implements ActivityUpda
 
             int endIndex = climb.getPoints().size() - 1;
 
-            // Plot location on map
-            map.addMarker(new LatLng(point.getLat(), point.getLon()), BitmapDescriptorFactory.HUE_BLUE);
+            /* Plot location on map
             float attemptDist = elevationView.plotLocation(point);
             RoutePoint pbPt = calcPbLocation(now);
             float pbDist = elevationView.pbLocation(pbPt);
@@ -135,116 +134,14 @@ public class ClimbViewActivity extends AppCompatActivity implements ActivityUpda
 
                 // Add to database
                 Database.getInstance().addAttempt(attempt, climbId);
-            }
+            }*/
         }
 
         lastPoint = currentPoint;
     }
 
-    private RoutePoint calcPbLocation(LocalDateTime now) {
-        if (pb == null || pb.getPoints() == null || pb.getPoints().size() == 0) return null;
 
-        long secondsSinceStart = ChronoUnit.SECONDS.between(attempt.getDatetime(), now);
 
-        // Find point on pb that is this many seconds from the start
-        AttemptPoint pt = pb.getPoints().stream()
-                .filter(p -> p.getSecondsFromStart() <= secondsSinceStart)
-                .sorted((a,b) -> Long.compare(b.getSecondsFromStart(), a.getSecondsFromStart()))
-                .findFirst()
-                .orElse(null);
-        if (pt != null) {
-            // Found earliest point
-            if (pt.getSecondsFromStart() == secondsSinceStart) {
-                // Exact match
-                Log.d(TAG, "PB: " + pt.getPoint().getLat() + "," + pt.getPoint().getLon());
-                map.addMarker(new LatLng(pt.getPoint().getLat(), pt.getPoint().getLon()), BitmapDescriptorFactory.HUE_GREEN);
-                return pt.getPoint();
-            } else {
-                // Get next point
-                Log.d(TAG, "PB1: " + pt.getPoint().getLat() + "," + pt.getPoint().getLon());
-                Log.d(TAG, "PB1: " + pt.getPoint().getEasting() + "," + pt.getPoint().getNorthing());
-                AttemptPoint nextPt = pb.getPoints().stream()
-                        .filter(p -> p.getSecondsFromStart() > secondsSinceStart)
-                        .findFirst()
-                        .orElse(null);
 
-                if (nextPt != null) {
-                    // Next point
-                    Log.d(TAG, "PB2: " + nextPt.getPoint().getLat() + "," + nextPt.getPoint().getLon());
-                    Log.d(TAG, "PB2: " + nextPt.getPoint().getEasting() + "," + nextPt.getPoint().getNorthing());
-                    long timeDiff = nextPt.getSecondsFromStart() - pt.getSecondsFromStart();
-                    double weighting = (double)(secondsSinceStart - pt.getSecondsFromStart()) / (double)timeDiff;
-                    RoutePoint routePoint = new RoutePoint();
-                    routePoint.setEasting(pt.getPoint().getEasting() + (weighting * (nextPt.getPoint().getEasting() - pt.getPoint().getEasting())));
-                    routePoint.setNorthing(pt.getPoint().getNorthing() + (weighting * (nextPt.getPoint().getNorthing() - pt.getPoint().getNorthing())));
-                    routePoint.setLat(pt.getPoint().getLat() + (weighting * (nextPt.getPoint().getLat() - pt.getPoint().getLat())));
-                    routePoint.setLon(pt.getPoint().getLon() + (weighting * (nextPt.getPoint().getLon() - pt.getPoint().getLon())));
 
-                    Log.d(TAG, "PBx: " + routePoint.getLat() + "," + routePoint.getLon());
-                    Log.d(TAG, "PBx: " + routePoint.getEasting() + "," + routePoint.getNorthing());
-                    map.addMarker(new LatLng(routePoint.getLat(), routePoint.getLon()), BitmapDescriptorFactory.HUE_GREEN);
-                    return routePoint;
-                } else {
-                    map.addMarker(new LatLng(pt.getPoint().getLat(), pt.getPoint().getLon()), BitmapDescriptorFactory.HUE_GREEN);
-                    return pt.getPoint();
-                }
-            }
-        }
-        return null;
-    }
-
-    private void setDistances() {
-        float dist = 0;
-        climb.getPoints().get(0).setDistFromStart(0);
-
-        for (int i=1; i<climb.getPoints().size(); i++) {
-            dist += Math.sqrt(Math.pow(climb.getPoints().get(i).getEasting() - climb.getPoints().get(i-1).getEasting(), 2.0) +
-                            Math.pow(climb.getPoints().get(i).getNorthing() - climb.getPoints().get(i-1).getNorthing(), 2.0));
-            climb.getPoints().get(i).setDistFromStart(dist);
-        }
-    }
-
-    private float calcTimeDiff(RoutePoint loc, LocalDateTime now) {
-        // Determine where this point is on the PB
-        RoutePoint lastPoint = null;
-        PointF locPt = new PointF((float)loc.getEasting(), (float)loc.getNorthing());
-        float secondsToPoint = 0;
-        int lastIndex = 0;
-
-        for (AttemptPoint attPt : pb.getPoints()) {
-            if (lastPoint == null) {
-                lastPoint = attPt.getPoint();
-                continue;
-            }
-
-            RoutePoint pt = attPt.getPoint();
-
-            PointF lastPointPt = new PointF((float)lastPoint.getEasting(), (float)lastPoint.getNorthing());
-            PointF attemptPointPt = new PointF((float)attPt.getPoint().getEasting(), (float)attPt.getPoint().getNorthing());
-
-            // Determine if location is between this one and last one
-            if (LocationMonitor.pointWithinLineSegment(locPt, lastPointPt, attemptPointPt)) {
-                // Find the point on the route
-                PointF nearestPt = LocationMonitor.getXXYY(locPt, lastPointPt, attemptPointPt);
-                RoutePoint routePt = new RoutePoint();
-                routePt.setEasting(nearestPt.x);
-                routePt.setNorthing(nearestPt.y);
-                float distAlong = (float)calcDelta(routePt, pb.getPoints().get(lastIndex).getPoint().getEasting(), pb.getPoints().get(lastIndex).getPoint().getNorthing());
-                float distBetween = (float)Math.sqrt(Math.pow(attPt.getPoint().getEasting() - pb.getPoints().get(lastIndex).getPoint().getEasting(), 2.0) +
-                                            Math.pow(attPt.getPoint().getNorthing() - pb.getPoints().get(lastIndex).getPoint().getNorthing(), 2.0));
-                float weighting = distAlong / distBetween;
-                secondsToPoint = weighting * (attPt.getSecondsFromStart() - pb.getPoints().get(lastIndex).getSecondsFromStart());
-                secondsToPoint += pb.getPoints().get(lastIndex).getSecondsFromStart();
-                return secondsToPoint - (ChronoUnit.SECONDS.between(attempt.getDatetime(), now));
-            }
-
-            lastIndex++;
-            lastPoint = pt;
-        }
-        return -99;
-    }
-
-    private double calcDelta(RoutePoint pt, double e, double n) {
-        return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
-    }
 }

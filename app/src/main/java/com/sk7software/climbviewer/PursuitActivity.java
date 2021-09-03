@@ -14,19 +14,17 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.text.DecimalFormat;
 import java.util.Date;
+import java.util.Map;
 
-public class MapActivity extends AppCompatActivity implements ActivityUpdateInterface {
+public class PursuitActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
     private MapFragment map;
     private int climbId;
     private GPXRoute climb;
     private LocationMonitor monitor;
-    private TextView totalDist;
-    private TextView distToGo;
+    private TextView distBehind;
+    private TextView timeBehind;
     private long loadTime;
 
     private static final String TAG = MapActivity.class.getSimpleName();
@@ -34,18 +32,18 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_map);
+        setContentView(R.layout.activity_pursuit);
 
-        totalDist = (TextView)findViewById(R.id.txtTotalDist);
-        distToGo = (TextView)findViewById(R.id.txtToGoDist);
+        distBehind = (TextView)findViewById(R.id.txtDistBehind);
+        timeBehind = (TextView)findViewById(R.id.txtTimeBehind);
 
         int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
-        DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart(),
-                                        "km", totalDist, true);
+        DisplayFormatter.setDistanceText(ClimbController.getInstance().getDistToPB(),
+                "m", distBehind, false);
 
         monitor = new LocationMonitor(this);
-        map = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.climbMap);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB);
+        map = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.pursuitMap);
+        map.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT);
     }
 
     @Override
@@ -68,21 +66,21 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
 
     @Override
     public void locationChanged(RoutePoint point) {
-        int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
-        DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
-                                ClimbController.getInstance().getAttemptDist(), "km", distToGo, true);
+        DisplayFormatter.setDistanceText(ClimbController.getInstance().getDistToPB(),
+                "m", distBehind, false);
+        DisplayFormatter.setTimeText(ClimbController.getInstance().getTimeDiffToPB(), timeBehind);
+
         map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN);
 
         if (ClimbController.getInstance().isPlotPB()) {
             map.addMarker(new LatLng(ClimbController.getInstance().getPbPoint().getLat(),
-                                     ClimbController.getInstance().getPbPoint().getLon()),
-                          ClimbController.PointType.PB, Color.GREEN);
+                            ClimbController.getInstance().getPbPoint().getLon()),
+                    ClimbController.PointType.PB, Color.GREEN);
         }
         map.moveCamera(point);
-
         long now = new Date().getTime();
         if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
+            Intent i = new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
             startActivity(i);
         }
     }

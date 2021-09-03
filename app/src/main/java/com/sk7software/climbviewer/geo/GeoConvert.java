@@ -1,5 +1,6 @@
 package com.sk7software.climbviewer.geo;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.model.RoutePoint;
 
 public class GeoConvert {
@@ -100,6 +101,42 @@ public class GeoConvert {
         }
 
         return gridLoc;
+    }
+
+    public static LatLng convertGridToLL(Projection proj, RoutePoint loc, int zone)
+    {
+        LatLng llPoint = null;
+        RoutePoint gridLoc = new RoutePoint();
+        gridLoc.setEasting(loc.getEasting());
+        gridLoc.setNorthing(loc.getNorthing());
+
+        if (proj == null) return null;
+
+        // Call appropriate conversion function
+        switch (proj.getProjType())
+        {
+            case Projection.SYS_TYPE_TM:
+
+                // Special case for OSGB transformation (apply shift)
+                if (proj.getProjType() == Projection.SYS_OSGB36) convertOSGB(gridLoc, false);
+                llPoint = TMConvertGridToLLx(gridLoc.getEasting(), gridLoc.getNorthing(), proj);
+
+                break;
+
+            case Projection.SYS_TYPE_UTM:
+//				// Get UTM zone parameters
+//				SetUTMProjection(&proj, zone);
+//
+//				TMConvertLLToGrid(latDeg, lonDeg, ellip.a, ellip.b,
+//							   proj.lat0, proj.lon0, proj.EF, proj.NF, proj.k0,
+//						       east, north);
+//				break;
+//			default:
+//				return retVal;
+                break;
+        }
+
+        return llPoint;
     }
 
     private static RoutePoint TMConvertLLToGrid(RoutePoint loc, Projection proj) {
@@ -310,11 +347,15 @@ public class GeoConvert {
         return gridLoc;
     }
 
-/*	
-	static void TMConvertGridToLL(double east, double north, double ellipa, double ellipb,
-			      double projlat0, double projlon0, double projEF, double projNF, double projk0,
-			      double *latDeg, double *lonDeg)
-	{
+
+	static LatLng TMConvertGridToLLx(double east, double north, Projection proj) {
+        double ellipa = proj.getE().getRadiusA();
+        double ellipb = proj.getE().getRadiusB();
+        double projlat0 = proj.getLat0();
+        double projlon0 = proj.getLon0();
+        double projEF = proj.getFalseE();
+        double projNF = proj.getFalseN();
+        double projk0 = proj.getK0();
 		double		v;
 		double		v1;
 		double		f;
@@ -348,59 +389,58 @@ public class GeoConvert {
 	
 		// Set up parameters
 		f = (ellipa - ellipb)/ellipa;
-		e = sqrt((2.0*f) - (f*f));
+		e = Math.sqrt((2.0*f) - (f*f));
 	
 		e2 = e*e;
-		e4 = pow(e,4);
-		e6 = pow(e,6);
-		sinLatRad = sin(latRad);
-		sin2LatRad = sinLatRad * sinLatRad;
-	
-		ee = e/sqrt(1 - e2);
-		e1 = (1 - sqrt(1 - e2))/(1 + sqrt(1 - e2));
-		r = (ellipa * (1 - e2))/pow(1 - (e2*sin2LatRad),1.5);
-		v = ellipa/pow(1 - (e2*sin2LatRad),0.5);
-	
+		e4 = Math.pow(e,4);
+		e6 = Math.pow(e,6);
+
+		ee = e/Math.sqrt(1 - e2);
+		e1 = (1 - Math.sqrt(1 - e2))/(1 + Math.sqrt(1 - e2));
 		e1_2 = e1*e1;
-		e1_3 = pow(e1, 3);
-		e1_4 = pow(e1, 4);
+		e1_3 = Math.pow(e1, 3);
+		e1_4 = Math.pow(e1, 4);
 	
 		Ma = (1.0 - ((e2)/4) - ((3 * e4)/64) - ((5 * e6)/256)) * projlat0;
-		Mb = (((3 * e2)/8) + ((3 * e4)/32) + ((45 * e6)/1024)) * sin(2.0*projlat0);
-		Mc = (((15 * e4)/256) + ((45 * e6)/1024)) * sin(4.0*projlat0);
-		Md = ((35 * e6)/3072) * sin(6.0*projlat0);
+		Mb = (((3 * e2)/8) + ((3 * e4)/32) + ((45 * e6)/1024)) * Math.sin(2.0*projlat0);
+		Mc = (((15 * e4)/256) + ((45 * e6)/1024)) * Math.sin(4.0*projlat0);
+		Md = ((35 * e6)/3072) * Math.sin(6.0*projlat0);
 		M0 = ellipa * (Ma - Mb + Mc - Md);
 	
 		M1 = M0 + (north - projNF)/projk0;
 		u1 = M1/(ellipa * (1 - (e2/4) - (3*e4/64) - (5*e6/256)));
 	
-		lat1a = ((3*e1/2) - (27*e1_3/32)) * sin(2*u1);
-		lat1b = ((21*e1_2/16) - (55*e1_4/32)) * sin(4*u1);
-		lat1c = (151*e1_3/96) * sin(6*u1);
-		lat1d = (1097*e1_4/512) * sin(8*u1);
+		lat1a = ((3*e1/2) - (27*e1_3/32)) * Math.sin(2*u1);
+		lat1b = ((21*e1_2/16) - (55*e1_4/32)) * Math.sin(4*u1);
+		lat1c = (151*e1_3/96) * Math.sin(6*u1);
+		lat1d = (1097*e1_4/512) * Math.sin(8*u1);
 		lat1 = u1 + lat1a + lat1b + lat1c + lat1d;
 	
-		sinLat1 = sin(lat1);
+		sinLat1 = Math.sin(lat1);
 		sin2Lat1 = sinLat1 * sinLat1;
 	
-		r1 = (ellipa * (1 - e2))/pow(1 - (e2*sin2Lat1),1.5);
-		v1 = ellipa/pow(1 - (e2*sin2Lat1),0.5);
+		r1 = (ellipa * (1 - e2))/Math.pow(1 - (e2*sin2Lat1),1.5);
+		v1 = ellipa/Math.pow(1 - (e2*sin2Lat1),0.5);
 	
-		T1 = pow(tan(lat1),2);
-		C1 = (ee*ee) * pow(cos(lat1),2);
+		T1 = Math.pow(Math.tan(lat1),2);
+		C1 = (ee*ee) * Math.pow(Math.cos(lat1),2);
 		D = (east - projEF) / (v1 * projk0);
 	
 		// Calculate latitude and longitude
-		latRad1 = (5 + (3*T1) + (10*C1) - (4*C1*C1) - (9*ee*ee)) * (pow(D,4)/24);
-		latRad2 = (61 + (90*T1) + (298*C1) + (45*T1*T1) - (252*ee*ee) - (3*C1*C1)) * (pow(D,6)/720);
-		latRad = lat1 - (v1 * tan(lat1)/r1) * ((D*D/2) - latRad1 + latRad2);
-	
-		lonRad1 = (1 + (2*T1) + C1) * (pow(D,3)/6);
-		lonRad2 = (5 - (2*C1) + (28*T1) - (3*C1*C1) + (8*ee*ee) + (24*T1*T1)) * (pow(D,5)/120);
-		lonRad = projlon0 + (D - lonRad1 + lonRad2) / cos(lat1);
-	
-		*latDeg = latRad * 180/pi;
-		*lonDeg = lonRad * 180/pi;
+		latRad1 = (5 + (3*T1) + (10*C1) - (4*C1*C1) - (9*ee*ee)) * (Math.pow(D,4)/24);
+		latRad2 = (61 + (90*T1) + (298*C1) + (45*T1*T1) - (252*ee*ee) - (3*C1*C1)) * (Math.pow(D,6)/720);
+		latRad = lat1 - (v1 * Math.tan(lat1)/r1) * ((D*D/2) - latRad1 + latRad2);
+
+        sinLatRad = Math.sin(latRad);
+        sin2LatRad = sinLatRad * sinLatRad;
+        r = (ellipa * (1 - e2))/Math.pow(1 - (e2*sin2LatRad),1.5);
+        v = ellipa/Math.pow(1 - (e2*sin2LatRad),0.5);
+
+        lonRad1 = (1 + (2*T1) + C1) * (Math.pow(D,3)/6);
+		lonRad2 = (5 - (2*C1) + (28*T1) - (3*C1*C1) + (8*ee*ee) + (24*T1*T1)) * (Math.pow(D,5)/120);
+		lonRad = projlon0 + (D - lonRad1 + lonRad2) / Math.cos(lat1);
+
+		return new LatLng(latRad * 180/Math.PI, lonRad * 180/Math.PI);
 	}
 	
 	
@@ -412,5 +452,44 @@ public class GeoConvert {
 	
 		return UTMzone;
 	}
-*/
+
+    private void convert(double X, double Y) {
+        var a = 6378137;
+        var f = 1 / 298.257222101;
+        var phizero = 0;
+        var lambdazero = 173;
+        var Nzero = 10000000;
+        var Ezero = 1600000;
+        var kzero = 0.9996;
+        var N  = Y;
+        var E  = X;
+        var b = a * (1 - f);
+        var esq = 2 * f - Math.pow(f,2);
+        var Z0 = 1 - esq / 4 - 3 * Math.pow(esq, 2) / 64 - 5 * Math.pow(esq, 3) / 256;
+        var A2 = 0.375 * (esq + Math.pow(esq, 2) / 4 + 15 * Math.pow(esq, 3) / 128);
+        var A4 = 15 * (Math.pow(esq, 2) + 3 * Math.pow(esq, 2) / 4) / 256;
+        var A6 = 35 * Math.pow(esq, 3) / 3072;
+        var Nprime = N - Nzero;
+        var mprime = Nprime / kzero;
+        var smn = (a - b) / (a + b);
+        var G = a * (1 - smn) * (1 - Math.pow(smn, 2)) * (1 + 9 * Math.pow(smn, 2) / 4 + 225 * Math.pow(smn, 4) / 64) * Math.PI / 180.0;
+        var sigma = mprime * Math.PI / (180 * G);
+        var phiprime = sigma + (3 * smn / 2 - 27 * Math.pow(smn, 3) / 32) * Math.sin(2 * sigma) + (21 * Math.pow(smn, 2) / 16 - 55 * Math.pow(smn, 4) / 32) * Math.sin(4 * sigma) + (151 * Math.pow(smn, 3) / 96) * Math.sin(6 * sigma) + (1097 * Math.pow(smn, 4) / 512) * Math.sin(8 * sigma);
+        var rhoprime = a * (1 - esq) / Math.pow(Math.pow(1 - esq * Math.sin(phiprime),2),1.5);
+        var upsilonprime = a / Math.sqrt(1 - esq * Math.pow(Math.sin(phiprime),2));
+        var psiprime = upsilonprime / rhoprime;
+        var tprime = Math.tan(phiprime);
+        var Eprime = E - Ezero;
+        var chi = Eprime / (kzero * upsilonprime);
+        var term_1 = tprime * Eprime * chi / (kzero * rhoprime * 2);
+        var term_2 = term_1 * Math.pow(chi,2) / 12 * (-4 * Math.pow(psiprime,2) + 9 * psiprime * (1 - Math.pow(tprime,2)) + 12 * Math.pow(tprime,2));
+        var term_3 = tprime * Eprime * Math.pow(chi,5) / (kzero * rhoprime * 720) * (8 * Math.pow(psiprime,4) * (11 - 24 * Math.pow(tprime,2)) - 12 * Math.pow(psiprime,3) * (21 - 71 * Math.pow(tprime,2)) + 15 * Math.pow(psiprime,2) * (15 - 98 * Math.pow(tprime,2) + 15 * Math.pow(tprime,4)) + 180 * psiprime * (5 * Math.pow(tprime,2) - 3 * Math.pow(tprime,4)) + 360 * Math.pow(tprime,4));
+        var term_4 = tprime * Eprime * Math.pow(chi,7) / (kzero * rhoprime * 40320) * (1385 + 3633 * Math.pow(tprime,2) + 4095 * Math.pow(tprime,4) + 1575 * Math.pow(tprime,6));
+        var term1 = chi * (1 / Math.cos(phiprime));
+        var term2 = Math.pow(chi,3) * (1 / Math.cos(phiprime)) / 6 * (psiprime + 2 * Math.pow(tprime,2));
+        var term3 = Math.pow(chi,5) * (1 / Math.cos(phiprime)) / 120 * (-4 * Math.pow(psiprime,3) * (1 - 6 * Math.pow(tprime,2)) + Math.pow(psiprime,2) * (9 - 68 * Math.pow(tprime,2)) + 72 * psiprime * Math.pow(tprime,2) + 24 * Math.pow(tprime,4));
+        var term4 = Math.pow(chi,7) * (1 / Math.cos(phiprime)) / 5040 * (61 + 662 * Math.pow(tprime,2) + 1320 * Math.pow(tprime,4) + 720 * Math.pow(tprime,6));
+        var latitude = (phiprime - term_1 + term_2 - term_3 + term_4) * 180 / Math.PI;
+        var longitude = lambdazero + 180 / Math.PI * (term1 - term2 + term3 - term4);
+    }
 }

@@ -20,7 +20,7 @@ public class LocationMonitor {
     private boolean listenerRunning;
     private ActivityUpdateInterface parent;
 
-    private static final float MAX_DIST = 20;
+    private static final float MAX_DIST = 15;
     private static final float MAX_DIST_SQ = MAX_DIST * MAX_DIST;
 
     // Time (in seconds) and distance (in metres) between updates to the location manager
@@ -151,6 +151,8 @@ public class LocationMonitor {
                         point.setLon(loc.getLongitude());
                         point.setENFromLL(Database.getProjection(Projection.SYS_OSGB36), 0);
                         point.setElevation(loc.getAltitude());
+
+                        ClimbController.getInstance().updateClimbData(point, notifyActivity);
 
                         // Send notification to parent activity
                         notifyActivity.locationChanged(point);
