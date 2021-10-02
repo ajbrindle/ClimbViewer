@@ -2,6 +2,7 @@ package com.sk7software.climbviewer;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -10,6 +11,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.DisplayFormatter;
@@ -45,7 +47,7 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
 
         monitor = new LocationMonitor(this);
         map = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.climbMap);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB);
+        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB, false);
     }
 
     @Override
@@ -67,23 +69,43 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
     }
 
     @Override
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed");
+        Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+        startActivity(i);
+    }
+
+    @Override
     public void locationChanged(RoutePoint point) {
         int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
         DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
                                 ClimbController.getInstance().getAttemptDist(), "km", distToGo, true);
-        map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN);
 
+        // Add markers
         if (ClimbController.getInstance().isPlotPB()) {
             map.addMarker(new LatLng(ClimbController.getInstance().getPbPoint().getLat(),
                                      ClimbController.getInstance().getPbPoint().getLon()),
-                          ClimbController.PointType.PB, Color.GREEN);
+                          ClimbController.PointType.PB, Color.GREEN, false);
         }
-        map.moveCamera(point);
+        map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, false);
+        map.moveCamera(point, false);
 
         long now = new Date().getTime();
         if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
-            startActivity(i);
+            // Check next screen
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
+                Intent i = new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
+                startActivity(i);
+            } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
+                Intent i = new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
+                startActivity(i);
+            } else {
+                // Advance load time so preference checks are not repeated
+                loadTime += 600000;
+            }
         }
     }
+
+    @Override
+    public void setProgress(boolean showProgressDialog, String progressMessage) {}
 }

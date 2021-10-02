@@ -10,7 +10,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:id="@+id/displayPanel">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -153,8 +155,6 @@
         android:id="@+id/elevationView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/trackView"
-        android:layout_below="@id/fragmentContainerView"
         android:background="#ffffff" />
 
 </LinearLayout>

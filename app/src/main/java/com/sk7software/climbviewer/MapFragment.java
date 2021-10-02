@@ -1,6 +1,5 @@
 package com.sk7software.climbviewer;
 
-import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -10,10 +9,8 @@ import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BlendMode;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,7 +22,6 @@ import android.view.ViewGroup;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -36,7 +32,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -53,6 +48,7 @@ public class MapFragment extends Fragment {
     private Map<ClimbController.PointType, Marker> marker;
     private boolean mapReady = false;
     private boolean trackRider = false;
+    private boolean mirror = false;
     private PlotType plotType;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
 
@@ -84,17 +80,21 @@ public class MapFragment extends Fragment {
                     map.setMapType(mapType);
                     climb = ClimbController.getInstance().getClimb();
                     mapReady = true;
-                    addMarker(new LatLng(climb.getPoints().get(0).getLat(), climb.getPoints().get(0).getLon()),
-                            ClimbController.PointType.ATTEMPT, Color.CYAN);
                     plotClimb();
+
+                    if (!mirror) {
+                        addMarker(new LatLng(climb.getPoints().get(0).getLat(), climb.getPoints().get(0).getLon()),
+                                ClimbController.PointType.ATTEMPT, Color.CYAN, plotType == PlotType.PURSUIT);
+                    }
                 }
             });
         }
     };
 
-    public void setMapType(int type, PlotType plotType) {
+    public void setMapType(int type, PlotType plotType, boolean mirror) {
         this.mapType = type;
         this.plotType = plotType;
+        this.mirror = mirror;
     }
 
     @Nullable
@@ -166,55 +166,76 @@ public class MapFragment extends Fragment {
         }
     }
 
-    public void moveCamera(RoutePoint point) {
+    public void moveCamera(RoutePoint point, boolean isMirror) {
         if (!trackRider) return;
+        float bearing = ClimbController.getInstance().getBearing();
+        float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
+
+        float zoom = 20;
+
+        if (distBetween < 20) {
+            zoom = 25;
+        } else if (distBetween > 150) {
+            zoom = 15;
+        }
+
+        if (isMirror) {
+            bearing = (bearing + 180) % 360;
+            zoom = 17;
+        }
+
         CameraPosition position = new CameraPosition.Builder()
                 .target(new LatLng(point.getLat(), point.getLon()))
-                .zoom(20)
+                .zoom(zoom)
                 .tilt(67.5f)
-                .bearing(ClimbController.getInstance().getBearing())
+                .bearing(bearing)
                 .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
     }
 
-    public void addMarker(LatLng ll, ClimbController.PointType type, int colour) {
-        if (!mapReady) {
-            return;
+    public RoutePoint addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
+        if (!mapReady || !ClimbController.getInstance().isAttemptInProgress()) {
+            return null;
         }
 
         RoutePoint snappedPosition = ClimbController.getInstance().getSnappedPosition().get(type);
 
         if (snappedPosition == null) {
-            return;
+            return null;
         }
 
         LatLng snappedLL = new LatLng(snappedPosition.getLat(), snappedPosition.getLon());
 
         Marker m = marker.get(type);
         if (m != null) {
-            animateMarkerToICS(m, snappedLL, new LatLngInterpolator.LinearFixed());
+            animateMarker(m, snappedLL, new LatLngInterpolator.LinearFixed());
         } else {
             marker.put(type, map.addMarker(new MarkerOptions()
                     .position(snappedLL)
-                    .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour))));
+                    .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour, large))));
         }
+
+        return snappedPosition;
     }
 
-    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour) {
+    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour, boolean large) {
+        float scaleFac = large ? 1.5f : 1;
+        int right = (int)(77 * scaleFac);
+        int bottom = (int)(102 * scaleFac);
         Drawable background = ContextCompat.getDrawable(context, R.drawable.ic_map_marker_solid);
-        background.setBounds(0, 0, 77, 102);
+        background.setBounds(0, 0, right, bottom);
         background.setTint(Color.BLACK);
         Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorResId);
-        vectorDrawable.setBounds(10, 8, 60, 50);
+        vectorDrawable.setBounds((int)(10 * scaleFac), (int)(8 * scaleFac), (int)(60 * scaleFac), (int)(50 * scaleFac));
         vectorDrawable.setTint(colour);
-        Bitmap bitmap = Bitmap.createBitmap(77, 102, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(right, bottom, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         background.draw(canvas);
         vectorDrawable.draw(canvas);
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
-    static void animateMarkerToICS(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+    private static void animateMarker(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
         TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
             @Override
             public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {

@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
@@ -47,7 +48,7 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
                 "km", totDistToGo, true);
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
-        elevationView.setClimb(ClimbController.getInstance().getClimb());
+        elevationView.setClimb(ClimbController.getInstance().getClimb(), 300);
         elevationView.setPB(ClimbController.getInstance().getPbAttempt());
         elevationView.invalidate();
     }
@@ -71,10 +72,17 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
     }
 
     @Override
+    public void onBackPressed() {
+        Log.d(TAG, "onBackPressed");
+        Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+        startActivity(i);
+    }
+
+    @Override
     public void locationChanged(RoutePoint point) {
         if (ClimbController.getInstance().isAttemptInProgress()) {
-            elevationView.plotLocation(point);
             elevationView.pbLocation(ClimbController.getInstance().getPbPoint());
+            elevationView.plotLocation(point);
             elevationView.invalidate();
 
             DisplayFormatter.setGradientText(ClimbController.getInstance().getCurrentGradient(), gradientNow);
@@ -87,9 +95,21 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
 
             long now = new Date().getTime();
             if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
-                startActivity(i);
+                // Check next screen
+                if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
+                    Intent i = new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
+                    startActivity(i);
+                } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
+                    Intent i = new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
+                    startActivity(i);
+                } else {
+                    // Advance load time so preference checks are not repeated
+                    loadTime += 600000;
+                }
             }
         }
     }
+
+    @Override
+    public void setProgress(boolean showProgressDialog, String progressMessage) {}
 }

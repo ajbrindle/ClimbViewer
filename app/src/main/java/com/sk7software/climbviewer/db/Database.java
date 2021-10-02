@@ -296,9 +296,8 @@ public class Database extends SQLiteOpenHelper {
         try (Cursor cursor = db.query("CLIMB", new String[] {"ID"}, "name=?",
                 new String[] {name}, null, null, null, null)){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
-                Log.d(TAG, "Id: " + cursor.getInt(0));
+                Log.d(TAG, "Found Id: " + cursor.getInt(0));
                 return -1;
             }
         } catch(SQLException e) {
@@ -307,9 +306,7 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery("SELECT MAX(ID) FROM CLIMB", null)) {
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
-                Log.d(TAG, "Max Id: " + cursor.getInt(0));
                 return cursor.getInt(0) + 1;
             }
         } catch(SQLException e) {
@@ -526,5 +523,23 @@ public class Database extends SQLiteOpenHelper {
 
         // No max found so return 1st attempt
         return 1;
+    }
+
+    public boolean attemptExists(LocalDateTime trackTime) {
+        long timestamp = trackTime.atZone(ZoneId.systemDefault()).toEpochSecond();
+        SQLiteDatabase db = getReadableDatabase();
+        String check = "SELECT ATTEMPT_ID " +
+                "FROM CLIMB_ATTEMPT " +
+                "WHERE TIMESTAMP = ?";
+
+        try (Cursor cursor = db.rawQuery(check, new String[]{String.valueOf(timestamp)})) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Attempt at same time exists");
+                return true;
+            }
+        } catch (SQLException e) {
+            Log.d(TAG, "Error looking up id: " + e.getMessage());
+        }
+        return false;
     }
  }

@@ -5,38 +5,90 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ClimbViewActivity"-->
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/fragmentContainerView"
-        android:name="com.sk7software.climbviewer.MapFragment"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_alignParentTop="true" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/panel">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="3dp"
+            android:layout_weight="50"
+            android:background="@drawable/layout_border"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DISTANCE"
+                android:textSize="28dp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtTotalDist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="8.88km"
+                android:maxLines="1"
+                android:textSize="60sp"
+                android:autoSizeMaxTextSize="60sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="3dp"
+            android:layout_weight="50"
+            android:background="@drawable/layout_border"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="PB"
+                android:textSize="28dp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtPBTime"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="8:88s"
+                android:maxLines="1"
+                android:textSize="60sp"
+                android:autoSizeMaxTextSize="60sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
 
     <com.sk7software.climbviewer.view.ClimbView
         android:id="@+id/elevationView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/trackView"
-        android:layout_below="@id/fragmentContainerView"
         android:background="#ffffff" />
 
-    <com.sk7software.climbviewer.view.TrackView
-        android:id="@+id/trackView"
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/mapView"
+        android:name="com.sk7software.climbviewer.MapFragment"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:layout_above="@id/txtProgress"
-        android:background="#cccccc" />
+        android:layout_height="match_parent" />
 
-    <TextView
-        android:id="@+id/txtProgress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:text="TextView"
-        android:textSize="32dp"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
-</RelativeLayout>
+</LinearLayout>

@@ -10,7 +10,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:id="@+id/displayPanel">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -75,10 +76,34 @@
         </LinearLayout>
     </LinearLayout>
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/pursuitMap"
-        android:name="com.sk7software.climbviewer.MapFragment"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/pursuitMap"
+            android:name="com.sk7software.climbviewer.MapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:id="@+id/mirror"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/layout_border"
+            android:backgroundTint="@color/white"
+            android:layout_alignParentRight="true"
+            android:layout_alignTop="@+id/pursuitMap"
+            android:padding="8dp"
+            android:orientation="vertical"
+            android:layout_margin="5dp"
+            android:visibility="invisible">
+
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/mirrorMap"
+                android:name="com.sk7software.climbviewer.MapFragment"
+                android:layout_width="150dp"
+                android:layout_height="150dp" />
+        </LinearLayout>
+    </RelativeLayout>
 </LinearLayout>

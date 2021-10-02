@@ -33,9 +33,9 @@ import lombok.Setter;
 @Setter
 public class TrackFile {
     // EMULATOR
-    private static final String FILE_DIR = "/data/data/com.sk7software.climbviewer/";
+    //private static final String FILE_DIR = "/data/data/com.sk7software.climbviewer/";
     // P20 Phone
-    //public static final String FILE_DIR = "/sdcard/Android/data/com.sk7software.climbviewer/";
+    public static final String FILE_DIR = "/sdcard/Android/data/com.sk7software.climbviewer/";
 
     private static final String DATE_FORMAT = "yyyy-MM-dd";
     private static final String TIME_FORMAT = "HH:mm:ss";
@@ -62,24 +62,28 @@ public class TrackFile {
 
             try {
                 TrackFile track = serializer.read(TrackFile.class, f);
-                if (track != null) {
-                    // Convert points to grid
-                    track.setGridPoints();
-
-                    // Find matched climbs
-                    List<GPXRoute> matchedClimbs = track.matchToClimbs();
-
-                    // Add attempt
-                    for (GPXRoute climb : matchedClimbs) {
-                        ClimbAttempt attempt = track.extractAttempt(climb);
-                        Log.d(TAG, "Extracted attempt: " + attempt.getDatetime());
-                        Log.d(TAG, "Duration: " + attempt.getDuration());
-                        Log.d(TAG, "Number of points: " + attempt.getPoints().size());
-                        Database.getInstance().addAttempt(attempt, climb.getId());
-                    }
-                }
             } catch (Exception e) {
                 Log.d(TAG, "Unable to read track: " + e.getMessage());
+            }
+        }
+    }
+
+    public static void processTrackFile(TrackFile track) {
+        if (track != null) {
+            // Convert points to grid
+            track.setGridPoints();
+
+            // Find matched climbs
+            List<GPXRoute> matchedClimbs = track.matchToClimbs();
+
+            // Add attempt
+            for (GPXRoute climb : matchedClimbs) {
+                ClimbAttempt attempt = track.extractAttempt(climb);
+                Log.d(TAG, "Extracted attempt: " + attempt.getDatetime());
+                Log.d(TAG, "Duration: " + attempt.getDuration());
+                Log.d(TAG, "Number of points: " + attempt.getPoints().size());
+                Log.d(TAG, "Attempt for climb: " + climb.getName() + " [" + climb.getId() + "]");
+                Database.getInstance().addAttempt(attempt, climb.getId());
             }
         }
     }
@@ -166,7 +170,7 @@ public class TrackFile {
 
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
             if (inProgress) {
-                Log.d(TAG, pt.getLat() + "," + pt.getLon());
+                //Log.d(TAG, pt.getLat() + "," + pt.getLon());
                 LocalDateTime pointTime = convertToDate(pt.getTime());
                 attempt.addPoint(pt, pointTime);
                 PointF end = new PointF((float)climb.getPoints().get(climb.getPoints().size()-1).getEasting(),

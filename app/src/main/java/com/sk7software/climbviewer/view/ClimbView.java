@@ -11,7 +11,9 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
 
 import androidx.annotation.Nullable;
 
@@ -36,9 +38,10 @@ public class ClimbView extends View {
     private float groundDist = 0;
     private float pbGroundDist = 0;
     private double scaleFacX = 0;
-    int minAttemptIdx = 0;
-    int minPBIdx = 0;
-    int maxY = 800;
+    private int minAttemptIdx = 0;
+    private int minPBIdx = 0;
+    private int maxY = 800;
+    private int y0 = 300;
 
     private static final int PADDING = 20;
     private static final int SMOOTH_DIST = 10;
@@ -61,11 +64,12 @@ public class ClimbView extends View {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    public void setClimb(GPXRoute climb) {
+    public void setClimb(GPXRoute climb, int y0) {
         this.climb = climb;
         currentPoint = new RoutePoint();
         currentPoint.setEasting(climb.getPoints().get(0).getEasting());
         currentPoint.setNorthing(climb.getPoints().get(0).getNorthing());
+        this.y0 = y0;
     }
 
     public void setPB(ClimbAttempt pb) {
@@ -96,12 +100,45 @@ public class ClimbView extends View {
             path.lineTo(points.get(i+1).getX(), maxY);
             path.lineTo(points.get(i).getX(), maxY);
             path.lineTo(points.get(i).getX(), points.get(i).getY());
-            p.setColor(Color.parseColor(getColour(points.get(i+1).getGradient())));
+            p.setColor(Palette.getColour(points.get(i+1).getGradient()));
             canvas.drawPath(path, p);
         }
 
-        drawTracker(canvas, currentPlotPoint, Color.BLUE);
+        if (y0 == 300 && currentPlotPoint != null) {
+            // Draw zoomed view of current position
+            int y1 = maxY - 50 - y0 + 100;
+            ViewGroup.LayoutParams layoutParams = this.getLayoutParams();
+            layoutParams.height = 800;
+            this.setLayoutParams(layoutParams);
+
+            // Find point before current location
+            int startIdx = findPointBefore(currentPlotPoint);
+
+            // Find point 500m further along
+            int endIdx = findNextPoint(currentPlotPoint, startIdx);
+
+            // Push back start if too short
+            if ((points.get(endIdx).getX() - points.get(startIdx).getX()) / scaleFacX < 500) {
+                startIdx = adjustStart(currentPlotPoint, startIdx, endIdx);
+            }
+
+            int yRange = calcYRange(startIdx, endIdx);
+            double xFac = 1;
+
+            for (int i=startIdx; i<=endIdx; i++) {
+                Path path = new Path();
+                path.moveTo((int)(points.get(i).getX()/xFac), points.get(i).getY()+y1);
+                path.lineTo((int)(points.get(i + 1).getX()/xFac), points.get(i + 1).getY()+y1);
+                path.lineTo((int)(points.get(i + 1).getX()/xFac), 800);
+                path.lineTo((int)(points.get(i).getX()/xFac), 800);
+                path.lineTo((int)(points.get(i).getX()/xFac), points.get(i).getY()+y1);
+                p.setColor(Palette.getColour(points.get(i + 1).getGradient()));
+                canvas.drawPath(path, p);
+            }
+        }
+
         drawTracker(canvas, pbPlotPoint, Color.GREEN);
+        drawTracker(canvas, currentPlotPoint, Color.BLUE);
     }
 
     private void drawTracker(Canvas canvas, PlotPoint pt, int colour) {
@@ -114,6 +151,53 @@ public class ClimbView extends View {
         canvas.drawCircle(pt.getX(), 100, 50, p);
         p.setStrokeWidth(10.0f);
         canvas.drawLine(pt.getX(), 150.0f, pt.getX(), pt.getY(), p);
+    }
+
+    private int findPointBefore(PlotPoint pt) {
+        if (points.get(0).getX() > pt.getX()) {
+            return 0;
+        }
+
+        int idx = 0;
+        for (PlotPoint p : points) {
+            if (p.getX() > pt.getX()) {
+                return idx-1;
+            }
+            idx++;
+        }
+        return 0;
+    }
+
+    private int findNextPoint(PlotPoint pt, int start) {
+        int endIdx = 0;
+        for (int i=start+1; i<points.size(); i++) {
+            if ((points.get(i).getX() - points.get(start).getX())/scaleFacX >= 500) {
+                return i;
+            }
+        }
+        return points.size()-1;
+    }
+
+    private int adjustStart(PlotPoint pt, int start, int end) {
+        for (int i=start; i>=0; i--) {
+            double dist = (points.get(end).getX() - points.get(i).getX()) / scaleFacX;
+            if (dist >= 500) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private int calcYRange(int start, int end) {
+        float mnY = Integer.MAX_VALUE;
+        float mxY = Integer.MIN_VALUE;
+
+        for (int i=start; i<=end; i++) {
+            if (points.get(i).getY() < mnY) mnY = points.get(i).getY();
+            if (points.get(i).getY() > mxY) mxY = points.get(i).getY();
+        }
+
+        return (int)(mxY - mnY);
     }
 
     private List<PlotPoint> getPlotPoints() {
@@ -150,7 +234,6 @@ public class ClimbView extends View {
                 distFromLast = 0;
             }
 
-            //Log.d(TAG, p.toString());
             points.add(p);
 
             if (pt.getElevation() < minElevation) {
@@ -186,7 +269,6 @@ public class ClimbView extends View {
         }
 
         double scaleFacY = yRange / (maxElevation - minElevation);
-        float y0 = 300;
         maxY = (int)(yRange + y0) + 50;
 
         Log.d(TAG, "Adjust - Screen width: " + screenWidth + "; xScale: " + scaleFacX +
@@ -196,6 +278,10 @@ public class ClimbView extends View {
             p.setX((float)(p.getX() * scaleFacX) + PADDING);
             p.setY((float)((maxElevation - p.getElevation()) * scaleFacY) + y0);
         }
+
+        ViewGroup.LayoutParams layoutParams = this.getLayoutParams();
+        layoutParams.height = maxY;
+        this.setLayoutParams(layoutParams);
 
         return points;
     }
@@ -207,21 +293,6 @@ public class ClimbView extends View {
     private double calcGradient(double dist, double elevDiff) {
         return 100 * (elevDiff/dist);
     }
-
-    private String getColour(double gradient) {
-        if (gradient < 0) {
-            return "#0000ff";
-        } else if (gradient < 2) {
-            return "#00ff00";
-        } else if (gradient < 5) {
-            return "#ffff00";
-        } else if (gradient < 10) {
-            return "#ffa500";
-        } else {
-            return "#ff0000";
-        }
-    }
-
 
     public float plotLocation(RoutePoint loc) {
         groundDist = ClimbController.getInstance().getAttemptDist();
