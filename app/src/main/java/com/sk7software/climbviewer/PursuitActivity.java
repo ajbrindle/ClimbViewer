@@ -40,6 +40,7 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pursuit);
+        getSupportActionBar().hide();
 
         distBehind = (TextView)findViewById(R.id.txtDistBehind);
         timeBehind = (TextView)findViewById(R.id.txtTimeBehind);
@@ -95,6 +96,14 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
 
     @Override
     public void locationChanged(RoutePoint point) {
+        if (!ClimbController.getInstance().isAttemptInProgress()) {
+            // Return to home screen
+            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+            i.putExtra("id", ClimbController.getInstance().getLastClimbId());
+            startActivity(i);
+            return;
+        }
+
         DisplayFormatter.setDistanceText(ClimbController.getInstance().getDistToPB(),
                 "m", distBehind, false);
         DisplayFormatter.setTimeText(ClimbController.getInstance().getTimeDiffToPB(), timeBehind);

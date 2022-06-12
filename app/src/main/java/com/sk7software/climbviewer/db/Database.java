@@ -12,6 +12,7 @@ import com.sk7software.climbviewer.geo.Ellipsoid;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.AttemptPoint;
+import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -488,6 +489,55 @@ public class Database extends SQLiteOpenHelper {
         }
         Log.d(TAG, "Got PB - duration " + pb.getDuration() + " seconds");
         return pb;
+    }
+
+
+    public AttemptStats getLastAttempt(int climbId) {
+        SQLiteDatabase db = getReadableDatabase();
+        AttemptStats attempt = new AttemptStats();
+
+        String query = "SELECT attempt_id, duration " +
+                "FROM CLIMB_ATTEMPT  " +
+                "WHERE id = ? " +
+                "ORDER BY attempt_id DESC";
+
+        // Set stats for this attempt
+        try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Found " + cursor.getCount());
+                boolean first = true;
+                int pbDuration = Integer.MAX_VALUE;
+                int pos = 1;
+                int total = 0;
+
+                cursor.moveToFirst();
+                while (!cursor.isAfterLast()) {
+                    total++;
+                    int duration = cursor.getInt(1);
+                    if (first) {
+                        attempt.setId(cursor.getInt(0));
+                        attempt.setDuration(duration);
+                        first = false;
+                    } else if (duration < attempt.getDuration()) {
+                        pos++;
+                    }
+
+                    if (duration < pbDuration) {
+                        attempt.setPb(duration);
+                        pbDuration = duration;
+                    }
+                    cursor.moveToNext();
+                }
+                attempt.setPos(pos);
+                attempt.setTotal(total);
+                return attempt;
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            Log.d(TAG, "Error looking up attempts: " + e.getMessage());
+            return null;
+        }
     }
 
     private int getAttemptId(int climbId, long timestamp) {

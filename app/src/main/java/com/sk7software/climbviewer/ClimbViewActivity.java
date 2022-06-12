@@ -1,8 +1,13 @@
 package com.sk7software.climbviewer;
 
+import android.content.Context;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
+import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -38,6 +43,7 @@ public class ClimbViewActivity extends AppCompatActivity {
         Log.d(TAG, "onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_climb_view);
+        getSupportActionBar().hide();
 
         climbId = getIntent().getIntExtra("id", 0);
         climb = Database.getInstance().getClimb(climbId);
@@ -58,8 +64,9 @@ public class ClimbViewActivity extends AppCompatActivity {
         }
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
-        elevationView.setClimb(climb,50);
+        elevationView.setClimb(climb,false);
         elevationView.setPB(pb);
+        setClimbViewHeight();
         elevationView.invalidate();
 
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
@@ -75,5 +82,23 @@ public class ClimbViewActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+    }
+
+    private void setClimbViewHeight() {
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+
+        LinearLayout panel = (LinearLayout)findViewById(R.id.panel);
+
+        int s=0;
+        int resource = ApplicationContextProvider.getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resource > 0) {
+            s = ApplicationContextProvider.getContext().getResources().getDimensionPixelSize(resource);
+        }
+
+        Log.d(TAG, "Setting climb view height: " + (size.y - panel.getHeight() - s) + "/" + size.y + " (" + s + ")");
+        elevationView.setHeight(size.y - panel.getHeight() - s);
     }
 }

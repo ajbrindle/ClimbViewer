@@ -16,22 +16,27 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
+import android.widget.TextView;
 
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.ClimbListActivity;
+import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.network.NetworkRequest;
+import com.sk7software.climbviewer.view.DisplayFormatter;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -131,12 +136,14 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     monitorButton.setBackgroundColor(Color.RED);
                     monitorButton.setTextColor(Color.WHITE);
                     monitorButton.setText("MONITORING RIDE");
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 } else {
                     monitor.stopListener();
                     monitor = null;
                     monitorButton.setBackgroundColor(getResources().getColor(R.color.purple_700));
                     monitorButton.setTextColor(Color.WHITE);
                     monitorButton.setText("MONITOR RIDE");
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 }
             }
         });
@@ -171,6 +178,38 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             monitor.resumeListener();
         }
         super.onResume();
+
+        LinearLayout panel = (LinearLayout) findViewById(R.id.lastSegment);
+        panel.setVisibility(View.GONE);
+
+        int lastClimbId = getIntent().getIntExtra("id", -1);
+        Log.d(TAG, "Stats for " + lastClimbId);
+
+        // Determine if a segment has just been completed
+        if (lastClimbId >= 0) {
+            AttemptStats stats = ClimbController.getInstance().getLastAttemptStats(lastClimbId);
+
+            if (stats != null) {
+                TextView txtLastDist = (TextView) findViewById(R.id.txtSegmentDist);
+                TextView txtLastTime = (TextView) findViewById(R.id.txtSegmentTime);
+                TextView txtPB = (TextView) findViewById(R.id.txtSegmentPB);
+                TextView txtNewPB = (TextView) findViewById(R.id.txtNewPB);
+
+                DisplayFormatter.setDistanceText(stats.getDistanceM(), "km", txtLastDist, true);
+                DisplayFormatter.setFullTimeText(stats.getDuration(), txtLastTime);
+                DisplayFormatter.setFullTimeText(stats.getPb(), txtPB);
+
+                if (stats.getPos() == 1) {
+                    txtNewPB.setTextColor(Color.GREEN);
+                    txtNewPB.setText("*** NEW PB ***");
+                } else {
+                    txtNewPB.setTextColor(Color.RED);
+                    txtNewPB.setText(stats.getPos() + "/" + stats.getTotal() + " Attempts");
+                }
+
+                panel.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     @Override

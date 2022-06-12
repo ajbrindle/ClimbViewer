@@ -38,4 +38,10 @@ public class DisplayFormatter {
         df.setMaximumFractionDigits(dp);
         txt.setText(df.format(time) + "s");
     }
+
+    public static void setFullTimeText(float time, TextView txt) {
+        int mins = (int)(time / 60);
+        int secs = (int)(time % 60);
+        txt.setText(mins + ":" + secs);
+    }
 }

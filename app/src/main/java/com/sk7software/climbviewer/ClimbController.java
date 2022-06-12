@@ -8,9 +8,11 @@ import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.AttemptPoint;
+import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.view.DisplayFormatter;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,6 +32,7 @@ public class ClimbController {
 
     private GPXRoute climb;
     private Map<PointType, Integer> minIndex;
+    private int lastClimbId;
 
     // Current attempt
     private ClimbAttempt attempt;
@@ -39,6 +42,7 @@ public class ClimbController {
     private boolean inLastSegment;
     private float bearing;
     private Map<PointType, RoutePoint> snappedPosition;
+    private int offClimbCount;
 
     // Gradients
     private float currentGradient;
@@ -75,6 +79,7 @@ public class ClimbController {
         lastPoint = null;
         climb = null;
         plotPB = false;
+        offClimbCount = 0;
     }
 
     public void startAttempt() {
@@ -86,6 +91,7 @@ public class ClimbController {
         attemptInProgress = true;
         inLastSegment = false;
         snappedPosition = new HashMap<>();
+        offClimbCount = 0;
     }
 
     public void loadPB() {
@@ -146,6 +152,14 @@ public class ClimbController {
                 // Add to database then reset
                 Database.getInstance().addAttempt(attempt, climb.getId());
                 reset();
+            } else if (!stillOnClimb(currentPoint)) {
+                if (++offClimbCount > 5) {
+                    // Deviated off climb, so reset
+                    lastClimbId = -99; // Prevents summary panel on screen
+                    reset();
+                }
+            } else {
+                offClimbCount = 0;
             }
         }
 
@@ -326,14 +340,43 @@ public class ClimbController {
 
     public void loadClimb(GPXRoute climb) {
         this.climb = climb;
+        this.lastClimbId = climb.getId();
+        setPointsDist(this.climb);
+    }
 
+    private void setPointsDist(GPXRoute climb) {
         float dist = 0;
         climb.getPoints().get(0).setDistFromStart(0);
 
-        for (int i=1; i<this.climb.getPoints().size(); i++) {
-            dist += Math.sqrt(Math.pow(this.climb.getPoints().get(i).getEasting() - this.climb.getPoints().get(i-1).getEasting(), 2.0) +
-                    Math.pow(this.climb.getPoints().get(i).getNorthing() - this.climb.getPoints().get(i-1).getNorthing(), 2.0));
-            this.climb.getPoints().get(i).setDistFromStart(dist);
+        for (int i=1; i<climb.getPoints().size(); i++) {
+            dist += Math.sqrt(Math.pow(climb.getPoints().get(i).getEasting() - climb.getPoints().get(i-1).getEasting(), 2.0) +
+                    Math.pow(climb.getPoints().get(i).getNorthing() - climb.getPoints().get(i-1).getNorthing(), 2.0));
+            climb.getPoints().get(i).setDistFromStart(dist);
         }
+    }
+
+    private boolean stillOnClimb(PointF point) {
+        PointF lastP = null;
+        for (RoutePoint pt : climb.getPoints()) {
+            PointF p = new PointF((float) pt.getEasting(), (float) pt.getNorthing());
+            if (lastP == null) {
+                lastP = p;
+            } else {
+                if (LocationMonitor.pointWithinLineSegment(point, lastP, p)) {
+                    return true;
+                }
+                lastP = p;
+            }
+        }
+       return false;
+    }
+
+    public AttemptStats getLastAttemptStats(int lastClimbId) {
+        AttemptStats stats = Database.getInstance().getLastAttempt(lastClimbId);
+        GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
+        setPointsDist(lastClimb);
+        int numClimbPoints = lastClimb.getPoints().size();
+        stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints-1).getDistFromStart());
+        return stats;
     }
 }

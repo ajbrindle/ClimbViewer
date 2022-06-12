@@ -23,9 +23,9 @@ import lombok.Setter;
 @Setter
 public class GPXFile {
     // EMULATOR
-    //private static final String FILE_DIR = "/data/data/com.sk7software.climbviewer/";
+    private static final String FILE_DIR = "/data/data/com.sk7software.climbviewer/";
     // P20 Phone
-    public static final String FILE_DIR = "/sdcard/Android/data/com.sk7software.climbviewer/";
+    //public static final String FILE_DIR = "/sdcard/Android/data/com.sk7software.climbviewer/";
 
     private static final String GPX_EXT = ".gpx";
     private static final String TAG = GPXFile.class.getSimpleName();

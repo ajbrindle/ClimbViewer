@@ -37,6 +37,7 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+        getSupportActionBar().hide();
 
         totalDist = (TextView)findViewById(R.id.txtTotalDist);
         distToGo = (TextView)findViewById(R.id.txtToGoDist);
@@ -77,6 +78,14 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
 
     @Override
     public void locationChanged(RoutePoint point) {
+        if (!ClimbController.getInstance().isAttemptInProgress()) {
+            // Return to home screen
+            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+            i.putExtra("id", ClimbController.getInstance().getLastClimbId());
+            startActivity(i);
+            return;
+        }
+
         int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
         DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
                                 ClimbController.getInstance().getAttemptDist(), "km", distToGo, true);
