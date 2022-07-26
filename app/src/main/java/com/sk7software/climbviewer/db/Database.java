@@ -12,6 +12,7 @@ import com.sk7software.climbviewer.geo.Ellipsoid;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.AttemptPoint;
+import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -296,9 +297,8 @@ public class Database extends SQLiteOpenHelper {
         try (Cursor cursor = db.query("CLIMB", new String[] {"ID"}, "name=?",
                 new String[] {name}, null, null, null, null)){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
-                Log.d(TAG, "Id: " + cursor.getInt(0));
+                Log.d(TAG, "Found Id: " + cursor.getInt(0));
                 return -1;
             }
         } catch(SQLException e) {
@@ -307,9 +307,7 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery("SELECT MAX(ID) FROM CLIMB", null)) {
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
-                Log.d(TAG, "Max Id: " + cursor.getInt(0));
                 return cursor.getInt(0) + 1;
             }
         } catch(SQLException e) {
@@ -493,6 +491,55 @@ public class Database extends SQLiteOpenHelper {
         return pb;
     }
 
+
+    public AttemptStats getLastAttempt(int climbId) {
+        SQLiteDatabase db = getReadableDatabase();
+        AttemptStats attempt = new AttemptStats();
+
+        String query = "SELECT attempt_id, duration " +
+                "FROM CLIMB_ATTEMPT  " +
+                "WHERE id = ? " +
+                "ORDER BY attempt_id DESC";
+
+        // Set stats for this attempt
+        try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Found " + cursor.getCount());
+                boolean first = true;
+                int pbDuration = Integer.MAX_VALUE;
+                int pos = 1;
+                int total = 0;
+
+                cursor.moveToFirst();
+                while (!cursor.isAfterLast()) {
+                    total++;
+                    int duration = cursor.getInt(1);
+                    if (first) {
+                        attempt.setId(cursor.getInt(0));
+                        attempt.setDuration(duration);
+                        first = false;
+                    } else if (duration < attempt.getDuration()) {
+                        pos++;
+                    }
+
+                    if (duration < pbDuration) {
+                        attempt.setPb(duration);
+                        pbDuration = duration;
+                    }
+                    cursor.moveToNext();
+                }
+                attempt.setPos(pos);
+                attempt.setTotal(total);
+                return attempt;
+            } else {
+                return null;
+            }
+        } catch (SQLException e) {
+            Log.d(TAG, "Error looking up attempts: " + e.getMessage());
+            return null;
+        }
+    }
+
     private int getAttemptId(int climbId, long timestamp) {
         SQLiteDatabase db = getReadableDatabase();
         String check = "SELECT ATTEMPT_ID " +
@@ -526,5 +573,23 @@ public class Database extends SQLiteOpenHelper {
 
         // No max found so return 1st attempt
         return 1;
+    }
+
+    public boolean attemptExists(LocalDateTime trackTime) {
+        long timestamp = trackTime.atZone(ZoneId.systemDefault()).toEpochSecond();
+        SQLiteDatabase db = getReadableDatabase();
+        String check = "SELECT ATTEMPT_ID " +
+                "FROM CLIMB_ATTEMPT " +
+                "WHERE TIMESTAMP = ?";
+
+        try (Cursor cursor = db.rawQuery(check, new String[]{String.valueOf(timestamp)})) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Attempt at same time exists");
+                return true;
+            }
+        } catch (SQLException e) {
+            Log.d(TAG, "Error looking up id: " + e.getMessage());
+        }
+        return false;
     }
  }

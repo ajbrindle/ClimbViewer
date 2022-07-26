@@ -23,6 +23,8 @@ public class GPXRoute {
     @Element
     private String name;
 
+    private String time;
+
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;
 

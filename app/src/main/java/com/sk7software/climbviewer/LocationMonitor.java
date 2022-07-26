@@ -20,7 +20,7 @@ public class LocationMonitor {
     private boolean listenerRunning;
     private ActivityUpdateInterface parent;
 
-    private static final float MAX_DIST = 20;
+    private static final float MAX_DIST = 15;
     private static final float MAX_DIST_SQ = MAX_DIST * MAX_DIST;
 
     // Time (in seconds) and distance (in metres) between updates to the location manager
@@ -58,25 +58,25 @@ public class LocationMonitor {
     }
 
     /**
-     * Determines if the start point of the climb is within the line segment of the last two live
-     * location updates. In order to be valid, the perpendicular distance must be within 10 metres
-     * @param start - start point of route (E, N)
+     * Determines if the current point of the climb (loc) is within the line segment of the last two live
+     * location updates. In order to be valid, the perpendicular distance must be within 15 metres
+     * @param loc - current location on route (E, N)
      * @param a - last-but-one location update (E, N)
      * @param b - last location update (E, N)
      * @return true if point is within line segment (and close enough)
      */
-    public static boolean pointWithinLineSegment(PointF start, PointF a, PointF b) {
+    public static boolean pointWithinLineSegment(PointF loc, PointF a, PointF b) {
         // Algorithm from:
         // https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
-        PointF xxyy = getXXYY(start, a, b);
+        PointF xxyy = getXXYY(loc, a, b);
         if (xxyy == null) {
             return false;
         }
 
-        double dx = start.x - xxyy.x;
-        double dy = start.y - xxyy.y;
+        double dx = loc.x - xxyy.x;
+        double dy = loc.y - xxyy.y;
         double distSq = dx * dx + dy * dy;
-        Log.d(TAG, "Dist sq: " + distSq);
+        //Log.d(TAG, "Dist sq: " + distSq);
         return distSq < MAX_DIST_SQ;
     }
 
@@ -140,22 +140,23 @@ public class LocationMonitor {
             if (loc != null) {
                 // Check lat and lon are > 0
                 if (Math.abs(loc.getLatitude()) > 0.001 && Math.abs(loc.getLongitude()) > 0.001) {
-
+                    RoutePoint point = new RoutePoint();
                     try {
                         boolean mapChanged = false;
                         Log.d(TAG, "Location changed: " + loc.getLatitude() +
                                 "," + loc.getLongitude());
 
-                        RoutePoint point = new RoutePoint();
                         point.setLat(loc.getLatitude());
                         point.setLon(loc.getLongitude());
                         point.setENFromLL(Database.getProjection(Projection.SYS_OSGB36), 0);
                         point.setElevation(loc.getAltitude());
 
-                        // Send notification to parent activity
-                        notifyActivity.locationChanged(point);
+                        ClimbController.getInstance().updateClimbData(point, notifyActivity);
                     } catch (Exception e) {
                         Log.d(TAG, "Exception: " + e.getMessage());
+                    } finally {
+                        // Send notification to parent activity
+                        notifyActivity.locationChanged(point);
                     }
                 }
             }

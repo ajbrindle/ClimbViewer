@@ -20,8 +20,196 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@+id/climbListSel"
-        android:layout_alignParentBottom="true"
+        android:layout_below="@id/climbListSel"
         android:layout_alignRight="@+id/climbListSel"
         android:text="Show Climb" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:layout_below="@id/showClimbBtn"
+        android:id="@+id/label1"
+        android:textSize="10pt"
+        android:textColor="#000000"
+        android:text="Show Screens"/>
+
+    <Switch
+        android:id="@+id/swiMap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="5dp"
+        android:layout_below="@id/label1"
+        android:layout_alignParentEnd="true"
+        android:textSize="8pt"
+        android:textColor="#000000"
+        android:paddingLeft="5dp"
+        android:text="2D Map" />
+
+    <Switch
+        android:id="@+id/swiClimb"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="5dp"
+        android:layout_below="@id/swiMap"
+        android:layout_alignParentEnd="true"
+        android:textSize="8pt"
+        android:textColor="#000000"
+        android:paddingLeft="5dp"
+        android:text="Elevation" />
+
+    <Switch
+        android:id="@+id/swiPursuit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="5dp"
+        android:layout_below="@id/swiClimb"
+        android:layout_alignParentEnd="true"
+        android:textSize="8pt"
+        android:textColor="#000000"
+        android:paddingLeft="5dp"
+        android:text="Pursuit" />
+
+    <Button
+        android:id="@+id/monitorBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/climbListSel"
+        android:layout_alignRight="@+id/climbListSel"
+        android:layout_below="@id/swiPursuit"
+        android:text="Monitor Ride" />
+
+    <LinearLayout
+        android:id="@+id/lastSegment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_weight="50"
+        android:background="@drawable/layout_border"
+        android:orientation="vertical"
+        android:layout_below="@id/monitorBtn"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LAST SEGMENT"
+            android:textSize="28dp"
+            android:textStyle="bold" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="Distance"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textColor="@color/design_default_color_primary"
+                android:layout_alignParentLeft="true"/>
+            <TextView
+                android:id="@+id/txtSegmentDist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="88.88km"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:layout_alignParentRight="true"
+                android:textColor="@color/design_default_color_primary_dark"
+                android:textStyle="bold" />
+        </RelativeLayout>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="Time"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textColor="@color/design_default_color_primary"
+                android:layout_alignParentLeft="true"/>
+            <TextView
+                android:id="@+id/txtSegmentTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="8.88s"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:layout_alignParentRight="true"
+                android:textColor="@color/design_default_color_primary_dark"
+                android:textStyle="bold" />
+        </RelativeLayout>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="PB"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textColor="@color/design_default_color_primary"
+                android:layout_alignParentLeft="true"/>
+            <TextView
+                android:id="@+id/txtSegmentPB"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="8.88s"
+                android:maxLines="1"
+                android:textSize="40sp"
+                android:autoSizeMaxTextSize="40sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textColor="@color/design_default_color_primary_dark"
+                android:layout_alignParentRight="true"
+                android:textStyle="bold" />
+        </RelativeLayout>
+        <TextView
+            android:id="@+id/txtNewPB"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/oswald_bold"
+            android:text="*** NEW PB ***"
+            android:maxLines="1"
+            android:textSize="40sp"
+            android:autoSizeMaxTextSize="40sp"
+            android:autoSizeMinTextSize="28sp"
+            android:autoSizeStepGranularity="2sp"
+            android:autoSizeTextType="uniform"
+            android:textAlignment="center"
+            android:gravity="center_horizontal"
+            android:textColor="#00ff00"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
 </RelativeLayout>

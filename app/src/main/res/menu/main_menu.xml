@@ -4,4 +4,12 @@
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="@string/action_settings"/>
+    <item
+        android:id="@+id/action_load_climbs"
+        android:orderInCategory="1"
+        android:title="Load Climbs"/>
+    <item
+        android:id="@+id/action_load_attempts"
+        android:orderInCategory="2"
+        android:title="Load Attempts"/>
 </menu>
