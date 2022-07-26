@@ -160,8 +160,7 @@ public class GeoConvertTest {
 
     private boolean nearEnough(double result, double value, double error) {
         //System.out.print(Math.abs(result-value) + " ");
-        if (Math.abs(result-value) < error) return true;
-        return false;
+        return Math.abs(result-value) < error;
     }
 
 }

@@ -17,6 +17,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.AttemptPoint;
+import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -56,11 +57,21 @@ public class ClimbViewActivity extends AppCompatActivity {
         }
 
         pb = Database.getInstance().getClimbPB(climbId);
+        TextView txtPB = (TextView) findViewById(R.id.txtPBTime);
+
         if (pb != null && pb.getPoints() != null && pb.getPoints().size() > 0) {
             int pbMins = (int)(pb.getDuration() / 60);
             int pbSecs = pb.getDuration() % 60;
-            TextView txtPB = (TextView) findViewById(R.id.txtPBTime);
             txtPB.setText(pbMins + ":" + pbSecs + "s");
+        } else {
+            txtPB.setText("-:--s");
+        }
+
+        // Display number of attempts
+        AttemptStats attempts = Database.getInstance().getLastAttempt(climbId);
+        if (attempts != null) {
+            TextView txtAttempts = (TextView) findViewById(R.id.txtAttempts);
+            txtAttempts.setText("Attempts: " + attempts.getTotal());
         }
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
