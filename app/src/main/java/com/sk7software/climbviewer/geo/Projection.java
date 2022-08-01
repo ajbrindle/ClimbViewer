@@ -14,6 +14,7 @@ public class Projection {
     public static final int SYS_TYPE_TM = 1;
     public static final int SYS_TYPE_UTM = 2;
     public static final int SYS_OSGB36 = 1;
+    public static final int SYS_UTM_WGS84 = 2;
 
     public Projection(int id, String name,
                       double falseE, double falseN, double lat0, double lon0, double k0,

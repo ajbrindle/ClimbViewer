@@ -23,6 +23,8 @@ public class GPXRoute {
     @Element
     private String name;
 
+    private int projectionId;
+    private int zone;
     private String time;
 
     @ElementList(entry="rtept", inline = true)

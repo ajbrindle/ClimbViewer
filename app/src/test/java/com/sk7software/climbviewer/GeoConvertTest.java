@@ -1,5 +1,6 @@
 package com.sk7software.climbviewer;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -156,6 +157,33 @@ public class GeoConvertTest {
             assertTrue(nearEnough(ll.latitude, latIn[i], error) &&
                     nearEnough(ll.longitude, lonIn[i], error));
         }
+    }
+
+    @Test
+    public void testUTMZone() {
+        assertEquals(39, GeoConvert.calcUTMZone(30.0,50.0));
+        assertEquals(-39, GeoConvert.calcUTMZone(-30.0,50.0));
+    }
+
+    @Test
+    public void testUTMConvert() {
+        final Ellipsoid e = new Ellipsoid(13, "WGS 1984", 6378137.0, 6356752.314245);
+        final Projection proj = new Projection(1, "UTM (WGS 1984)", 500000.0, 0.0, 0.0, 0.0, 0.9996, e, Projection.SYS_TYPE_UTM);
+
+        RoutePoint loc = new RoutePoint();
+        RoutePoint p = new RoutePoint();
+
+        loc.setLat(30);
+        loc.setLon(50);
+        p = GeoConvert.convertLLToGrid(proj, loc, 39);
+        assertEquals(403549.85, p.getEasting(), 0.01);
+        assertEquals(3319206.22, p.getNorthing(), 0.01);
+
+        loc.setLat(-30);
+        loc.setLon(50);
+        p = GeoConvert.convertLLToGrid(proj, loc, -39);
+        assertEquals(403549.847, p.getEasting(), 0.01);
+        assertEquals(6680793.777, p.getNorthing(), 0.01);
     }
 
     private boolean nearEnough(double result, double value, double error) {

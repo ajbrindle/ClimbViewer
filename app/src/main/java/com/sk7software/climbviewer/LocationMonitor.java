@@ -11,6 +11,7 @@ import android.location.LocationManager;
 import android.util.Log;
 
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.RoutePoint;
 
@@ -146,9 +147,19 @@ public class LocationMonitor {
                         Log.d(TAG, "Location changed: " + loc.getLatitude() +
                                 "," + loc.getLongitude());
 
+
+                        int projId = Projection.SYS_UTM_WGS84;
+                        int zone = GeoConvert.calcUTMZone(loc.getLatitude(), loc.getLongitude());
+
+                        if (ClimbController.getInstance().isAttemptInProgress()) {
+                            // Override with settings for the climb (should ensure that zone changes get ignored)
+                            projId = ClimbController.getInstance().getClimb().getProjectionId();
+                            zone = ClimbController.getInstance().getClimb().getZone();
+                        }
+
                         point.setLat(loc.getLatitude());
                         point.setLon(loc.getLongitude());
-                        point.setENFromLL(Database.getProjection(Projection.SYS_OSGB36), 0);
+                        point.setENFromLL(Database.getProjection(projId), zone);
                         point.setElevation(loc.getAltitude());
 
                         ClimbController.getInstance().updateClimbData(point, notifyActivity);

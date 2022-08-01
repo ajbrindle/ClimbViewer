@@ -168,7 +168,8 @@ public class ClimbController {
 
     private synchronized float calcDist(RoutePoint loc, PointType type) {
         PointF locPt = new PointF((float)loc.getEasting(), (float)loc.getNorthing());
-        Projection proj = Database.getProjection(Projection.SYS_OSGB36);
+        Projection proj = Database.getProjection(climb.getProjectionId());
+        int zone = climb.getZone();
 
         int startIndex = minIndex.get(type);
         int lastIndex = startIndex;
@@ -192,7 +193,7 @@ public class ClimbController {
                 RoutePoint routePt = new RoutePoint();
                 routePt.setEasting(nearestPt.x);
                 routePt.setNorthing(nearestPt.y);
-                LatLng ll = GeoConvert.convertGridToLL(proj, routePt, 0);
+                LatLng ll = GeoConvert.convertGridToLL(proj, routePt, zone);
                 routePt.setLat(ll.latitude);
                 routePt.setLon(ll.longitude);
                 snappedPosition.put(type, routePt);

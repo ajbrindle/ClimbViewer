@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.geo.Ellipsoid;
 import com.sk7software.climbviewer.geo.GeoConvert;
@@ -22,16 +23,20 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Database extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 1;
+    public static final int DATABASE_VERSION = 2;
     public static final String DATABASE_NAME = "com.sk7software.climbviewer.db";
     private static final String TAG = Database.class.getSimpleName();
 
     private static Database dbInstance;
     private int maxId = 1;
+    private boolean isUpgrading = false;
+    private SQLiteDatabase currentDb = null;
 
     public static Database getInstance() {
         if (dbInstance == null) {
@@ -55,7 +60,24 @@ public class Database extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldv, int newv) {
-        Log.d(TAG, "DB onUpgrade()");
+        Log.d(TAG, "DB onUpgrade() " + oldv + " to " + newv);
+
+        if (oldv <= 1 && newv == 2) {
+            isUpgrading = true;
+            currentDb = db;
+            // Add UTM fields to climb table
+            String sqlStr = "ALTER TABLE CLIMB " +
+                            "ADD PROJECTION_ID INTEGER;";
+            db.execSQL(sqlStr);
+            sqlStr = "ALTER TABLE CLIMB " +
+                        "ADD ZONE INTEGER;";
+            db.execSQL(sqlStr);
+
+            // Migrate all existing grid points
+            migrateToUTM(db, Projection.SYS_UTM_WGS84);
+            isUpgrading = false;
+            currentDb = null;
+        }
     }
 
 
@@ -265,14 +287,22 @@ public class Database extends SQLiteOpenHelper {
         Log.d(TAG, "id: " + id);
 
         if (id > 0) {
+            int zone = 0;
+            if (!gpx.getRoute().getPoints().isEmpty()) {
+                zone = GeoConvert.calcUTMZone(gpx.getRoute().getPoints().get(0).getLat(),
+                        gpx.getRoute().getPoints().get(0).getLon());
+            }
+
             String insert = "INSERT INTO CLIMB VALUES(" + id + ",'" +
-                    name + "')";
+                    name + "'," +
+                    Projection.SYS_UTM_WGS84 + "," +
+                    zone + ")";
             db.execSQL(insert);
 
             int i = 1;
 
             for (RoutePoint pt : gpx.getRoute().getPoints()) {
-                RoutePoint gridPoint = GeoConvert.convertLLToGrid(getProjection(Projection.SYS_OSGB36), pt, 0);
+                RoutePoint gridPoint = GeoConvert.convertLLToGrid(getProjection(Projection.SYS_UTM_WGS84), pt, zone);
                 gridPoint.setElevation(pt.getElevation());
                 String insertPoint = "INSERT INTO CLIMB_POINT VALUES(" + id + "," +
                         i + "," +
@@ -320,7 +350,7 @@ public class Database extends SQLiteOpenHelper {
 
     public GPXRoute getClimb(int id) {
         SQLiteDatabase db = getReadableDatabase();
-        String query = "SELECT a.name, b.point_no, b.easting, b.northing, b.elevation, b.lat, b.lon " +
+        String query = "SELECT a.name, a.projection_id, a.zone, b.point_no, b.easting, b.northing, b.elevation, b.lat, b.lon " +
                 "FROM CLIMB a INNER JOIN CLIMB_POINT b " +
                 "ON a.id = b.id " +
                 "WHERE a.id = ? " +
@@ -333,16 +363,18 @@ public class Database extends SQLiteOpenHelper {
                 GPXRoute climb = new GPXRoute();
                 climb.setId(id);
                 climb.setName(cursor.getString(0));
+                climb.setProjectionId(cursor.getInt(1));
+                climb.setZone(cursor.getInt(2));
 
                 List<RoutePoint> points = new ArrayList<>();
                 while (!cursor.isAfterLast()) {
                     RoutePoint point = new RoutePoint();
-                    point.setNo(cursor.getInt(1));
-                    point.setEasting(cursor.getDouble(2));
-                    point.setNorthing(cursor.getDouble(3));
-                    point.setElevation(cursor.getDouble(4));
-                    point.setLat(cursor.getDouble(5));
-                    point.setLon(cursor.getDouble(6));
+                    point.setNo(cursor.getInt(3));
+                    point.setEasting(cursor.getDouble(4));
+                    point.setNorthing(cursor.getDouble(5));
+                    point.setElevation(cursor.getDouble(6));
+                    point.setLat(cursor.getDouble(7));
+                    point.setLon(cursor.getDouble(8));
                     points.add(point);
                     cursor.moveToNext();
                 }
@@ -358,7 +390,7 @@ public class Database extends SQLiteOpenHelper {
     public GPXRoute[] getClimbs() {
         Log.d(TAG, "Fetch all climbs");
         SQLiteDatabase db = Database.getInstance().getReadableDatabase();
-        String query = "SELECT a.id, a.name, b.easting, b.northing, c.easting, c.northing " +
+        String query = "SELECT a.id, a.name, a.zone, b.easting, b.northing, c.easting, c.northing " +
                 "FROM CLIMB a INNER JOIN CLIMB_POINT b " +
                 "ON a.id = b.id " +
                 "INNER JOIN CLIMB_POINT c " +
@@ -377,12 +409,13 @@ public class Database extends SQLiteOpenHelper {
                     GPXRoute climb = new GPXRoute();
                     climb.setId(cursor.getInt(0));
                     climb.setName(cursor.getString(1));
+                    climb.setZone(cursor.getInt(2));
                     RoutePoint first = new RoutePoint();
                     RoutePoint second = new RoutePoint();
-                    first.setEasting(cursor.getDouble(2));
-                    first.setNorthing(cursor.getDouble(3));
-                    second.setEasting(cursor.getDouble(4));
-                    second.setNorthing(cursor.getDouble(5));
+                    first.setEasting(cursor.getDouble(3));
+                    first.setNorthing(cursor.getDouble(4));
+                    second.setEasting(cursor.getDouble(5));
+                    second.setNorthing(cursor.getDouble(6));
                     climb.addPoint(first);
                     climb.addPoint(second);
                     climbs.add(climb);
@@ -591,5 +624,128 @@ public class Database extends SQLiteOpenHelper {
             Log.d(TAG, "Error looking up id: " + e.getMessage());
         }
         return false;
+    }
+
+    private void migrateToUTM(SQLiteDatabase db, int toId) {
+        Log.d(TAG, "Fetch all climbs");
+        String query = "SELECT id, name FROM CLIMB;";
+        Projection proj = null;
+        int zone = 0;
+
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Found " + cursor.getCount());
+                cursor.moveToFirst();
+
+                while (!cursor.isAfterLast()) {
+                    int id = cursor.getInt(0);
+                    Log.d(TAG, "Migrating: " + cursor.getString(1) + " [" + id + "]");
+
+                    // Get all lat/long points for climb
+                    GPXRoute route = getClimb(id);
+
+                    // Figure out UTM zone from first point
+                    if (route != null && !route.getPoints().isEmpty()) {
+                        RoutePoint ll = route.getPoints().get(0);
+                        zone = GeoConvert.calcUTMZone(ll.getLat(), ll.getLon());
+                        proj = getProjection(toId);
+
+                        // Update climb table
+                        Log.d(TAG, route.getName() + " - Proj: " + toId + "; Zone: " + zone);
+                        query = "UPDATE CLIMB " +
+                                "SET projection_id = " + toId + "," +
+                                "zone = " + zone +
+                                " WHERE id = " + id;
+                        db.execSQL(query);
+
+                        for (RoutePoint pt : route.getPoints()) {
+                            RoutePoint newPt = GeoConvert.convertLLToGrid(proj, pt, zone);
+                            int ptId = pt.getNo();
+
+                            // Update grid points
+                            Log.d(TAG, "Point: " + ptId + " - E: " + newPt.getEasting() + ", N: " + newPt.getNorthing());
+                            query = "UPDATE CLIMB_POINT " +
+                                    "SET easting = " + newPt.getEasting() + "," +
+                                    "northing = " + newPt.getNorthing() +
+                                    " WHERE id = " + id +
+                                    " AND point_no = " + ptId + ";";
+                            db.execSQL(query);
+                        }
+                    }
+
+                    // Get all lat/long points for climb attempts
+                    Map<Integer, ClimbAttempt> climbAttempts = getAllAttemptPoints(id);
+
+                    // Loop through all attempts and points
+                    if (climbAttempts != null && !climbAttempts.isEmpty()) {
+                        for (Map.Entry<Integer, ClimbAttempt> attempt : climbAttempts.entrySet()) {
+                            int attemptId = attempt.getKey();
+                            int pointNo = 1;
+
+                            for (AttemptPoint pt : attempt.getValue().getPoints()) {
+                                RoutePoint newPt = GeoConvert.convertLLToGrid(proj, pt.getPoint(), zone);
+
+                                // Update grid points
+                                Log.d(TAG, "Attempt: " + attemptId + ", Point: " + pointNo + " - E: " + newPt.getEasting() + ", N: " + newPt.getNorthing());
+                                query = "UPDATE CLIMB_ATTEMPT_POINT " +
+                                        "SET easting = " + newPt.getEasting() + "," +
+                                        "northing = " + newPt.getNorthing() +
+                                        " WHERE id = " + id +
+                                        " AND attempt_id = " + attemptId +
+                                        " AND point_no = " + pointNo + ";";
+                                db.execSQL(query);
+                                pointNo++;
+                            }
+                        }
+                    }
+                    cursor.moveToNext();
+                }
+            }
+        }
+    }
+
+    private Map<Integer, ClimbAttempt> getAllAttemptPoints(int climbId) {
+        SQLiteDatabase db = getReadableDatabase();
+        Map<Integer, ClimbAttempt> attempts = new HashMap<>();
+
+        String query = "SELECT attempt_id, point_no, lat, lon " +
+                "FROM CLIMB_ATTEMPT_POINT " +
+                "WHERE id = ? " +
+                "ORDER BY attempt_id, point_no";
+
+        try (Cursor cursor = db.rawQuery(query, new String[] {String.valueOf(climbId)})){
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Found " + cursor.getCount());
+                cursor.moveToFirst();
+                int attemptId = -1;
+                ClimbAttempt attempt = new ClimbAttempt();
+
+                while (!cursor.isAfterLast()) {
+                    int id = cursor.getInt(0);
+                    if (id != attemptId) {
+                        // This is a new attempt
+                        attempt = new ClimbAttempt();
+                        attempts.put(id, attempt);
+                        attemptId = id;
+                    }
+                    RoutePoint pt = new RoutePoint();
+                    pt.setLat(cursor.getDouble(2));
+                    pt.setLon(cursor.getDouble(3));
+                    attempt.addPoint(pt, null);
+                    cursor.moveToNext();
+                }
+            }
+        } catch(SQLException e) {
+            Log.d(TAG, "Error looking up climb attempts: " + e.getMessage());
+        }
+        return attempts;
+    }
+
+    @Override
+    public SQLiteDatabase getReadableDatabase() {
+        if(isUpgrading && currentDb != null){
+            return currentDb;
+        }
+        return super.getReadableDatabase();
     }
  }

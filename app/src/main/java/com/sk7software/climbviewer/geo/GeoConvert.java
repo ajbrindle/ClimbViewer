@@ -88,16 +88,12 @@ public class GeoConvert {
                 break;
 
             case Projection.SYS_TYPE_UTM:
-//				// Get UTM zone parameters
-//				SetUTMProjection(&proj, zone);
-//
-//				TMConvertLLToGrid(latDeg, lonDeg, ellip.a, ellip.b,
-//							   proj.lat0, proj.lon0, proj.EF, proj.NF, proj.k0,
-//						       east, north);
-//				break;
-//			default:
-//				return retVal;
-                break;
+				// Update projection parameters for UTM zone
+				setUTMProjection(proj, zone);
+                gridLoc = TMConvertLLToGrid(loc, proj);
+				break;
+			default:
+				return null;
         }
 
         return gridLoc;
@@ -124,16 +120,12 @@ public class GeoConvert {
                 break;
 
             case Projection.SYS_TYPE_UTM:
-//				// Get UTM zone parameters
-//				SetUTMProjection(&proj, zone);
-//
-//				TMConvertLLToGrid(latDeg, lonDeg, ellip.a, ellip.b,
-//							   proj.lat0, proj.lon0, proj.EF, proj.NF, proj.k0,
-//						       east, north);
-//				break;
-//			default:
-//				return retVal;
-                break;
+				// Get UTM zone parameters
+				setUTMProjection(proj, zone);
+                llPoint = TMConvertGridToLLx(gridLoc.getEasting(), gridLoc.getNorthing(), proj);
+				break;
+			default:
+				return null;
         }
 
         return llPoint;
@@ -444,13 +436,9 @@ public class GeoConvert {
 	}
 	
 	
-	int CalcUTMZone(double lat, double lon)
-	{
-		int UTMzone;
-		UTMzone = (int)(((lon + 180.0)/6)+1) *
+	public static int calcUTMZone(double lat, double lon) {
+		return (int)(((lon + 180.0)/6)+1) *
 				 (lat < 0 ? -1 : 1);
-	
-		return UTMzone;
 	}
 
     private void convert(double X, double Y) {
@@ -491,5 +479,23 @@ public class GeoConvert {
         var term4 = Math.pow(chi,7) * (1 / Math.cos(phiprime)) / 5040 * (61 + 662 * Math.pow(tprime,2) + 1320 * Math.pow(tprime,4) + 720 * Math.pow(tprime,6));
         var latitude = (phiprime - term_1 + term_2 - term_3 + term_4) * 180 / Math.PI;
         var longitude = lambdazero + 180 / Math.PI * (term1 - term2 + term3 - term4);
+    }
+
+    private static void setUTMProjection(Projection proj, int zone) {
+        double zoneLon0;
+
+        // Assume zone has been validated
+        if (zone > 0) {
+            // Northern hemisphere - false northing is 0
+            proj.setFalseN(0.0);
+        } else {
+            // Southern hemisphere - false northing is 10,000,000
+            proj.setFalseN(10000000.0);
+        }
+
+        // Set central meridian (in radians)
+        zoneLon0 = ((Math.abs(zone) - 31) * 6) + 3;
+        zoneLon0 *= Math.PI/180.0;
+        proj.setLon0(zoneLon0);
     }
 }

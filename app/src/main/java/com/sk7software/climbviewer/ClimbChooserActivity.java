@@ -28,6 +28,7 @@ import android.widget.TextView;
 
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
@@ -256,7 +257,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         // Check if any of the listed climbs have started
         for (GPXRoute climb : allClimbs) {
             PointF start = new PointF((float)climb.getPoints().get(0).getEasting(), (float)climb.getPoints().get(0).getNorthing());
-            if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+            if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon()) &&
+                    LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
                 PointF second = new PointF((float)climb.getPoints().get(1).getEasting(), (float)climb.getPoints().get(1).getNorthing());
                 if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
                     Log.d(TAG, "STARTED CLIMB " + climb.getName());

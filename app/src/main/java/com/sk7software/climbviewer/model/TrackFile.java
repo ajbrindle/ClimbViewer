@@ -6,6 +6,7 @@ import android.util.Log;
 import com.bea.xml.stream.samples.Parse;
 import com.sk7software.climbviewer.LocationMonitor;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 
 import org.simpleframework.xml.Element;
@@ -89,8 +90,14 @@ public class TrackFile {
     }
 
     private void setGridPoints() {
+        int zone = 0;
+
+        if (!getRoute().getTrackSegment().getPoints().isEmpty()) {
+            zone = GeoConvert.calcUTMZone(getRoute().getTrackSegment().getPoints().get(0).getLat(),
+                    getRoute().getTrackSegment().getPoints().get(0).getLon());
+        }
         for (RoutePoint pt : getRoute().getTrackSegment().getPoints()) {
-            pt.setENFromLL(Database.getProjection(Projection.SYS_OSGB36), 0);
+            pt.setENFromLL(Database.getProjection(Projection.SYS_UTM_WGS84), zone);
         }
     }
     private List<GPXRoute> matchToClimbs() {
