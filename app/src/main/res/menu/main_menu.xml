@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"/>
-    <item
-        android:id="@+id/action_load_climbs"
-        android:orderInCategory="1"
-        android:title="Load Climbs"/>
-    <item
-        android:id="@+id/action_load_attempts"
-        android:orderInCategory="2"
-        android:title="Load Attempts"/>
+    <group android:id="@+id/settings">"
+        <item
+            android:id="@+id/action_settings"
+            android:orderInCategory="100"
+            android:title="@string/action_settings" />
+    </group>
+    <group android:id="@+id/loading">
+        <item
+            android:id="@+id/action_load_climbs"
+            android:orderInCategory="1"
+            android:title="Load Climbs" />
+        <item
+            android:id="@+id/action_load_attempts"
+            android:orderInCategory="2"
+            android:title="Load Attempts" />
+    </group>
+    <group android:id="@+id/database">
+        <item
+            android:id="@+id/action_backup_db"
+            android:orderInCategory="3"
+            android:title="Backup Data" />
+        <item
+            android:id="@+id/action_restore_db"
+            android:orderInCategory="4"
+            android:title="Restore Data" />
+    </group>
 </menu>

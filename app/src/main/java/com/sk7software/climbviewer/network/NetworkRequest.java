@@ -13,8 +13,11 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -24,6 +27,7 @@ import com.sk7software.climbviewer.model.TrackMetadata;
 import com.sk7software.climbviewer.model.TrackSegment;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
@@ -35,6 +39,8 @@ public class NetworkRequest {
 
     private static final String GPX_LOAD_URL = "http://www.sk7software.co.uk/gpxloader/gpxload.php";
     private static final String GPX_LIST_URL = "http://www.sk7software.co.uk/gpxloader/gpxlist.php?dir=";
+    private static final String BACKUP_URL = "http://www.sk7software.co.uk/climbviewer/backup/backup.php";
+    private static final String RESTORE_URL = "http://www.sk7software.co.uk/climbviewer/backup/restore.php?id=";
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
@@ -163,6 +169,75 @@ public class NetworkRequest {
             f.setRoute(t);
             f.setMetadata(m);
             TrackFile.processTrackFile(f);
+        }
+    }
+
+    public static void backupDB(final Context context, BackupData backupData, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        try {
+            Gson gson = new GsonBuilder()
+                    .create();
+            String json = gson.toJson(backupData);
+            JSONObject backup = new JSONObject(json);
+
+            JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                    (Request.Method.POST, BACKUP_URL, backup,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    Log.d(TAG, "Response: " + response.toString());
+                                    uiUpdate.setProgress(false, null);
+                                    callback.onRequestCompleted(null);
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    uiUpdate.setProgress(false, null);
+                                    callback.onError(error);
+                                }
+                            }
+                    );
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 4, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (JSONException e) {
+            Log.d(TAG, "Error uploading backup: " + e.getMessage());
+            uiUpdate.setProgress(false, null);
+        }
+    }
+
+    public static void restoreDB(final Context context, int id, final NetworkCallback callback) {
+        Log.d(TAG, "Restoring: " + id);
+        try {
+            JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                    (Request.Method.GET, RESTORE_URL + id,
+                            null,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        String data = response.getString("data");
+                                        Log.d(TAG, "Restore data fetched");
+                                        callback.onRequestCompleted(data);
+                                    } catch (JSONException e) {
+                                        Log.d(TAG, "Error getting restore data: " + e.getMessage());
+                                        callback.onRequestCompleted(null);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    );
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error fetching restore data: " + e.getMessage());
         }
     }
 

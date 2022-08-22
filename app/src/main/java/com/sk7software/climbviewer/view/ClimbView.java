@@ -151,11 +151,21 @@ public class ClimbView extends View {
         if (!zoomPoints.isEmpty()) {
             y0 = height/2;
             int zoomWidth = size.x / 2;
+
+            // Draw box round zoom area
+            Paint p = new Paint();
+            p.setStyle(Paint.Style.STROKE);
+            p.setColor(Color.BLACK);
+            p.setStrokeWidth(5);
+
             float distOnZoom = ClimbController.getInstance().getAttemptDist() - zoomPoints.get(0).getX();
 //            Log.d(TAG, "ZOOM_LOG: Dist on zoom: " + ClimbController.getInstance().getAttemptDist() + "/" + distOnZoom + "/" + zoomPoints.get(0).getX());
             double zoomYRange = convertToPlotPoints(zoomPoints, zoomWidth, (3*height/8)-100, ZOOM_MULTIPLIER, PlotType.ZOOM);
             int maxZoomY = (int)(zoomYRange + 50 + ((((3*height)/8) - 100 - yRange)/2));
             int zoomPadding = (int)(size.x - zoomPoints.get(zoomPoints.size()-1).getX())/2;
+            canvas.drawRoundRect(zoomPadding-10, y0-20, zoomPadding+zoomWidth+10, maxZoomY+y0+10, 20, 20, p);
+            canvas.drawLine(attPoint.getX()+PADDING, attPoint.getY(), zoomPadding, y0-20, p);
+            canvas.drawLine(attPoint.getX()+PADDING, attPoint.getY(), zoomPadding+zoomWidth, y0-20, p);
             plotPoints(zoomPoints, y0, maxZoomY, canvas, zoomPadding);
 
             PlotPoint zoomPoint = calcPlotXY(zoomPoints, PlotType.ZOOM, zoomPadding, distOnZoom);
@@ -181,6 +191,10 @@ public class ClimbView extends View {
             path.lineTo(pts.get(i).getX()+padding, pts.get(i).getY()+y0);
             p.setColor(Palette.getColour(pts.get(i+1).getGradient()));
             canvas.drawPath(path, p);
+            p.setColor(Color.BLACK);
+            p.setStrokeWidth(3);
+            canvas.drawLine(pts.get(i).getX()+padding, pts.get(i).getY()+y0,
+                    pts.get(i+1).getX()+padding, pts.get(i+1).getY()+y0, p);
         }
     }
     private Point getScreenSize() {

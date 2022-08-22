@@ -3,6 +3,7 @@ package com.sk7software.climbviewer;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.view.MenuCompat;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -25,12 +26,14 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.model.AttemptStats;
+import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -94,6 +97,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         // Set up database
         Database db = Database.getInstance();
         db.getWritableDatabase();
+        db.backup();
         //GPXFile.addLocalFiles();
         //TrackFile.addLocalFiles();
 
@@ -303,6 +307,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main_menu, menu);
+        MenuCompat.setGroupDividerEnabled(menu, true);
         return true;
     }
 
@@ -314,6 +319,43 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 return true;
             case R.id.action_load_attempts:
                 doLoad("attempts");
+                return true;
+            case R.id.action_backup_db:
+                Toast.makeText(getApplicationContext(), "Backing up data...", Toast.LENGTH_SHORT).show();
+                BackupData data = new BackupData();
+                data.setId(1);
+                data.setTableData(Database.getInstance().backup());
+                NetworkRequest.backupDB(getApplicationContext(), data, this, new NetworkRequest.NetworkCallback() {
+                    @Override
+                    public void onRequestCompleted(Object callbackData) {
+                        Toast.makeText(getApplicationContext(), "Data backed up successfully", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "Database backed up successfully");
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Toast.makeText(getApplicationContext(), "Unable to backup data", Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Error backing up database: " + e);
+                    }
+                });
+                return true;
+            case R.id.action_restore_db:
+                Toast.makeText(getApplicationContext(), "Fetching data...", Toast.LENGTH_SHORT).show();
+                NetworkRequest.restoreDB(getApplicationContext(), 1, new NetworkRequest.NetworkCallback() {
+                    @Override
+                    public void onRequestCompleted(Object callbackData) {
+                        Toast.makeText(getApplicationContext(), "Restoring data...", Toast.LENGTH_SHORT).show();
+                        String[] rows = callbackData.toString().split("~");
+                        Database.getInstance().restore(rows);
+                        Toast.makeText(getApplicationContext(), "Database restore complete", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "Database restore completed");
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Toast.makeText(getApplicationContext(), "Unable to restore data", Toast.LENGTH_LONG).show();
+                    }
+                });
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
