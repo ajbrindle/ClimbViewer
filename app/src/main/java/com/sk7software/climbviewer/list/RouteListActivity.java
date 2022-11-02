@@ -13,25 +13,25 @@ import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.GPXRoute;
 
-public class ClimbListActivity extends Activity {
+public class RouteListActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_climb_list);
+        setContentView(R.layout.activity_route_list);
         // Show the Up button in the action bar.
         setupActionBar();
 
         // Populate list
-        final ListView lv = (ListView) findViewById(R.id.climbList);
-        final GPXRoute[] items = Database.getInstance().getClimbs();
+        final ListView lv = (ListView) findViewById(R.id.routeList);
+        final GPXRoute[] items = Database.getInstance().getRoutes();
 
         ArrayAdapter<GPXRoute> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, items);
         lv.setAdapter(adapter);
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent i = new Intent();
-                i.putExtra("climb", items[position].getName());
+                i.putExtra("route", items[position].getName());
                 i.putExtra("id", items[position].getId());
                 i.putExtra("pos", String.valueOf(position));
                 setResult(Activity.RESULT_OK, i);

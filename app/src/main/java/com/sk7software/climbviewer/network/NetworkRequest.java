@@ -169,6 +169,13 @@ public class NetworkRequest {
             f.setRoute(t);
             f.setMetadata(m);
             TrackFile.processTrackFile(f);
+        } else if ("routes".equals(dir)) {
+            GPXFile f = new GPXFile();
+            GPXMetadata m = new GPXMetadata();
+            m.setName(route.getName());
+            f.setMetadata(m);
+            f.setRoute(route);
+            Database.getInstance().addRoute(f);
         }
     }
 
@@ -247,6 +254,8 @@ public class NetworkRequest {
         } else if ("attempts".equals(dir)) {
             LocalDateTime trackTime = TrackFile.convertToDate(desc.getTime());
             return Database.getInstance().attemptExists(trackTime);
+        } else if ("routes".equals(dir)) {
+            return Database.getInstance().findRoute(desc.getDescription()) < 0;
         }
         return false;
     }

@@ -38,6 +38,12 @@ public class RoutePoint {
     @Attribute(required = false)
     private float distFromStart;
 
+    @Attribute(required = false)
+    private float accuracy;
+
+    @Attribute(required = false)
+    private float elevFromStart;
+
     public void setENFromLL(Projection proj, int zone) {
         RoutePoint tmpPt = new RoutePoint();
         tmpPt = GeoConvert.convertLLToGrid(proj, this, zone);

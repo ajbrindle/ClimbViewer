@@ -50,6 +50,14 @@
                 android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
         </activity>
         <activity
+            android:name=".RouteViewActivity"
+            android:screenOrientation="portrait"
+            android:exported="true">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+        </activity>
+        <activity
             android:name=".ClimbChooserActivity"
             android:screenOrientation="portrait"
             android:exported="true">
@@ -63,6 +71,15 @@
         <activity
             android:name=".list.ClimbListActivity"
             android:label="Climb List"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ClimbChooserActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+        </activity>
+        <activity
+            android:name=".list.RouteListActivity"
+            android:label="Route List"
             android:screenOrientation="portrait"
             android:parentActivityName=".ClimbChooserActivity">
             <meta-data

@@ -6,10 +6,10 @@
     android:paddingLeft="16dp"
     android:paddingRight="16dp"
     android:paddingTop="16dp"
-    tools:context=".list.ClimbListActivity" >
+    tools:context=".list.RouteListActivity" >
 
     <ListView
-        android:id="@+id/climbList"
+        android:id="@+id/routeList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true" >

@@ -1,21 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".PursuitActivity"
+    android:orientation="vertical"
+    tools:context=".FullClimbActivity"
     android:keepScreenOn="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-    <LinearLayout
-        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:id="@+id/displayPanel">
+        android:id="@+id/panel">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -27,14 +24,45 @@
             android:padding="8dp">
 
             <TextView
+                style="@style/panelTitleStyle"
+                android:id="@+id/panel1Label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="DISTANCE"
-                android:textSize="28dp"
-                android:textStyle="bold" />
+                android:text="PANEL1" />
 
             <TextView
-                android:id="@+id/txtDistBehind"
+                android:id="@+id/txtPanel1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:text="8.88km"
+                android:maxLines="1"
+                android:textSize="60sp"
+                android:autoSizeMaxTextSize="60sp"
+                android:autoSizeMinTextSize="28sp"
+                android:autoSizeStepGranularity="2sp"
+                android:autoSizeTextType="uniform"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="3dp"
+            android:layout_weight="50"
+            android:background="@drawable/layout_border"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                style="@style/panelTitleStyle"
+                android:id="@+id/panel2Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="PANEL2" />
+
+            <TextView
+                android:id="@+id/txtPanel2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/oswald_bold"
@@ -47,78 +75,51 @@
                 android:autoSizeTextType="uniform"
                 android:textStyle="bold" />
         </LinearLayout>
+    </LinearLayout>
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.sk7software.climbviewer.view.ClimbView
+            android:id="@+id/fullRouteView"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="#ffffff" />
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/panelOffRoute"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="3dp"
             android:layout_weight="50"
             android:background="@drawable/layout_border"
             android:orientation="vertical"
-            android:padding="8dp">
+            android:padding="8dp"
+            android:layout_alignLeft="@+id/fullRouteView"
+            android:layout_alignTop="@id/fullRouteView"
+            android:visibility="gone">
 
             <TextView
+                android:id="@+id/txtOffRoute"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="TIME"
-                android:textSize="28dp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtTimeBehind"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:fontFamily="@font/oswald_bold"
-                android:text="88.8s"
+                android:text="OFF ROUTE"
                 android:maxLines="1"
                 android:textSize="60sp"
+                android:textColor="#FF0000"
                 android:autoSizeMaxTextSize="60sp"
                 android:autoSizeMinTextSize="28sp"
                 android:autoSizeStepGranularity="2sp"
                 android:autoSizeTextType="uniform"
                 android:textStyle="bold" />
         </LinearLayout>
-    </LinearLayout>
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <androidx.fragment.app.FragmentContainerView
-            android:id="@+id/pursuitMap"
-            android:name="com.sk7software.climbviewer.MapFragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <LinearLayout
-            android:id="@+id/mirror"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/layout_border"
-            android:backgroundTint="@color/white"
-            android:layout_alignParentRight="true"
-            android:layout_alignTop="@+id/pursuitMap"
-            android:padding="8dp"
-            android:orientation="vertical"
-            android:layout_margin="5dp"
-            android:visibility="invisible">
-
-            <androidx.fragment.app.FragmentContainerView
-                android:id="@+id/mirrorMap"
-                android:name="com.sk7software.climbviewer.MapFragment"
-                android:layout_width="150dp"
-                android:layout_height="150dp" />
-        </LinearLayout>
     </RelativeLayout>
-    </LinearLayout>
-
-    <RelativeLayout
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/mapView"
+        android:name="com.sk7software.climbviewer.MapFragment"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:visibility="gone"
-        android:background="@color/white"
-        android:id="@+id/segmentCompletePanel">
-        <include layout="@layout/summary_panel" />
-    </RelativeLayout>
-</RelativeLayout>
+        android:layout_height="match_parent"
+        android:layout_weight="1"/>
+
+</LinearLayout>

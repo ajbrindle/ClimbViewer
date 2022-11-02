@@ -16,6 +16,7 @@ import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.ScreenController;
 
 import java.util.Date;
 
@@ -51,7 +52,11 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
         elevationView.setClimb(ClimbController.getInstance().getClimb(), true);
-        elevationView.setPB(ClimbController.getInstance().getPbAttempt());
+        elevationView.addPlot(ClimbController.PointType.ATTEMPT);
+
+        if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
+            elevationView.addPlot(ClimbController.PointType.PB);
+        }
     }
 
     @Override
@@ -92,26 +97,22 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
                 return;
             }
 
-            elevationView.pbLocation(ClimbController.getInstance().getPbPoint());
-            elevationView.plotLocation(point);
+            elevationView.startUpdating();
             elevationView.invalidate();
 
-            DisplayFormatter.setGradientText(ClimbController.getInstance().getCurrentGradient(), gradientNow);
-            DisplayFormatter.setGradientText(ClimbController.getInstance().getNextGradient(), gradientNext);
-            DisplayFormatter.setDistanceText(ClimbController.getInstance().getSegmentToGo(), "m", distToGo, true);
+            DisplayFormatter.setGradientText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getCurrentGradient(), gradientNow);
+            DisplayFormatter.setGradientText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getNextGradient(), gradientNext);
+            DisplayFormatter.setDistanceText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSegmentToGo(), "m", distToGo, true);
 
             int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
             DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
-                    ClimbController.getInstance().getAttemptDist(), "km", totDistToGo, true);
+                    ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getDist(), "km", totDistToGo, true);
 
             long now = new Date().getTime();
             if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
                 // Check next screen
-                if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-                    Intent i = new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
-                    startActivity(i);
-                } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-                    Intent i = new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
+                Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+                if (i != null) {
                     startActivity(i);
                 } else {
                     // Advance load time so preference checks are not repeated
@@ -119,10 +120,11 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
                 }
             }
         } else {
-            // Return to home screen
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
-            i.putExtra("id", ClimbController.getInstance().getLastClimbId());
-            startActivity(i);
+            // Return to home screen or route screen
+            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            if (i != null) {
+                startActivity(i);
+            }
             return;
         }
     }
@@ -142,7 +144,7 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
         }
 
         Log.d(TAG, "Setting climb view height: " + (size.y - panel.getHeight() - s) + "/" + size.y + " (" + s + ")");
-        elevationView.setHeight(size.y - panel.getHeight() - s);
+        elevationView.setHeight(size.y - panel.getHeight() - s, true);
         heightSet = true;
     }
 

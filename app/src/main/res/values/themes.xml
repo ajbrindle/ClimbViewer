@@ -13,4 +13,28 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <style name="cvButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:autoSizeMaxTextSize">16sp</item>
+        <item name="android:autoSizeMinTextSize">10sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:backgroundTint">@color/purple_500</item>
+        <item name="android:textColor">#ffffff</item>
+    </style>
+
+    <style name="panelTitleStyle" parent="Widget.MaterialComponents.TextView">
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:autoSizeMaxTextSize">28sp</item>
+        <item name="android:autoSizeMinTextSize">18sp</item>
+        <item name="android:autoSizeStepGranularity">1sp</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
 </resources>

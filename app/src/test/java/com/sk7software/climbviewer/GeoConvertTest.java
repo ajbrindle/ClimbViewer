@@ -11,6 +11,8 @@ import com.sk7software.climbviewer.model.RoutePoint;
 
 import org.junit.Test;
 
+import java.text.DecimalFormat;
+
 public class GeoConvertTest {
     final double[] latIn = {57.602556,
             57.333739,
@@ -184,6 +186,14 @@ public class GeoConvertTest {
         p = GeoConvert.convertLLToGrid(proj, loc, -39);
         assertEquals(403549.847, p.getEasting(), 0.01);
         assertEquals(6680793.777, p.getNorthing(), 0.01);
+
+        loc.setLat(53.3798);
+        loc.setLon(-2.08556);
+        //E: 560834.027, N: 5914899.875
+        p = GeoConvert.convertLLToGrid(proj, loc, 30);
+        DecimalFormat formatter = new DecimalFormat("#.###");
+
+        System.out.println("E: " + formatter.format(p.getEasting()) + ", N: " + formatter.format(p.getNorthing()));
     }
 
     private boolean nearEnough(double result, double value, double error) {

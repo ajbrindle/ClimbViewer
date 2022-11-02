@@ -15,13 +15,15 @@ import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.RoutePoint;
 
+import java.text.DecimalFormat;
+
 public class LocationMonitor {
     private LocationManager lm;
     private LocationListener locationListener;
     private boolean listenerRunning;
     private ActivityUpdateInterface parent;
 
-    private static final float MAX_DIST = 15;
+    private static final float MAX_DIST = 25;
     private static final float MAX_DIST_SQ = MAX_DIST * MAX_DIST;
 
     // Time (in seconds) and distance (in metres) between updates to the location manager
@@ -147,7 +149,7 @@ public class LocationMonitor {
                         Log.d(TAG, "Location changed: " + loc.getLatitude() +
                                 "," + loc.getLongitude());
 
-
+                        // Set default projection details
                         int projId = Projection.SYS_UTM_WGS84;
                         int zone = GeoConvert.calcUTMZone(loc.getLatitude(), loc.getLongitude());
 
@@ -155,12 +157,19 @@ public class LocationMonitor {
                             // Override with settings for the climb (should ensure that zone changes get ignored)
                             projId = ClimbController.getInstance().getClimb().getProjectionId();
                             zone = ClimbController.getInstance().getClimb().getZone();
+                        } else if (ClimbController.getInstance().isRouteInProgress()) {
+                            projId = ClimbController.getInstance().getRoute().getProjectionId();
+                            zone = ClimbController.getInstance().getRoute().getZone();
                         }
-
+                        //FROM DB: 560583.5, 5914919.0
                         point.setLat(loc.getLatitude());
                         point.setLon(loc.getLongitude());
                         point.setENFromLL(Database.getProjection(projId), zone);
                         point.setElevation(loc.getAltitude());
+                        point.setAccuracy(loc.hasAccuracy() ? loc.getAccuracy() : 0);
+
+                        DecimalFormat formatter = new DecimalFormat("#.###");
+                        Log.d(TAG, "Location: " + formatter.format(point.getEasting()) + ", " + formatter.format(point.getNorthing()));
 
                         ClimbController.getInstance().updateClimbData(point, notifyActivity);
                     } catch (Exception e) {

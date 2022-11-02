@@ -76,7 +76,7 @@ public class ClimbViewActivity extends AppCompatActivity {
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
         elevationView.setClimb(climb,false);
-        elevationView.setPB(pb);
+        //elevationView.setPB(pb);
         setClimbViewHeight();
         elevationView.invalidate();
 
@@ -110,6 +110,6 @@ public class ClimbViewActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "Setting climb view height: " + (size.y - panel.getHeight() - s) + "/" + size.y + " (" + s + ")");
-        elevationView.setHeight(size.y - panel.getHeight() - s);
+        elevationView.setHeight(size.y - panel.getHeight() - s, true);
     }
 }

@@ -1,5 +1,7 @@
 package com.sk7software.climbviewer.model;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import org.simpleframework.xml.Attribute;
@@ -35,6 +37,35 @@ public class GPXRoute {
             points = new ArrayList<>();
         }
         points.add(point);
+    }
+
+    public void adjustRoute(int startIdx) {
+        if (startIdx == 0) {
+            return;
+        }
+
+        List<RoutePoint> adjustedPoints = new ArrayList<>();
+        for (int i=startIdx; i<this.getPoints().size(); i++) {
+            adjustedPoints.add(this.getPoints().get(i));
+        }
+
+        // Add other points onto the end if it is a circular route
+        if (isCircular()) {
+            for (int i=0; i<startIdx; i++) {
+                adjustedPoints.add(this.getPoints().get(i));
+            }
+        }
+        this.setPoints(adjustedPoints);
+    }
+
+    private boolean isCircular() {
+        int lastIdx = this.getPoints().size() - 1;
+        RoutePoint start = this.getPoints().get(0);
+        RoutePoint end = this.getPoints().get(lastIdx);
+
+        // Circular if start and end are within 50m of each other
+        Log.d("GPXRoute", "CIRCULAR DIST: " + Math.sqrt(Math.pow(end.getEasting() - start.getElevation(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)));
+        return (Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)) < 50);
     }
 
     @NonNull

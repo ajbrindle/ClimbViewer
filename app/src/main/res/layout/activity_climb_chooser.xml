@@ -2,33 +2,96 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:paddingBottom="16dp"
     android:paddingLeft="16dp"
     android:paddingRight="16dp"
     android:paddingTop="16dp"
-    tools:context=".ClimbChooserActivity" >
+    tools:context=".ClimbChooserActivity">
 
     <ListView
-        android:id="@+id/climbListSel"
+        android:id="@+id/routeListSel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true">
     </ListView>
 
-    <Button
-        android:id="@+id/showClimbBtn"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/routeButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/routeListSel"
+        android:layout_below="@id/routeListSel"
+        android:layout_alignRight="@+id/routeListSel"
+        android:orientation="horizontal">
+        <Button
+            style="@style/cvButtonStyle"
+            android:id="@+id/showRouteBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:layout_marginRight="4dp"
+            android:text="Show Route" />
+        <Button
+            style="@style/cvButtonStyle"
+            android:id="@+id/followRouteBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:layout_weight="2"
+            android:text="Follow Route" />
+        <ImageButton
+            android:id="@+id/deleteRoute"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:layout_weight="3"
+            app:backgroundTint="#ff0000"
+            app:tint="#ffffff"
+            android:src="@drawable/ic_trash_can_regular"/>
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/climbListSel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:layout_below="@+id/routeButtons">
+    </ListView>
+
+    <LinearLayout
+        android:id="@+id/climbButtons"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@+id/climbListSel"
         android:layout_below="@id/climbListSel"
         android:layout_alignRight="@+id/climbListSel"
-        android:text="Show Climb" />
+        android:orientation="horizontal">
+        <Button
+            style="@style/cvButtonStyle"
+            android:id="@+id/showClimbBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Show Climb" />
+        <ImageButton
+            android:id="@+id/deleteClimb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:layout_weight="6"
+            app:backgroundTint="#ff0000"
+            app:tint="#ffffff"
+            android:src="@drawable/ic_trash_can_regular"/>
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="8dp"
-        android:layout_below="@id/showClimbBtn"
+        android:layout_below="@id/climbButtons"
         android:id="@+id/label1"
         android:textSize="10pt"
         android:textColor="#000000"
@@ -71,6 +134,7 @@
         android:text="Pursuit" />
 
     <Button
+        style="@style/cvButtonStyle"
         android:id="@+id/monitorBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

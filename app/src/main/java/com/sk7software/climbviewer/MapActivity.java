@@ -15,6 +15,7 @@ import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.ScreenController;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -79,34 +80,34 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
     @Override
     public void locationChanged(RoutePoint point) {
         if (!ClimbController.getInstance().isAttemptInProgress()) {
-            // Return to home screen
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
-            i.putExtra("id", ClimbController.getInstance().getLastClimbId());
-            startActivity(i);
+            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            if (i != null) {
+                startActivity(i);
+            }
             return;
         }
 
         int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
         DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
-                                ClimbController.getInstance().getAttemptDist(), "km", distToGo, true);
+                                ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getDist(), "km", distToGo, true);
 
         // Add markers
-        if (ClimbController.getInstance().isPlotPB()) {
-            map.addMarker(new LatLng(ClimbController.getInstance().getPbPoint().getLat(),
-                                     ClimbController.getInstance().getPbPoint().getLon()),
+        if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
+            map.addMarker(new LatLng(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB).getSnappedPosition().getLat(),
+                            ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB).getSnappedPosition().getLon()),
                           ClimbController.PointType.PB, Color.GREEN, false);
         }
-        map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, false);
+
+        LatLng snappedPoint = new LatLng(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition().getLat(),
+                ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition().getLon());
+        map.addMarker(snappedPoint, ClimbController.PointType.ATTEMPT, Color.CYAN, false);
         map.moveCamera(point, false);
 
         long now = new Date().getTime();
         if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
             // Check next screen
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
-                startActivity(i);
-            } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
+            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            if (i != null) {
                 startActivity(i);
             } else {
                 // Advance load time so preference checks are not repeated

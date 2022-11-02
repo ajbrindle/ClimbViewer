@@ -40,16 +40,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class MapFragment extends Fragment {
 
-    private GPXRoute climb;
+    private GPXRoute track;
     private GoogleMap map;
     private Map<ClimbController.PointType, Marker> marker;
     private boolean mapReady = false;
     private boolean trackRider = false;
     private boolean mirror = false;
     private PlotType plotType;
+    private int zoom = 20;
+    private float tilt = 67.5f;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
 
     private static final String TAG = MapFragment.class.getSimpleName();
@@ -57,7 +60,8 @@ public class MapFragment extends Fragment {
 
     public enum PlotType {
         FULL_CLIMB,
-        PURSUIT;
+        PURSUIT,
+        ROUTE;
     }
 
     private OnMapReadyCallback callback = new OnMapReadyCallback() {
@@ -78,12 +82,12 @@ public class MapFragment extends Fragment {
                 public void onMapLoaded() {
                     map = googleMap;
                     map.setMapType(mapType);
-                    climb = ClimbController.getInstance().getClimb();
+                    track = (plotType == PlotType.ROUTE ? ClimbController.getInstance().getRoute() : ClimbController.getInstance().getClimb());
                     mapReady = true;
-                    plotClimb();
+                    plotTrack();
 
-                    if (!mirror) {
-                        addMarker(new LatLng(climb.getPoints().get(0).getLat(), climb.getPoints().get(0).getLon()),
+                    if (ClimbController.getInstance().isAttemptInProgress()) {
+                        addMarker(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()),
                                 ClimbController.PointType.ATTEMPT, Color.CYAN, plotType == PlotType.PURSUIT);
                     }
                 }
@@ -116,42 +120,58 @@ public class MapFragment extends Fragment {
         }
     }
 
-    private void plotClimb() {
+    public void setTrackRider(boolean trackRider) {
+        this.trackRider = trackRider;
+    }
+
+    public void setZoom(int zoom) {
+        this.zoom = zoom;
+    }
+
+    public void setTilt(float tilt) {
+        this.tilt = tilt;
+    }
+
+    public void plotTrack(LatLng... position) {
         Log.d(TAG, "Map ready: " + mapReady);
-        if (!mapReady) {
+        if (!mapReady || track == null) {
             return;
         }
 
         List<LatLng> points = new ArrayList<>();
-        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
 
-        for (RoutePoint pt : climb.getPoints()) {
+        for (RoutePoint pt : track.getPoints()) {
             LatLng point = new LatLng(pt.getLat(), pt.getLon());
             points.add(point);
-            builder.include(point);
+            boundsBuilder.include(point);
+        }
+        if (position != null && position.length > 0) {
+            boundsBuilder.include(position[0]);
         }
 
         // Plot polyline
         PolylineOptions lineOptions = new PolylineOptions();
         lineOptions.addAll(points);
-        lineOptions.width(10);
+
+        lineOptions.width(15);
         lineOptions.color(Color.RED);
         map.addPolyline(lineOptions);
 
-        updateView(builder.build());
+        updateView(boundsBuilder.build());
     }
 
     private void updateView(LatLngBounds bounds) {
-        if (plotType == PlotType.FULL_CLIMB) {
+        if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.ROUTE) {
             int padding = 50; // offset from edges of the map in pixels
             CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
             map.animateCamera(cu);
         } else if (plotType == PlotType.PURSUIT) {
             CameraPosition position = new CameraPosition.Builder()
-                    .target(new LatLng(climb.getPoints().get(0).getLat(), climb.getPoints().get(0).getLon())) // Sets the new camera position
-                    .zoom(20) // Sets the zoom
+                    .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon())) // Sets the new camera position
+                    .zoom(zoom) // Sets the zoom
                     .bearing(0) // Rotate the camera
-                    .tilt(67.5f) // Set the camera tilt
+                    .tilt(tilt) // Set the camera tilt
                     .build(); // Creates a CameraPosition from the builder
             map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 2000,new GoogleMap.CancelableCallback() {
                 @Override
@@ -164,58 +184,57 @@ public class MapFragment extends Fragment {
                 }
             });
         }
+
+        if (ClimbController.getInstance().isRouteInProgress()) {
+            trackRider = true;
+        }
     }
 
     public void moveCamera(RoutePoint point, boolean isMirror) {
         if (!trackRider) return;
-        float bearing = ClimbController.getInstance().getBearing();
-        float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
 
-        float zoom = 20;
+        ClimbController.PointType ptType = (ClimbController.getInstance().isAttemptInProgress() ?
+                ClimbController.PointType.ATTEMPT : ClimbController.PointType.ROUTE);
+        float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
 
-        if (distBetween < 20) {
-            zoom = 25;
-        } else if (distBetween > 150) {
-            zoom = 15;
-        }
+        if (ptType == ClimbController.PointType.ATTEMPT) {
+            float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
+            zoom = 20;
 
-        if (isMirror) {
-            bearing = (bearing + 180) % 360;
-            zoom = 17;
+            if (distBetween < 20) {
+                zoom = 25;
+            } else if (distBetween > 150) {
+                zoom = 15;
+            }
+
+            if (isMirror) {
+                bearing = (bearing + 180) % 360;
+                zoom = 17;
+            }
         }
 
         CameraPosition position = new CameraPosition.Builder()
                 .target(new LatLng(point.getLat(), point.getLon()))
                 .zoom(zoom)
-                .tilt(67.5f)
+                .tilt(tilt)
                 .bearing(bearing)
                 .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
     }
 
-    public RoutePoint addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
-        if (!mapReady || !ClimbController.getInstance().isAttemptInProgress()) {
-            return null;
+    public void addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
+        if (!mapReady) {
+            return;
         }
-
-        RoutePoint snappedPosition = ClimbController.getInstance().getSnappedPosition().get(type);
-
-        if (snappedPosition == null) {
-            return null;
-        }
-
-        LatLng snappedLL = new LatLng(snappedPosition.getLat(), snappedPosition.getLon());
 
         Marker m = marker.get(type);
         if (m != null) {
-            animateMarker(m, snappedLL, new LatLngInterpolator.LinearFixed());
+            animateMarker(m, ll, new LatLngInterpolator.LinearFixed());
         } else {
             marker.put(type, map.addMarker(new MarkerOptions()
-                    .position(snappedLL)
+                    .position(ll)
                     .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour, large))));
         }
-
-        return snappedPosition;
     }
 
     private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour, boolean large) {

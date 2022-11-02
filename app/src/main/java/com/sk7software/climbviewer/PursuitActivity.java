@@ -6,9 +6,11 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -17,9 +19,13 @@ import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.ScreenController;
+import com.sk7software.climbviewer.view.SummaryPanel;
 
 import java.util.Date;
 import java.util.Map;
+
+import lombok.SneakyThrows;
 
 public class PursuitActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
@@ -32,9 +38,10 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
     private TextView timeBehind;
     private long loadTime;
     private LinearLayout panel;
+    private boolean completionPanelShown;
     private boolean paused = false;
 
-    private static final String TAG = MapActivity.class.getSimpleName();
+    private static final String TAG = PursuitActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +52,6 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
         distBehind = (TextView)findViewById(R.id.txtDistBehind);
         timeBehind = (TextView)findViewById(R.id.txtTimeBehind);
 
-        int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
         DisplayFormatter.setDistanceText(ClimbController.getInstance().getDistToPB(),
                 "m", distBehind, false);
 
@@ -67,6 +73,7 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
                 paused = !paused;
             }
         });
+        completionPanelShown = false;
     }
 
     @Override
@@ -96,11 +103,9 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
 
     @Override
     public void locationChanged(RoutePoint point) {
+        // Return to another screen if attempt has finished
         if (!ClimbController.getInstance().isAttemptInProgress()) {
-            // Return to home screen
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
-            i.putExtra("id", ClimbController.getInstance().getLastClimbId());
-            startActivity(i);
+            showCompletionPanel();
             return;
         }
 
@@ -116,15 +121,17 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
             timeBehind.setTextColor(Color.GREEN);
         }
 
-        RoutePoint snappedPos = map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, true);
-        mirror.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, false);
+        RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition();
+        if (snappedPos != null) {
+            map.addMarker(new LatLng(snappedPos.getLat(), snappedPos.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, true);
+            mirror.addMarker(new LatLng(snappedPos.getLat(), snappedPos.getLon()), ClimbController.PointType.ATTEMPT, Color.CYAN, false);
+        }
 
-        if (ClimbController.getInstance().isPlotPB()) {
-            map.addMarker(new LatLng(ClimbController.getInstance().getPbPoint().getLat(),
-                            ClimbController.getInstance().getPbPoint().getLon()),
+        if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
+            RoutePoint pbPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB).getSnappedPosition();
+            map.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
                     ClimbController.PointType.PB, Color.GREEN, true);
-            mirror.addMarker(new LatLng(ClimbController.getInstance().getPbPoint().getLat(),
-                            ClimbController.getInstance().getPbPoint().getLon()),
+            mirror.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
                     ClimbController.PointType.PB, Color.GREEN, false);
         }
         map.moveCamera(snappedPos, false);
@@ -142,18 +149,36 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
 
         long now = new Date().getTime();
         if (!paused && now - loadTime > ClimbController.DISPLAY_INTERVAL) {
-            // Check next screen
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
-                startActivity(i);
-            } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
+            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            if (i != null) {
                 startActivity(i);
             } else {
                 // Advance load time so preference checks are not repeated
                 loadTime += 600000;
             }
         }
+    }
+
+    private void showCompletionPanel() {
+        if (completionPanelShown) {
+            return;
+        }
+
+        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.segmentCompletePanel);
+        SummaryPanel panel = new SummaryPanel();
+        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId());
+        completionPanelShown = true;
+
+        Handler handler = new Handler();
+
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                Intent i = ScreenController.getInstance().getNextIntent(PursuitActivity.class);
+                if (i != null) {
+                    startActivity(i);
+                }
+            }
+        }, 10000);
     }
 
     @Override
