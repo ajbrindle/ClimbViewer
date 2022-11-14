@@ -160,7 +160,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             public void onClick(View v) {
                 if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton)) {
                     PositionMonitor.getInstance().setRouteId(currentRouteId);
-                    PositionMonitor.getInstance().setTryingToResume(false);
+                    boolean resuming = followRouteButton.getText().toString().startsWith("RESUME");
+                    PositionMonitor.getInstance().setTryingToResume(resuming);
                 }
             }
         });
@@ -242,46 +243,24 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     " (" + r.getPoints().get(0).getEasting() + "," + r.getPoints().get(0).getNorthing() + ") " +
                     " (" + r.getPoints().get(1).getEasting() + "," + r.getPoints().get(1).getNorthing() + ") ");
         }
+
+        // See if there is a route that needs resuming
+        checkRouteResume();
     }
 
     @Override
     public void onResume() {
         if (monitor != null && !monitor.isListenerRunning()) {
+            Log.d(TAG, "Resume location listener");
             monitor.resumeListener();
         }
+
+        // Reset monitoring
+        PositionMonitor.getInstance().stopAllMonitors();
+        PositionMonitor.getInstance().setOnRoute(false);
+        PositionMonitor.getInstance().setOnClimbId(-1);
+
         super.onResume();
-
-        LinearLayout panel = (LinearLayout) findViewById(R.id.lastSegment);
-        panel.setVisibility(View.GONE);
-
-        int lastClimbId = getIntent().getIntExtra("id", -1);
-        Log.d(TAG, "Stats for " + lastClimbId);
-
-        // Determine if a segment has just been completed
-        if (lastClimbId >= 0) {
-            AttemptStats stats = ClimbController.getInstance().getLastAttemptStats(lastClimbId);
-
-            if (stats != null) {
-                TextView txtLastDist = (TextView) findViewById(R.id.txtSegmentDist);
-                TextView txtLastTime = (TextView) findViewById(R.id.txtSegmentTime);
-                TextView txtPB = (TextView) findViewById(R.id.txtSegmentPB);
-                TextView txtNewPB = (TextView) findViewById(R.id.txtNewPB);
-
-                DisplayFormatter.setDistanceText(stats.getDistanceM(), "km", txtLastDist, true);
-                DisplayFormatter.setFullTimeText(stats.getDuration(), txtLastTime);
-                DisplayFormatter.setFullTimeText(stats.getPb(), txtPB);
-
-                if (stats.getPos() == 1) {
-                    txtNewPB.setTextColor(Color.GREEN);
-                    txtNewPB.setText("*** NEW PB ***");
-                } else {
-                    txtNewPB.setTextColor(Color.RED);
-                    txtNewPB.setText(stats.getPos() + "/" + stats.getTotal() + " Attempts");
-                }
-
-                panel.setVisibility(View.VISIBLE);
-            }
-        }
     }
 
     @Override
@@ -316,6 +295,11 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     h.put("value", currentRoute);
                     routeListAdapter.notifyDataSetChanged();
                     Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
+
+                    // Clear preferences (will be set when route starts)
+                    Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
+                    Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
+                    followRouteButton.setText("FOLLOW ROUTE");
                 }
             }
         }
@@ -326,7 +310,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     public void locationChanged(RoutePoint point) {
         PositionMonitor.getInstance().locationChanged(point);
 
-        if (PositionMonitor.getInstance().isOnRoute()) {
+        if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.ROUTE) && PositionMonitor.getInstance().isOnRoute()) {
             // Stop monitoring route, as this will now be managed from the route view
             PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.ROUTE);
             Intent intent = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
@@ -335,7 +319,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             showRoute(intent, PositionMonitor.getInstance().getRouteStartIdx());
         }
 
-        if (PositionMonitor.getInstance().getOnClimbId() != 0) {
+        if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
             showClimb(PositionMonitor.getInstance().getOnClimbId(), null);
         }
     }
@@ -528,5 +512,21 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 Preferences.getInstance().addPreference(pref, isChecked);
             }
         });
+    }
+
+    private void checkRouteResume() {
+        int savedRouteId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ROUTE_ID);
+
+        if (savedRouteId > 0) {
+            // There is a route to resume so set route id and select in list
+            GPXRoute savedRoute = Database.getInstance().getRoute(savedRouteId);
+            currentRoute = savedRoute.getName();
+            currentRouteId = savedRouteId;
+            HashMap<String, String> h = new HashMap<String, String>();
+            h = routeList.get(0);
+            h.put("value", currentRoute);
+            routeListAdapter.notifyDataSetChanged();
+            followRouteButton.setText("RESUME ROUTE");
+        }
     }
 }

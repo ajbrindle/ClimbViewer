@@ -9,6 +9,8 @@ public class Preferences {
     public static final String PREFERNECE_ELEVATION = "PREF_ELEVATION";
     public static final String PREFERNECE_PURSUIT = "PREF_PURSUIT";
     public static final String PREFERENCES_INIT = "PREFS_INIT";
+    public static final String PREFERENCES_ROUTE_ID = "PREF_ROUTE_ID";
+    public static final String PREFERENCES_ROUTE_START_IDX = "PREF_ROUTE_START_IDX";
     public static final String PREFS_SET = "Y";
 
     private static Preferences instance;
@@ -72,4 +74,7 @@ public class Preferences {
         prefs.edit().putString(name, "").commit();
     }
 
+    public void clearIntPreference(String name) {
+        prefs.edit().putInt(name, -1).commit();
+    }
 }

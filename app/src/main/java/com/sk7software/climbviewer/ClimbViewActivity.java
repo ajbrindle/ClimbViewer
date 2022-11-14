@@ -6,6 +6,8 @@ import android.graphics.PointF;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -76,9 +78,21 @@ public class ClimbViewActivity extends AppCompatActivity {
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
         elevationView.setClimb(climb,false);
-        //elevationView.setPB(pb);
         setClimbViewHeight();
         elevationView.invalidate();
+
+        elevationView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                if (motionEvent.getAction() == MotionEvent.ACTION_DOWN || motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                    elevationView.setShowGradientAt((int)motionEvent.getX());
+                } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                    elevationView.setShowGradientAt(-1);
+                }
+                elevationView.invalidate();
+                return true;
+            }
+        });
 
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
         map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB, false);
@@ -86,7 +100,6 @@ public class ClimbViewActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
-        Log.d(TAG, "onResume");
         super.onResume();
     }
 

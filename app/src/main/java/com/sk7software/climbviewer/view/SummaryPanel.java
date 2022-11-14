@@ -1,16 +1,28 @@
 package com.sk7software.climbviewer.view;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
+import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.model.AttemptStats;
 
 public class SummaryPanel {
 
-    public void showSummary(View panel, int lastClimbId) {
+    private static boolean visible = false;
+    private static String TAG = SummaryPanel.class.getSimpleName();
+
+    public SummaryPanel() {
+        SummaryPanel.visible = false;
+    }
+
+    public void showSummary(View panel, int lastClimbId, Activity currentScreen) {
         AttemptStats stats = ClimbController.getInstance().getLastAttemptStats(lastClimbId);
 
         if (stats != null) {
@@ -32,6 +44,24 @@ public class SummaryPanel {
             }
 
             panel.setVisibility(View.VISIBLE);
+            SummaryPanel.visible = true;
         }
+
+        Handler handler = new Handler();
+
+        Log.d(TAG, "Set task to return to previous screen");
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                Intent i = ScreenController.getInstance().getNextIntent(currentScreen);
+                if (i != null) {
+                    SummaryPanel.visible = false;
+                    currentScreen.startActivity(i);
+                }
+            }
+        }, 10000);
+    }
+
+    public static boolean isVisible() {
+        return SummaryPanel.visible;
     }
 }

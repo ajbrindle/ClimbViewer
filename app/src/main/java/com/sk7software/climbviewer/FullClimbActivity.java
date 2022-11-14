@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.sk7software.climbviewer.db.Preferences;
@@ -17,6 +18,7 @@ import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.ScreenController;
+import com.sk7software.climbviewer.view.SummaryPanel;
 
 import java.util.Date;
 
@@ -111,7 +113,7 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
             long now = new Date().getTime();
             if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
                 // Check next screen
-                Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+                Intent i = ScreenController.getInstance().getNextIntent(this);
                 if (i != null) {
                     startActivity(i);
                 } else {
@@ -120,11 +122,7 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
                 }
             }
         } else {
-            // Return to home screen or route screen
-            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
-            if (i != null) {
-                startActivity(i);
-            }
+            showCompletionPanel();
             return;
         }
     }
@@ -146,6 +144,18 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
         Log.d(TAG, "Setting climb view height: " + (size.y - panel.getHeight() - s) + "/" + size.y + " (" + s + ")");
         elevationView.setHeight(size.y - panel.getHeight() - s, true);
         heightSet = true;
+    }
+
+    private void showCompletionPanel() {
+        Log.d(TAG, "FINISH: Show completion panel");
+        if (SummaryPanel.isVisible()) {
+            return;
+        }
+
+        Log.d(TAG, "FINISH: Show completion panel now");
+        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.climbCompletePanel);
+        SummaryPanel panel = new SummaryPanel();
+        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId(), this);
     }
 
     @Override

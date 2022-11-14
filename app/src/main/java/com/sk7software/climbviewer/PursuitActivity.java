@@ -38,7 +38,6 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
     private TextView timeBehind;
     private long loadTime;
     private LinearLayout panel;
-    private boolean completionPanelShown;
     private boolean paused = false;
 
     private static final String TAG = PursuitActivity.class.getSimpleName();
@@ -73,7 +72,6 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
                 paused = !paused;
             }
         });
-        completionPanelShown = false;
     }
 
     @Override
@@ -149,7 +147,7 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
 
         long now = new Date().getTime();
         if (!paused && now - loadTime > ClimbController.DISPLAY_INTERVAL) {
-            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            Intent i = ScreenController.getInstance().getNextIntent(this);
             if (i != null) {
                 startActivity(i);
             } else {
@@ -160,25 +158,15 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
     }
 
     private void showCompletionPanel() {
-        if (completionPanelShown) {
+        Log.d(TAG, "SHOW COMPLETION");
+        if (SummaryPanel.isVisible()) {
             return;
         }
 
-        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.segmentCompletePanel);
+        Log.d(TAG, "SHOW NOW");
+        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.pursuitCompletePanel);
         SummaryPanel panel = new SummaryPanel();
-        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId());
-        completionPanelShown = true;
-
-        Handler handler = new Handler();
-
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                Intent i = ScreenController.getInstance().getNextIntent(PursuitActivity.class);
-                if (i != null) {
-                    startActivity(i);
-                }
-            }
-        }, 10000);
+        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId(), this);
     }
 
     @Override

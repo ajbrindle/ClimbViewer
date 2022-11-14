@@ -1,5 +1,6 @@
 package com.sk7software.climbviewer.view;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.PointF;
 import android.util.Log;
@@ -35,10 +36,9 @@ public class ScreenController {
         return INSTANCE;
     }
 
-    public Intent getNextIntent(Class<?> currentScreen) {
+    public Intent getNextIntent(Activity currentScreen) {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
-            Log.d(TAG, "Checking next screen: " + currentScreen.getSimpleName());
             List<Class<?>> availableScreens = new ArrayList<>();
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
                 availableScreens.add(MapActivity.class);
@@ -56,8 +56,7 @@ public class ScreenController {
             }
 
             for (int i=0; i<availableScreens.size(); i++) {
-                if (availableScreens.get(i).getSimpleName().equals(currentScreen.getSimpleName())) {
-                    Log.d(TAG, "Found current screen");
+                if (availableScreens.get(i).getSimpleName().equals(currentScreen.getClass().getSimpleName())) {
                     int nextIdx = i+1;
                     if (nextIdx >= availableScreens.size()) {
                         nextIdx = 0;

@@ -167,6 +167,7 @@ public class LocationMonitor {
                         point.setENFromLL(Database.getProjection(projId), zone);
                         point.setElevation(loc.getAltitude());
                         point.setAccuracy(loc.hasAccuracy() ? loc.getAccuracy() : 0);
+                        point.setBearing(loc.getBearing());
 
                         DecimalFormat formatter = new DecimalFormat("#.###");
                         Log.d(TAG, "Location: " + formatter.format(point.getEasting()) + ", " + formatter.format(point.getNorthing()));

@@ -5,6 +5,7 @@ import android.graphics.PointF;
 import android.util.Log;
 
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -87,6 +88,10 @@ public class PositionMonitor {
                         onRoute = true;
                         if (!tryingToResume) {
                             routeStartIdx = i;
+
+                            // Store in preferences
+                            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_ID, routeId);
+                            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_START_IDX, routeStartIdx);
                         }
                         break;
                     }
@@ -105,6 +110,10 @@ public class PositionMonitor {
 
      public void stopMonitor(MonitorType type) {
         monitoring.remove(type);
+     }
+
+     public void stopAllMonitors() {
+        monitoring.clear();
      }
 
     public enum MonitorType {

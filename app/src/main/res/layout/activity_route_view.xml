@@ -4,122 +4,155 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
     android:orientation="vertical"
-    tools:context=".FullClimbActivity"
-    android:keepScreenOn="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:id="@+id/panel">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
-                style="@style/panelTitleStyle"
-                android:id="@+id/panel1Label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="PANEL1" />
-
-            <TextView
-                android:id="@+id/txtPanel1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8.88km"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
-                style="@style/panelTitleStyle"
-                android:id="@+id/panel2Label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="PANEL2" />
-
-            <TextView
-                android:id="@+id/txtPanel2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="888m"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </LinearLayout>
+    tools:context=".FullClimbActivity">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <com.sk7software.climbviewer.view.ClimbView
-            android:id="@+id/fullRouteView"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:background="#ffffff" />
         <LinearLayout
-            android:id="@+id/panelOffRoute"
+            android:id="@+id/panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:layout_alignLeft="@+id/fullRouteView"
-            android:layout_alignTop="@id/fullRouteView"
+            android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/panel1Label"
+                    style="@style/panelTitleStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="PANEL1" />
+
+                <TextView
+                    android:id="@+id/txtPanel1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="8.88km"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/panel2Label"
+                    style="@style/panelTitleStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="PANEL2" />
+
+                <TextView
+                    android:id="@+id/txtPanel2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="888m"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+            <SeekBar
+                android:id="@+id/profileTransparency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="255"
+                android:min="0"
+                android:progress="128"
+                android:text="Profile Transparency"/>
+        </LinearLayout>
+        <RelativeLayout
+            android:id="@+id/panelOffRoute"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignLeft="@+id/panel"
+            android:layout_alignTop="@id/panel"
+            android:layout_alignBottom="@id/panel"
+            android:background="@color/white"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/txtOffRoute"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:fontFamily="@font/oswald_bold"
-                android:text="OFF ROUTE"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:textColor="#FF0000"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </RelativeLayout>
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/mapView"
-        android:name="com.sk7software.climbviewer.MapFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"/>
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
 
+                <TextView
+                    android:id="@+id/txtOffRoute"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="OFF ROUTE"
+                    android:textColor="#FF0000"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </RelativeLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/mapView"
+            android:name="com.sk7software.climbviewer.MapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:layout="@layout/fragment_map" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/mapView">
+
+            <com.sk7software.climbviewer.view.ClimbView
+                android:id="@+id/fullRouteView"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:background="#00ffffff" />
+        </RelativeLayout>
+    </RelativeLayout>
 </LinearLayout>

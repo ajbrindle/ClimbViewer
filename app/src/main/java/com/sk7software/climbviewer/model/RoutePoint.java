@@ -36,6 +36,9 @@ public class RoutePoint {
     private double northing;
 
     @Attribute(required = false)
+    private float bearing;
+
+    @Attribute(required = false)
     private float distFromStart;
 
     @Attribute(required = false)

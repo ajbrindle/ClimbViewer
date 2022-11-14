@@ -61,6 +61,6 @@ public class Palette {
         }
 
         // Unreachable
-        return Color.BLACK;
+        return 0xFF000000;
     }
 }

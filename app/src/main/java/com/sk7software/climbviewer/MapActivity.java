@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -16,6 +17,7 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.ScreenController;
+import com.sk7software.climbviewer.view.SummaryPanel;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -80,10 +82,7 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
     @Override
     public void locationChanged(RoutePoint point) {
         if (!ClimbController.getInstance().isAttemptInProgress()) {
-            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
-            if (i != null) {
-                startActivity(i);
-            }
+            showCompletionPanel();
             return;
         }
 
@@ -106,7 +105,7 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
         long now = new Date().getTime();
         if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
             // Check next screen
-            Intent i = ScreenController.getInstance().getNextIntent(this.getClass());
+            Intent i = ScreenController.getInstance().getNextIntent(this);
             if (i != null) {
                 startActivity(i);
             } else {
@@ -114,6 +113,16 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
                 loadTime += 600000;
             }
         }
+    }
+
+    private void showCompletionPanel() {
+        if (SummaryPanel.isVisible()) {
+            return;
+        }
+
+        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.mapCompletePanel);
+        SummaryPanel panel = new SummaryPanel();
+        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId(), this);
     }
 
     @Override

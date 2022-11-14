@@ -118,7 +118,7 @@
         android:layout_centerVertical="true"
         android:visibility="gone"
         android:background="@color/white"
-        android:id="@+id/segmentCompletePanel">
+        android:id="@+id/pursuitCompletePanel">
         <include layout="@layout/summary_panel" />
     </RelativeLayout>
 </RelativeLayout>

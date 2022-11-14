@@ -1,85 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:context=".MapActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:id="@+id/displayPanel">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/displayPanel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="TOTAL"
-                android:textSize="28dp"
-                android:textStyle="bold" />
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
 
-            <TextView
-                android:id="@+id/txtTotalDist"
-                android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TOTAL"
+                    android:textSize="28dp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtTotalDist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="8.88km"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8.88km"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TO GO"
+                    android:textSize="28dp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtToGoDist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="8.88km"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="TO GO"
-                android:textSize="28dp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtToGoDist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8.88km"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/climbMap"
+            android:name="com.sk7software.climbviewer.MapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
     </LinearLayout>
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/climbMap"
-        android:name="com.sk7software.climbviewer.MapFragment"
+    <RelativeLayout
+        android:id="@+id/mapCompletePanel"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:background="@color/white"
+        android:visibility="gone">
+        <include layout="@layout/summary_panel" />
+    </RelativeLayout>
 
-</LinearLayout>
+</RelativeLayout>

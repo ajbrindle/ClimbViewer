@@ -71,7 +71,7 @@ public class Database extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldv, int newv) {
         Log.d(TAG, "DB onUpgrade() " + oldv + " to " + newv);
 
-        if (oldv <= 1 && newv == 2) {
+        if (oldv <= 1 && newv >= 2) {
             isUpgrading = true;
             currentDb = db;
             // Add UTM fields to climb table
@@ -285,6 +285,7 @@ public class Database extends SQLiteOpenHelper {
                         "NORTHING REAL," +
                         "PRIMARY KEY (ID, ATTEMPT_ID, POINT_NO));";
         db.execSQL(createClimbAttemptPoints);
+        onUpgrade(db, 1, DATABASE_VERSION);
     }
 
     public static Projection getProjection(int id) {

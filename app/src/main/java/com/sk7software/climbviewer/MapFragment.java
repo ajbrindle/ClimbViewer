@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Property;
@@ -27,11 +28,14 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.SphericalUtil;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -40,7 +44,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class MapFragment extends Fragment {
 
@@ -53,6 +56,8 @@ public class MapFragment extends Fragment {
     private PlotType plotType;
     private int zoom = 20;
     private float tilt = 67.5f;
+    private Circle locationMarker = null;
+    private float posMarkerRadius = -1;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
 
     private static final String TAG = MapFragment.class.getSimpleName();
@@ -85,6 +90,14 @@ public class MapFragment extends Fragment {
                     track = (plotType == PlotType.ROUTE ? ClimbController.getInstance().getRoute() : ClimbController.getInstance().getClimb());
                     mapReady = true;
                     plotTrack();
+
+                    // Force recalculation of radius if zooming
+                    map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                        @Override
+                        public void onCameraMove() {
+                            posMarkerRadius = -1;
+                        }
+                    });
 
                     if (ClimbController.getInstance().isAttemptInProgress()) {
                         addMarker(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()),
@@ -161,6 +174,44 @@ public class MapFragment extends Fragment {
         updateView(boundsBuilder.build());
     }
 
+    public void plotOffRouteTrack(double radius, LatLng currentPoint) {
+        if (!mapReady || track == null) {
+            return;
+        }
+
+        // Increase radius to give a bit of padding but limit to 1km
+        if (radius > 500) {
+            radius = 500;
+        }
+        radius *= 1.2;
+
+        double distanceFromCenterToCorner = radius * Math.sqrt(2.0);
+        LatLng southwestCorner =
+                SphericalUtil.computeOffset(currentPoint, distanceFromCenterToCorner, 225.0);
+        LatLng northeastCorner =
+                SphericalUtil.computeOffset(currentPoint, distanceFromCenterToCorner, 45.0);
+        List<LatLng> points = new ArrayList<>();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+
+        for (RoutePoint pt : track.getPoints()) {
+            LatLng point = new LatLng(pt.getLat(), pt.getLon());
+            points.add(point);
+        }
+
+        boundsBuilder.include(southwestCorner);
+        boundsBuilder.include(northeastCorner);
+
+        // Plot polyline
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(points);
+
+        lineOptions.width(15);
+        lineOptions.color(Color.RED);
+        map.addPolyline(lineOptions);
+
+        updateView(boundsBuilder.build());
+    }
+
     private void updateView(LatLngBounds bounds) {
         if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.ROUTE) {
             int padding = 50; // offset from edges of the map in pixels
@@ -222,6 +273,13 @@ public class MapFragment extends Fragment {
         map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
     }
 
+    public void moveOffRouteCamera(LatLng centrePoint, float bearing) {
+        CameraPosition position = new CameraPosition.Builder()
+                .target(centrePoint)
+                .bearing(bearing)
+                .build();
+        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 1, null);
+    }
     public void addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
         if (!mapReady) {
             return;
@@ -235,6 +293,44 @@ public class MapFragment extends Fragment {
                     .position(ll)
                     .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour, large))));
         }
+    }
+
+    public void showPosition(LatLng ll) {
+        if (!mapReady) {
+            return;
+        }
+
+        if (locationMarker != null) {
+            locationMarker.remove();
+        }
+
+        if (ll == null) {
+            return;
+        }
+
+        // Plot location
+        CircleOptions circleOptions = new CircleOptions();
+        circleOptions.center(ll);
+        circleOptions.radius(calcRadius());
+        circleOptions.strokeColor(Color.BLACK);
+        circleOptions.fillColor(Color.BLUE);
+        circleOptions.strokeWidth(3);
+        circleOptions.zIndex(100);
+        locationMarker = map.addCircle(circleOptions);
+    }
+
+    private float calcRadius() {
+        if (posMarkerRadius > 0) return posMarkerRadius;
+
+        // get 2 of the visible diagonal corners of the map (could also use farRight and nearLeft)
+        LatLng topLeft = map.getProjection().getVisibleRegion().farLeft;
+        LatLng bottomRight = map.getProjection().getVisibleRegion().nearRight;
+
+        // use the Location class to calculate the distance between the 2 diagonal map points
+        float results[] = new float[4];
+        Location.distanceBetween(topLeft.latitude,topLeft.longitude,bottomRight.latitude,bottomRight.longitude,results);
+        posMarkerRadius = results[0]/100;
+        return posMarkerRadius;
     }
 
     private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour, boolean large) {
