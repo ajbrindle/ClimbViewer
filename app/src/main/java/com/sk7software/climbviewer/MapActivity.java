@@ -100,7 +100,7 @@ public class MapActivity extends AppCompatActivity implements ActivityUpdateInte
         LatLng snappedPoint = new LatLng(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition().getLat(),
                 ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition().getLon());
         map.addMarker(snappedPoint, ClimbController.PointType.ATTEMPT, Color.CYAN, false);
-        map.moveCamera(point, false);
+        map.moveCamera(point, false, true);
 
         long now = new Date().getTime();
         if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {

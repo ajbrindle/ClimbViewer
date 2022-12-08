@@ -77,7 +77,7 @@ public class ClimbViewActivity extends AppCompatActivity {
         }
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
-        elevationView.setClimb(climb,false);
+        elevationView.setClimb(climb);
         setClimbViewHeight();
         elevationView.invalidate();
 

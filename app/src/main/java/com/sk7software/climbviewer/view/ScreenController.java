@@ -10,9 +10,11 @@ import com.sk7software.climbviewer.ClimbChooserActivity;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.FullClimbActivity;
 import com.sk7software.climbviewer.MapActivity;
+import com.sk7software.climbviewer.MapFragment;
 import com.sk7software.climbviewer.PositionMonitor;
 import com.sk7software.climbviewer.PursuitActivity;
 import com.sk7software.climbviewer.RouteViewActivity;
+import com.sk7software.climbviewer.SectionViewActivity;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 
@@ -36,6 +38,41 @@ public class ScreenController {
         return INSTANCE;
     }
 
+    public MapFragment.PlotType getNextPlotType(MapFragment.PlotType currentType) {
+        // For climbs, loop through selected screens
+        if (ClimbController.getInstance().isAttemptInProgress()) {
+            List<MapFragment.PlotType> availableScreens = new ArrayList<>();
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
+                availableScreens.add(MapFragment.PlotType.NORMAL);
+            }
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
+                availableScreens.add(MapFragment.PlotType.FULL_CLIMB);
+            }
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
+                availableScreens.add(MapFragment.PlotType.PURSUIT);
+            }
+
+            if (availableScreens.size() == 1 && currentType != null) {
+                // Just stay on current screen
+                return null;
+            } else if (!availableScreens.isEmpty() && currentType == null) {
+                return availableScreens.get(0);
+            }
+
+            for (int i = 0; i < availableScreens.size(); i++) {
+                if (availableScreens.get(i) == currentType) {
+                    int nextIdx = i + 1;
+                    if (nextIdx >= availableScreens.size()) {
+                        nextIdx = 0;
+                    }
+                    Log.d(TAG, "Next screen: " + availableScreens.get(nextIdx).name());
+                    return availableScreens.get(nextIdx);
+                }
+            }
+        }
+        return null;
+    }
+
     public Intent getNextIntent(Activity currentScreen) {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
@@ -44,7 +81,7 @@ public class ScreenController {
                 availableScreens.add(MapActivity.class);
             }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-                availableScreens.add(FullClimbActivity.class);
+                availableScreens.add(SectionViewActivity.class);
             }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
                 availableScreens.add(PursuitActivity.class);

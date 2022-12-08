@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.graphics.PointF;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.AttemptPoint;
 import com.sk7software.climbviewer.model.AttemptStats;
@@ -34,6 +35,7 @@ public class ClimbController {
 
     // Location
     private PointF lastPoint = null;
+    private LatLng lastPointLL = null;
 
     // Route
     private GPXRoute route;
@@ -117,7 +119,7 @@ public class ClimbController {
     public void loadPB() {
         if (climb != null) {
             ClimbAttempt pbAttempt = Database.getInstance().getClimbPB(climb.getId());
-            if (pbAttempt != null && pbAttempt.getPoints() != null && pbAttempt.getPoints().size() > 0) {
+            if (pbAttempt != null && pbAttempt.getPoints() != null && !pbAttempt.getPoints().isEmpty()) {
                 LocalDateTime pbStart = pbAttempt.getPoints().get(0).getTimestamp();
                 pbAttempt.getPoints().stream()
                         .forEach(p -> p.setSecondsFromStart(ChronoUnit.SECONDS.between(pbStart, p.getTimestamp())));
@@ -132,6 +134,8 @@ public class ClimbController {
     }
 
     public void updateClimbData(RoutePoint point, ActivityUpdateInterface callbackActivity) {
+        lastPointLL = new LatLng(point.getLat(), point.getLon());
+
         if (lastPoint == null) {
             lastPoint = new PointF((float)point.getEasting(), (float)point.getNorthing());
             return;
@@ -218,7 +222,7 @@ public class ClimbController {
             Database.getInstance().addAttempt(attempt, climb.getId());
             reset(PointType.ATTEMPT);
         } else if (!stillOnTrack(climb, currentPoint, point.getAccuracy())) {
-            if (++offClimbCount > 20) {
+            if (++offClimbCount > 5) {
                 // Deviated off climb, so reset
                 lastClimbId = -99; // Prevents summary panel on screen
                 reset(PointType.ATTEMPT);
@@ -298,20 +302,20 @@ public class ClimbController {
         ClimbAttempt pbAttempt = attempts.get(PointType.PB).getAttempt();
 
         // Determine where this point is on the PB
-        RoutePoint lastPoint = null;
+        RoutePoint lastRoutePoint = null;
         PointF attPt = new PointF((float)attemptPoint.getEasting(), (float)attemptPoint.getNorthing());
         float secondsToPoint = 0;
         int lastIndex = 0;
 
         for (AttemptPoint pbPoint : pbAttempt.getPoints()) {
-            if (lastPoint == null) {
-                lastPoint = pbPoint.getPoint();
+            if (lastRoutePoint == null) {
+                lastRoutePoint = pbPoint.getPoint();
                 continue;
             }
 
             RoutePoint pt = pbPoint.getPoint();
 
-            PointF lastPbPointPt = new PointF((float)lastPoint.getEasting(), (float)lastPoint.getNorthing());
+            PointF lastPbPointPt = new PointF((float)lastRoutePoint.getEasting(), (float)lastRoutePoint.getNorthing());
             PointF pbPointPt = new PointF((float)pbPoint.getPoint().getEasting(), (float)pbPoint.getPoint().getNorthing());
 
             // Determine if location is between this one and last one on the PB track
@@ -335,7 +339,7 @@ public class ClimbController {
             }
 
             lastIndex++;
-            lastPoint = pt;
+            lastRoutePoint = pt;
         }
         return Float.MIN_VALUE;
     }

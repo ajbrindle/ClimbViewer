@@ -53,7 +53,7 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
                 "km", totDistToGo, true);
 
         elevationView = (ClimbView) findViewById(R.id.elevationView);
-        elevationView.setClimb(ClimbController.getInstance().getClimb(), true);
+        elevationView.setClimb(ClimbController.getInstance().getClimb());
         elevationView.addPlot(ClimbController.PointType.ATTEMPT);
 
         if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
@@ -63,7 +63,6 @@ public class FullClimbActivity extends AppCompatActivity implements ActivityUpda
 
     @Override
     protected void onResume() {
-        Log.d(TAG, "onResume");
         loadTime = new Date().getTime();
         heightSet = false;
 

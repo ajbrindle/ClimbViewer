@@ -18,6 +18,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
@@ -51,6 +53,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_route_view);
         getSupportActionBar().hide();
 
@@ -65,7 +68,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         prepareForFinish = -1;
 
         fullRouteView = (ClimbView) findViewById(R.id.fullRouteView);
-        fullRouteView.setClimb(route, false);
+        fullRouteView.setClimb(route);
         fullRouteView.setTransparency(0x88);
         setClimbViewHeight();
         fullRouteView.invalidate();
@@ -109,6 +112,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
         map.setZoom(18);
         map.setTilt(45);
+        map.setCentre(ClimbController.getInstance().getLastPointLL());
 
         if (ClimbController.getInstance().isRouteInProgress()) {
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
@@ -179,8 +183,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             if (map != null && snappedPos != null) {
                 lastRoutePoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
                 map.addMarker(lastRoutePoint, ClimbController.PointType.ROUTE,
-                        ClimbController.PointType.ROUTE.getColor(), false);
-                map.moveCamera(point, false);
+                        ClimbController.PointType.ROUTE.getColor(), true);
+                map.moveCamera(point, false, false);
             }
         } else if (prepareForFinish < 0) {
             // Hide elevation data and show "off route" warning and restart monitoring
@@ -198,7 +202,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 map.plotOffRouteTrack(radius, new LatLng(point.getLat(), point.getLon()));
                 map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ROUTE,
                         ClimbController.PointType.ROUTE.getColor(), false);
-//                map.moveOffRouteCamera(new LatLng(point.getLat(), point.getLon()), point.getBearing());
             }
         }
 
@@ -227,7 +230,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
             return new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
         } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-            return new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
+            return new Intent(ApplicationContextProvider.getContext(), SectionViewActivity.class);
         } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
             return new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
         }

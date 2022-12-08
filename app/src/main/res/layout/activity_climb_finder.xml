@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".ClimbFinderActivity">
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/btnSetClimb"
+        android:text="Define Climb"
+        android:layout_margin="4dp"/>
+    <com.sk7software.climbviewer.view.ClimbView
+        android:id="@+id/climbFinder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#00ffffff" />
+    <com.sk7software.climbviewer.view.ClimbView
+        android:id="@+id/climbZoom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#00ffffff" />
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/mapClimbView"
+        android:name="com.sk7software.climbviewer.MapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_map" />
+</LinearLayout>

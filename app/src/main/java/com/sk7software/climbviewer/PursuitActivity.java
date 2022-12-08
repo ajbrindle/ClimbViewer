@@ -132,10 +132,10 @@ public class PursuitActivity extends AppCompatActivity implements ActivityUpdate
             mirror.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
                     ClimbController.PointType.PB, Color.GREEN, false);
         }
-        map.moveCamera(snappedPos, false);
+        map.moveCamera(snappedPos, false, true);
 
         if (ClimbController.getInstance().getDistToPB() > 0) {
-            mirror.moveCamera(snappedPos, true);
+            mirror.moveCamera(snappedPos, true, true);
         }
 
         LinearLayout ll = (LinearLayout)findViewById(R.id.mirror);

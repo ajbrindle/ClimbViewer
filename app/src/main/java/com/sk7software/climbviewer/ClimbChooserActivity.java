@@ -1,10 +1,5 @@
 package com.sk7software.climbviewer;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.view.MenuCompat;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -22,40 +17,35 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.view.MenuCompat;
+
+import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.maps.OnMapsSdkInitializedCallback;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.list.RouteListActivity;
-import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.BackupData;
-import com.sk7software.climbviewer.model.ClimbAttempt;
-import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
-import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.network.NetworkRequest;
-import com.sk7software.climbviewer.view.DisplayFormatter;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class ClimbChooserActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
-    private ArrayList<HashMap<String,String>> climbList = new ArrayList<HashMap<String,String>>();
+    private ArrayList<HashMap<String,String>> climbList = new ArrayList<>();
     private ListView climbListView;
     private SimpleAdapter climbListAdapter;
     private int currentClimbId;
@@ -63,9 +53,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private int selectedClimb;
     private List<GPXRoute> allClimbs;
     private LocationMonitor monitor;
-    private PointF lastPoint;
 
-    private ArrayList<HashMap<String,String>> routeList = new ArrayList<HashMap<String,String>>();
+    private ArrayList<HashMap<String,String>> routeList = new ArrayList<>();
     private ListView routeListView;
     private SimpleAdapter routeListAdapter;
     private int currentRouteId;
@@ -74,6 +63,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private List<GPXRoute> allRoutes;
 
     private Button showClimbButton;
+    private Button findClimbsButton;
     private ImageButton deleteClimbButton;
     private Button showRouteButton;
     private Button followRouteButton;
@@ -143,6 +133,15 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             public void onClick(View v) {
                 Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbViewActivity.class);
                 showClimb(currentClimbId, i);
+            }
+        });
+
+        findClimbsButton = (Button) findViewById(R.id.findClimbsBtn);
+        findClimbsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbFinderActivity.class);
+                showRoute(i, 0);
             }
         });
 
@@ -320,6 +319,9 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         }
 
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
+            if (monitor != null && monitor.isListenerRunning()) {
+                monitor.stopListener();
+            }
             showClimb(PositionMonitor.getInstance().getOnClimbId(), null);
         }
     }
@@ -353,14 +355,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     }
 
     private Intent getNextScreen() {
-        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-            return new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
-        } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-            return new Intent(ApplicationContextProvider.getContext(), FullClimbActivity.class);
-        } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-            return new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
-        }
-        return null;
+        return new Intent(ApplicationContextProvider.getContext(), SectionViewActivity.class);
     }
 
     @Override
