@@ -6,9 +6,9 @@ public enum TableIdentifier {
     CLIMB_ATTEMPT("CA"),
     CLIMB_ATTEMPT_POINT("CAP");
 
-    private String abbrev;
+    private final String abbrev;
 
-    private TableIdentifier(String abbrev) {
+    TableIdentifier(String abbrev) {
         this.abbrev = abbrev;
     }
 

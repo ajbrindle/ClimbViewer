@@ -18,10 +18,12 @@ import android.widget.TextView;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.climbviewer.view.SummaryPanel;
 
@@ -57,6 +59,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     private MapFragment.PlotType plotType;
 
     private static final String TAG = SectionViewActivity.class.getSimpleName();
+    private static final int DEFAULT_DISPLAY_INTERVAL = 15;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,28 +71,28 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
         climbId = getIntent().getIntExtra("id", 0);
         Log.d(TAG, "Climb id: " + climbId);
-        climb = Database.getInstance().getClimb(climbId);
+        climb = ClimbController.getInstance().getClimb();
 
-        climbView = (ClimbView) findViewById(R.id.sectionView);
-        climbView.setClimb(climb);
+        climbView = findViewById(R.id.sectionView);
+        climbView.setClimb(climb, 20);
         climbView.setTransparency(0xFF);
         setClimbViewHeight();
         climbView.invalidate();
 
-        txtPanel1 = (TextView)findViewById(R.id.txtPanel1);
-        txtPanel2 = (TextView)findViewById(R.id.txtPanel2);
-        txtPanel3 = (TextView)findViewById(R.id.txtPanel3);
-        txtPanel4 = (TextView)findViewById(R.id.txtPanel4);
-        lblPanel1 = (TextView)findViewById(R.id.lblPanel1);
-        lblPanel2 = (TextView)findViewById(R.id.lblPanel2);
-        lblPanel3 = (TextView)findViewById(R.id.lblPanel3);
-        lblPanel4 = (TextView)findViewById(R.id.lblPanel4);
-        panel3 = (LinearLayout)findViewById(R.id.panel3);
-        panel4 = (LinearLayout)findViewById(R.id.panel4);
+        txtPanel1 = findViewById(R.id.txtPanel1);
+        txtPanel2 = findViewById(R.id.txtPanel2);
+        txtPanel3 = findViewById(R.id.txtPanel3);
+        txtPanel4 = findViewById(R.id.txtPanel4);
+        lblPanel1 = findViewById(R.id.lblPanel1);
+        lblPanel2 = findViewById(R.id.lblPanel2);
+        lblPanel3 = findViewById(R.id.lblPanel3);
+        lblPanel4 = findViewById(R.id.lblPanel4);
+        panel3 = findViewById(R.id.panel3);
+        panel4 = findViewById(R.id.panel4);
 
         // Load first screen type
         plotType = null;
-        mirrorPanel = (LinearLayout)findViewById(R.id.mirror);
+        mirrorPanel = findViewById(R.id.mirror);
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
         mirrorMap = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mirrorMap);
         loadNextScreen(true);
@@ -149,16 +152,16 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                     return;
                 }
 
-                climbView.startUpdating();
                 climbView.invalidate();
-
                 updatePanels();
 
                 RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSnappedPosition();
                 plotMarkers(snappedPos);
 
                 long now = new Date().getTime();
-                if (now - loadTime > ClimbController.DISPLAY_INTERVAL) {
+                int displayInterval = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SCREEN_DELAY_S, DEFAULT_DISPLAY_INTERVAL);
+                displayInterval *= 1000;
+                if (now - loadTime > displayInterval) {
                     // Go to next mode
                     loadNextScreen(false);
                 }
@@ -173,21 +176,21 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         if (map != null && snappedPos != null) {
             LatLng climbPoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
             map.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
-                    ClimbController.PointType.ROUTE.getColor(), true);
+                    ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.LARGE);
 
             if (plotType == MapFragment.PlotType.PURSUIT) {
                 mirrorMap.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
-                        ClimbController.PointType.ROUTE.getColor(), false);
+                        ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);
             }
 
             if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
                 RoutePoint pbPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB).getSnappedPosition();
                 map.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
-                        ClimbController.PointType.PB, Color.GREEN, true);
+                        ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.LARGE);
 
                 if (plotType == MapFragment.PlotType.PURSUIT) {
                     mirrorMap.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
-                            ClimbController.PointType.PB, Color.GREEN, false);
+                            ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.MEDIUM);
 
                     if (ClimbController.getInstance().getDistToPB() > 20) {
                         mirrorPanel.setVisibility(View.VISIBLE);
@@ -263,14 +266,15 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             return;
         }
 
-        RelativeLayout completionPanel = (RelativeLayout)findViewById(R.id.climbCompletePanel);
+        RelativeLayout completionPanel = findViewById(R.id.climbCompletePanel);
         SummaryPanel panel = new SummaryPanel();
         panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId(), this);
     }
 
     private void loadNextScreen(boolean firstLoad) {
         MapFragment.PlotType currentType = plotType;
-        plotType = ScreenController.getInstance().getNextPlotType(currentType);
+        boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null;
+        plotType = ScreenController.getInstance().getNextPlotType(currentType, inPursuit);
         loadTime = new Date().getTime();
 
         if (!firstLoad && plotType == null) {

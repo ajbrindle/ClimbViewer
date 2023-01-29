@@ -1,5 +1,7 @@
 package com.sk7software.climbviewer.db;
 
+import static java.lang.reflect.Array.getInt;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -11,6 +13,8 @@ public class Preferences {
     public static final String PREFERENCES_INIT = "PREFS_INIT";
     public static final String PREFERENCES_ROUTE_ID = "PREF_ROUTE_ID";
     public static final String PREFERENCES_ROUTE_START_IDX = "PREF_ROUTE_START_IDX";
+    public static final String PREFERENCES_SMOOTH_DIST = "PREF_SMOOTH_DIST";
+    public static final String PREFERENCES_SCREEN_DELAY_S = "PREF_SCREEN_DELAY_S";
     public static final String PREFS_SET = "Y";
 
     private static Preferences instance;
@@ -55,7 +59,11 @@ public class Preferences {
     }
 
     public int getIntPreference(String name) {
-        return prefs.getInt(name, 0);
+        return getIntPreference(name, 0);
+    }
+
+    public int getIntPreference(String name, int defVal) {
+        return prefs.getInt(name, defVal);
     }
 
     public void clearAllPreferences() {

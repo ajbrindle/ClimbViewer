@@ -27,7 +27,6 @@ import lombok.Setter;
 public class ClimbController {
     private static ClimbController INSTANCE = null;
     private static final String TAG = ClimbController.class.getSimpleName();
-    public static final int DISPLAY_INTERVAL = 20000;
 
     // Climb
     private GPXRoute climb;

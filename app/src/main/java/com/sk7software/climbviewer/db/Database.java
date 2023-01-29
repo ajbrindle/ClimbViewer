@@ -33,16 +33,16 @@ import java.util.Map;
 
 public class Database extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 5;
+    public static final int DATABASE_VERSION = 6;
     public static final String DATABASE_NAME = "com.sk7software.climbviewer.db";
     private static final String TAG = Database.class.getSimpleName();
 
     private static Database dbInstance;
-    private int maxId = 1;
+    private final int maxId = 1;
     private boolean isUpgrading = false;
     private SQLiteDatabase currentDb = null;
 
-    private static final List<String> CLIMB_COLUMNS = Arrays.asList("ID", "NAME", "PROJECTION_ID", "ZONE");
+    private static final List<String> CLIMB_COLUMNS = Arrays.asList("ID", "NAME", "PROJECTION_ID", "ZONE", "SMOOTH_DIST");
     private static final List<String> CLIMB_POINT_COLUMNS = Arrays.asList ("ID", "POINT_NO", "LAT", "LON", "EASTING", "NORTHING", "ELEVATION");
     private static final List<String> CLIMB_ATTEMPT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "TIMESTAMP", "DURATION");
     private static final List<String> CLIMB_ATTEMPT_POINT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "POINT_NO", "TIMESTAMP", "LAT", "LON", "EASTING", "NORTHING");
@@ -119,7 +119,21 @@ public class Database extends SQLiteOpenHelper {
             migrateToUTM(db, Projection.SYS_UTM_WGS84);
             isUpgrading = false;
             currentDb = null;
+        }
 
+        if (oldv <=5 && newv >= 6) {
+            isUpgrading = true;
+            currentDb = db;
+            // Add smooth distance to climb
+            String sqlStr = "ALTER TABLE CLIMB " +
+                    "ADD SMOOTH_DIST INTEGER;";
+            db.execSQL(sqlStr);
+
+            int smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 50);
+            sqlStr = "UPDATE CLIMB SET SMOOTH_DIST = " + smoothDist;
+            db.execSQL(sqlStr);
+            isUpgrading = false;
+            currentDb = null;
         }
     }
 
@@ -342,11 +356,14 @@ public class Database extends SQLiteOpenHelper {
             }
             String table1Name = "climb".equals(type) ? "CLIMB" : "ROUTE";
             String table2Name = "climb".equals(type) ? "CLIMB_POINT" : "ROUTE_POINT";
+            int smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 50);
 
             String insert = "INSERT INTO " + table1Name + " VALUES(" + id + ",'" +
                     name + "'," +
                     Projection.SYS_UTM_WGS84 + "," +
-                    zone + ")";
+                    zone +
+                    ("CLIMB".equals(table1Name) ? "," + smoothDist : "") +
+                    ")";
             db.execSQL(insert);
 
             int i = 1;
@@ -421,7 +438,7 @@ public class Database extends SQLiteOpenHelper {
 
     public GPXRoute getClimb(int id) {
         SQLiteDatabase db = getReadableDatabase();
-        String query = "SELECT a.name, a.projection_id, a.zone, b.point_no, b.easting, b.northing, b.elevation, b.lat, b.lon " +
+        String query = "SELECT a.name, a.projection_id, a.zone, a.smooth_dist, b.point_no, b.easting, b.northing, b.elevation, b.lat, b.lon " +
                 "FROM CLIMB a INNER JOIN CLIMB_POINT b " +
                 "ON a.id = b.id " +
                 "WHERE a.id = ? " +
@@ -436,16 +453,17 @@ public class Database extends SQLiteOpenHelper {
                 climb.setName(cursor.getString(0));
                 climb.setProjectionId(cursor.getInt(1));
                 climb.setZone(cursor.getInt(2));
+                climb.setSmoothDist(cursor.getInt(3));
 
                 List<RoutePoint> points = new ArrayList<>();
                 while (!cursor.isAfterLast()) {
                     RoutePoint point = new RoutePoint();
-                    point.setNo(cursor.getInt(3));
-                    point.setEasting(cursor.getDouble(4));
-                    point.setNorthing(cursor.getDouble(5));
-                    point.setElevation(cursor.getDouble(6));
-                    point.setLat(cursor.getDouble(7));
-                    point.setLon(cursor.getDouble(8));
+                    point.setNo(cursor.getInt(4));
+                    point.setEasting(cursor.getDouble(5));
+                    point.setNorthing(cursor.getDouble(6));
+                    point.setElevation(cursor.getDouble(7));
+                    point.setLat(cursor.getDouble(8));
+                    point.setLon(cursor.getDouble(9));
                     points.add(point);
                     cursor.moveToNext();
                 }
@@ -621,7 +639,11 @@ public class Database extends SQLiteOpenHelper {
     public void deleteClimb(int climbId) {
         SQLiteDatabase db = getReadableDatabase();
 
-        String del = "DELETE FROM CLIMB_ATTEMPT WHERE id = " + climbId;
+        String del = "DELETE FROM CLIMB_ATTEMPT_POINT WHERE id = " + climbId;
+        db.execSQL(del);
+        del = "DELETE FROM CLIMB_ATTEMPT WHERE id = " + climbId;
+        db.execSQL(del);
+        del = "DELETE FROM CLIMB_POINT WHERE id = " + climbId;
         db.execSQL(del);
         del = "DELETE FROM CLIMB WHERE id = " + climbId;
         db.execSQL(del);
@@ -674,7 +696,7 @@ public class Database extends SQLiteOpenHelper {
         }
 
         // Now delete all attempt points except those for last attempt and PB
-        String del = "DELETE FROM CLIMB_ATTEMPT_POINT WHERE attempt_id NOT IN (" + lastAttemptId + "," + pbId + ")";
+        String del = "DELETE FROM CLIMB_ATTEMPT_POINT WHERE id = " + climbId + " AND attempt_id NOT IN (" + lastAttemptId + "," + pbId + ")";
         db.execSQL(del);
     }
 
@@ -837,6 +859,14 @@ public class Database extends SQLiteOpenHelper {
             Log.d(TAG, "Error looking up id: " + e.getMessage());
         }
         return false;
+    }
+
+    public void updateSmoothDist(int climbId, int smoothDist) {
+        SQLiteDatabase db = getReadableDatabase();
+        String query = "UPDATE CLIMB " +
+                "SET smooth_dist = " + smoothDist +
+                " WHERE id = " + climbId;
+        db.execSQL(query);
     }
 
     private void migrateToUTM(SQLiteDatabase db, int toId) {

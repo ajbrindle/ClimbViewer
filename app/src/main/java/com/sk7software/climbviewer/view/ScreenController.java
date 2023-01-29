@@ -1,28 +1,24 @@
 package com.sk7software.climbviewer.view;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.PointF;
+import android.graphics.Point;
 import android.util.Log;
+import android.view.Display;
+import android.view.WindowManager;
 
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbChooserActivity;
 import com.sk7software.climbviewer.ClimbController;
-import com.sk7software.climbviewer.FullClimbActivity;
-import com.sk7software.climbviewer.MapActivity;
 import com.sk7software.climbviewer.MapFragment;
 import com.sk7software.climbviewer.PositionMonitor;
-import com.sk7software.climbviewer.PursuitActivity;
 import com.sk7software.climbviewer.RouteViewActivity;
 import com.sk7software.climbviewer.SectionViewActivity;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.model.GPXRoute;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ScreenController {
     private static ScreenController INSTANCE = null;
@@ -38,7 +34,7 @@ public class ScreenController {
         return INSTANCE;
     }
 
-    public MapFragment.PlotType getNextPlotType(MapFragment.PlotType currentType) {
+    public MapFragment.PlotType getNextPlotType(MapFragment.PlotType currentType, boolean inPursuit) {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
             List<MapFragment.PlotType> availableScreens = new ArrayList<>();
@@ -48,7 +44,7 @@ public class ScreenController {
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
                 availableScreens.add(MapFragment.PlotType.FULL_CLIMB);
             }
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT) && inPursuit) {
                 availableScreens.add(MapFragment.PlotType.PURSUIT);
             }
 
@@ -77,16 +73,9 @@ public class ScreenController {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
             List<Class<?>> availableScreens = new ArrayList<>();
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-                availableScreens.add(MapActivity.class);
-            }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
                 availableScreens.add(SectionViewActivity.class);
             }
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-                availableScreens.add(PursuitActivity.class);
-            }
-
             if (availableScreens.size() == 1) {
                 // Just stay on current screen
                 return null;
@@ -117,5 +106,14 @@ public class ScreenController {
         }
 
         return null;
+    }
+
+    public static Point getScreenSize() {
+        // Find screen width
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        return size;
     }
 }

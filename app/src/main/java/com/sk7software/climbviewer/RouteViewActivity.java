@@ -29,6 +29,7 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.ScreenController;
 
 import java.util.ArrayList;
@@ -63,12 +64,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         // Get route and adjust start point
         route = Database.getInstance().getRoute(routeId);
         route.adjustRoute(startIdx);
+        ClimbController.getInstance().loadRoute(route);
 
         calcDistAndElevation();
         prepareForFinish = -1;
 
-        fullRouteView = (ClimbView) findViewById(R.id.fullRouteView);
-        fullRouteView.setClimb(route);
+        fullRouteView = findViewById(R.id.fullRouteView);
+        fullRouteView.setClimb(route, 20);
         fullRouteView.setTransparency(0x88);
         setClimbViewHeight();
         fullRouteView.invalidate();
@@ -91,7 +93,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
-        SeekBar transparency = (SeekBar) findViewById(R.id.profileTransparency);
+        SeekBar transparency = findViewById(R.id.profileTransparency);
         transparency.setProgress(0x88);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -105,18 +107,17 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) { }
         });
-        offRoutePanel = (RelativeLayout) findViewById(R.id.panelOffRoute);
+        offRoutePanel = findViewById(R.id.panelOffRoute);
         offRoutePanel.setVisibility(View.GONE);
 
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
-        map.setZoom(18);
-        map.setTilt(45);
-        map.setCentre(ClimbController.getInstance().getLastPointLL());
 
         if (ClimbController.getInstance().isRouteInProgress()) {
+            setMapForFollowing();
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
             monitor = new LocationMonitor(this);
+        } else {
+            map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
         }
     }
 
@@ -164,6 +165,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 offRoutePanel.setVisibility(View.GONE);
                 ClimbController.getInstance().setRouteInProgress(true);
                 PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.ROUTE);
+                setMapForFollowing();
                 map.setTrackRider(true);
                 fullRouteView.addPlot(ClimbController.PointType.ROUTE);
             }
@@ -174,16 +176,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 return;
             }
 
-            fullRouteView.startUpdating();
             fullRouteView.invalidate();
-
             updateDistAndElevation();
 
             RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getSnappedPosition();
             if (map != null && snappedPos != null) {
                 lastRoutePoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
                 map.addMarker(lastRoutePoint, ClimbController.PointType.ROUTE,
-                        ClimbController.PointType.ROUTE.getColor(), true);
+                        ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.LARGE);
                 map.moveCamera(point, false, false);
             }
         } else if (prepareForFinish < 0) {
@@ -201,7 +201,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 double radius = calcDistBetweenPoints(point, lastRoutePoint);
                 map.plotOffRouteTrack(radius, new LatLng(point.getLat(), point.getLon()));
                 map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ROUTE,
-                        ClimbController.PointType.ROUTE.getColor(), false);
+                        ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);
             }
         }
 
@@ -227,14 +227,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     }
 
     private Intent getNextScreen() {
-        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-            return new Intent(ApplicationContextProvider.getContext(), MapActivity.class);
-        } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-            return new Intent(ApplicationContextProvider.getContext(), SectionViewActivity.class);
-        } else if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-            return new Intent(ApplicationContextProvider.getContext(), PursuitActivity.class);
-        }
-        return null;
+        return new Intent(ApplicationContextProvider.getContext(), SectionViewActivity.class);
+    }
+
+    private void setMapForFollowing() {
+        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FOLLOW_ROUTE, false);
+        map.setZoom(18);
+        map.setTilt(45);
+        map.setCentre(ClimbController.getInstance().getLastPointLL());
     }
 
     private void setClimbViewHeight() {
@@ -271,10 +271,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         if (!ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = (TextView) findViewById(R.id.panel1Label);
-            TextView label2 = (TextView) findViewById(R.id.panel2Label);
-            TextView txtDist = (TextView) findViewById(R.id.txtPanel1);
-            TextView txtElev = (TextView) findViewById(R.id.txtPanel2);
+            TextView label1 = findViewById(R.id.panel1Label);
+            TextView label2 = findViewById(R.id.panel2Label);
+            TextView txtDist = findViewById(R.id.txtPanel1);
+            TextView txtElev = findViewById(R.id.txtPanel2);
 
             label1.setText("DISTANCE");
             label2.setText("ELEV GAIN");
@@ -286,10 +286,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
     private void updateDistAndElevation() {
         if (ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = (TextView) findViewById(R.id.panel1Label);
-            TextView label2 = (TextView) findViewById(R.id.panel2Label);
-            TextView txtDist = (TextView) findViewById(R.id.txtPanel1);
-            TextView txtElev = (TextView) findViewById(R.id.txtPanel2);
+            TextView label1 = findViewById(R.id.panel1Label);
+            TextView label2 = findViewById(R.id.panel2Label);
+            TextView txtDist = findViewById(R.id.txtPanel1);
+            TextView txtElev = findViewById(R.id.txtPanel2);
 
             label1.setText("TO GO");
             label2.setText("ELEV LEFT");

@@ -10,6 +10,7 @@ import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,7 +24,7 @@ public class PositionMonitor {
     private static PositionMonitor INSTANCE = null;
     private static final String TAG = PositionMonitor.class.getSimpleName();
 
-    private PointF lastPoint;
+    private List<PointF> prevPoints;
     private Set<MonitorType> monitoring;
     private int routeId;
     private List<GPXRoute> climbs;
@@ -34,7 +35,9 @@ public class PositionMonitor {
 
     private PositionMonitor() {
         super();
+        prevPoints = new ArrayList<>();
     }
+
     public static PositionMonitor getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new PositionMonitor();
@@ -52,8 +55,8 @@ public class PositionMonitor {
     }
 
     public void locationChanged(RoutePoint point) {
-        if (lastPoint == null) {
-            lastPoint = new PointF((float) point.getEasting(), (float) point.getNorthing());
+        if (prevPoints.isEmpty()) {
+            prevPoints.add(new PointF((float) point.getEasting(), (float) point.getNorthing()));
             return;
         }
 
@@ -65,9 +68,9 @@ public class PositionMonitor {
             for (GPXRoute climb : climbs) {
                 PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
                 if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon()) &&
-                        LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+                        hasPassedCloseToStart(start, currentPoint)) {
                     PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                    if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
+                    if (checkDirection(second, currentPoint)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         onClimbId = climb.getId();
                         break;
@@ -76,14 +79,14 @@ public class PositionMonitor {
             }
         }
         if (monitoring.contains(MonitorType.ROUTE)) {
-            // Check if the point is on the selected route
+            // Check if any point on selected route is between current point and one of the previous ones
             GPXRoute route = Database.getInstance().getRoute(routeId);
             for (int i = 0; i < route.getPoints().size() - 1; i++) {
-                PointF start = new PointF((float) route.getPoints().get(i).getEasting(), (float) route.getPoints().get(i).getNorthing());
+                PointF routePt = new PointF((float) route.getPoints().get(i).getEasting(), (float) route.getPoints().get(i).getNorthing());
                 if (route.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon()) &&
-                        LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+                        hasPassedCloseToStart(routePt, currentPoint)) {
                     PointF second = new PointF((float) route.getPoints().get(i + 1).getEasting(), (float) route.getPoints().get(i + 1).getNorthing());
-                    if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
+                    if (checkDirection(second, currentPoint)) {
                         Log.d(TAG, "ON ROUTE " + route.getName());
                         onRoute = true;
                         if (!tryingToResume) {
@@ -98,7 +101,24 @@ public class PositionMonitor {
                 }
             }
         }
-        lastPoint = currentPoint;
+
+        if (prevPoints.size() >= 5) {
+            prevPoints.remove(0);
+        }
+        prevPoints.add(currentPoint);
+    }
+
+    private boolean hasPassedCloseToStart(PointF start, PointF currentPoint) {
+        for (int i=prevPoints.size()-1; i>=0; i--) {
+            if (LocationMonitor.pointWithinLineSegment(start, prevPoints.get(i), currentPoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean checkDirection(PointF second, PointF currentPoint) {
+        return LocationMonitor.isRightDirection(second, prevPoints.get(prevPoints.size()-1), currentPoint);
     }
 
     public void doMonitor(MonitorType type) {
@@ -119,6 +139,6 @@ public class PositionMonitor {
     public enum MonitorType {
         NONE,
         ROUTE,
-        CLIMB;
+        CLIMB
     }
 }

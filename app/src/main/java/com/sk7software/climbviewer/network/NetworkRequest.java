@@ -31,6 +31,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 
 public class NetworkRequest {
@@ -44,8 +45,8 @@ public class NetworkRequest {
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
-        public void onRequestCompleted(Object callbackData);
-        public void onError(Exception e);
+        void onRequestCompleted(Object callbackData);
+        void onError(Exception e);
     }
 
     private synchronized static RequestQueue getQueue(Context context) {
@@ -161,7 +162,6 @@ public class NetworkRequest {
             TrackMetadata m = new TrackMetadata();
             Track t = new Track();
             TrackSegment s = new TrackSegment();
-
             m.setTime(route.getTime());
             s.setPoints(route.getPoints());
             t.setName(route.getName());

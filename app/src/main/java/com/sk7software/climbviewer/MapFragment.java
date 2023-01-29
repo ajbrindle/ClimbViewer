@@ -11,9 +11,11 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Property;
 import android.view.LayoutInflater;
@@ -31,17 +33,21 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
+import com.google.android.gms.maps.model.CustomCap;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
 import com.google.maps.android.SphericalUtil;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.Palette;
+import com.sk7software.climbviewer.view.PositionMarker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,20 +78,11 @@ public class MapFragment extends Fragment {
         FULL_CLIMB,
         PURSUIT,
         ROUTE,
-        NORMAL;
+        FOLLOW_ROUTE,
+        NORMAL
     }
 
-    private OnMapReadyCallback callback = new OnMapReadyCallback() {
-
-        /**
-         * Manipulates the map once available.
-         * This callback is triggered when the map is ready to be used.
-         * This is where we can add markers or lines, add listeners or move the camera.
-         * In this case, we just add a marker near Sydney, Australia.
-         * If Google Play services is not installed on the device, the user will be prompted to
-         * install it inside the SupportMapFragment. This method will only be triggered once the
-         * user has installed Google Play services and returned to the app.
-         */
+    private final OnMapReadyCallback callback = new OnMapReadyCallback() {
         @Override
         public void onMapReady(GoogleMap googleMap) {
             Log.d(TAG, "MAP READY");
@@ -95,7 +92,11 @@ public class MapFragment extends Fragment {
                     Log.d(TAG, "MAP LOADED");
                     map = googleMap;
                     map.setMapType(mapType);
-                    track = (plotType == PlotType.ROUTE ? ClimbController.getInstance().getRoute() : ClimbController.getInstance().getClimb());
+                    if (plotType == PlotType.ROUTE || plotType == PlotType.FOLLOW_ROUTE) {
+                        track = ClimbController.getInstance().getRoute();
+                    } else {
+                        track = ClimbController.getInstance().getClimb();
+                    }
                     mapReady = true;
 
                     if (centre != null) {
@@ -127,6 +128,10 @@ public class MapFragment extends Fragment {
         marker.clear();
     }
 
+    public void setReady(boolean ready) {
+        mapReady = ready;
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -144,6 +149,10 @@ public class MapFragment extends Fragment {
         if (mapFragment != null) {
             mapFragment.getMapAsync(callback);
         }
+    }
+
+    public void setPlotType(PlotType plotType) {
+        this.plotType = plotType;
     }
 
     public void setTrackRider(boolean trackRider) {
@@ -176,23 +185,27 @@ public class MapFragment extends Fragment {
             points.add(point);
             boundsBuilder.include(point);
         }
-
         if (plotType == PlotType.FULL_CLIMB) {
             // Plot gradient shaded line for climb
+            int zIdx = track.getPoints().size() + 1;
             for (int i = 1; i < track.getPoints().size(); i++) {
                 PolylineOptions lineOptions = new PolylineOptions();
                 List<LatLng> line = new ArrayList<>();
                 line.add(new LatLng(track.getPoints().get(i - 1).getLat(), track.getPoints().get(i - 1).getLon()));
                 line.add(new LatLng(track.getPoints().get(i).getLat(), track.getPoints().get(i).getLon()));
                 if (i < track.getPoints().size() - 2) {
-                    line.add(new LatLng(track.getPoints().get(i + 1).getLat(), track.getPoints().get(i + 1).getLon()));
+                    //line.add(new LatLng(track.getPoints().get(i + 1).getLat(), track.getPoints().get(i + 1).getLon()));
                 }
                 double elevDiff = track.getPoints().get(i).getElevation() - track.getPoints().get(i - 1).getElevation();
                 double distBetween = track.getPoints().get(i).getDistFromStart() - track.getPoints().get(i - 1).getDistFromStart();
                 double gradient = elevDiff * 100 / distBetween;
+
                 lineOptions.width(180)
                            .color(Palette.getColour(gradient))
-                           .addAll(line);
+                           .startCap(new RoundCap())
+                           .endCap(new RoundCap())
+                           .addAll(line)
+                           .zIndex(zIdx--);
                 map.addPolyline(lineOptions);
             }
         } else {
@@ -207,7 +220,7 @@ public class MapFragment extends Fragment {
     }
 
     public void plotClimbTrack(List<LatLng> points) {
-        if (!mapReady || track == null) {
+        if (!mapReady || track == null || points == null) {
             return;
         }
 
@@ -225,7 +238,8 @@ public class MapFragment extends Fragment {
         PolylineOptions lineOptions = new PolylineOptions();
         lineOptions.addAll(points)
                 .width(20)
-                .color(0xFF555555);
+                .color(0xFF555555)
+                .zIndex(10);
         climbTrack = map.addPolyline(lineOptions);
         updateView(boundsBuilder.build());
     }
@@ -234,6 +248,8 @@ public class MapFragment extends Fragment {
         if (!mapReady || track == null) {
             return;
         }
+
+        plotType = PlotType.ROUTE;
 
         // Increase radius to give a bit of padding but limit to 1km
         if (radius > 500) {
@@ -273,7 +289,7 @@ public class MapFragment extends Fragment {
             CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
             map.moveCamera(cu);
             zoom = (int)map.getCameraPosition().zoom;
-        } else if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.PURSUIT) {
+        } else if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.PURSUIT || plotType == PlotType.FOLLOW_ROUTE) {
             CameraPosition position = new CameraPosition.Builder()
                     .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()))
                     .zoom(zoom)
@@ -330,15 +346,7 @@ public class MapFragment extends Fragment {
         map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
     }
 
-    public void moveOffRouteCamera(LatLng centrePoint, float bearing) {
-        CameraPosition position = new CameraPosition.Builder()
-                .target(centrePoint)
-                .bearing(bearing)
-                .build();
-        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 1, null);
-    }
-
-    public void addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
+    public void addMarker(LatLng ll, ClimbController.PointType type, int colour, PositionMarker.Size size) {
         if (!mapReady) {
             return;
         }
@@ -349,7 +357,7 @@ public class MapFragment extends Fragment {
         } else {
             marker.put(type, map.addMarker(new MarkerOptions()
                     .position(ll)
-                    .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour, large))));
+                    .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(size, colour)))));
         }
     }
 
@@ -377,17 +385,6 @@ public class MapFragment extends Fragment {
         locationMarker = map.addCircle(circleOptions);
     }
 
-    public void showPositionAndZoom(LatLng ll, int zoom) {
-        showPosition(ll);
-        this.zoom = zoom;
-        CameraPosition position = new CameraPosition.Builder()
-                .target(ll)
-                .zoom(zoom)
-                .build();
-        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 300, null);
-
-    }
-
     private float calcRadius() {
         if (posMarkerRadius > 0) return posMarkerRadius;
 
@@ -396,32 +393,13 @@ public class MapFragment extends Fragment {
         LatLng bottomRight = map.getProjection().getVisibleRegion().nearRight;
 
         // use the Location class to calculate the distance between the 2 diagonal map points
-        float results[] = new float[4];
+        float[] results = new float[4];
         Location.distanceBetween(topLeft.latitude,topLeft.longitude,bottomRight.latitude,bottomRight.longitude,results);
         posMarkerRadius = results[0]/100;
         return posMarkerRadius;
     }
 
-    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour, boolean large) {
-        float scaleFac = large ? 1.5f : 1;
-        int right = (int)(82 * scaleFac);
-        int bottom = (int)(107 * scaleFac);
-        Drawable background = ContextCompat.getDrawable(context, R.drawable.ic_map_marker_solid);
-        background.setBounds(0, 0, right, bottom);
-        background.setTint(colour);
-        Drawable innerBackgroundDrawable = ContextCompat.getDrawable(context, R.drawable.ic_map_marker_solid);
-        innerBackgroundDrawable.setBounds((int)(5 * scaleFac), (int)(5 * scaleFac), (int)(77 * scaleFac), (int)(102 * scaleFac));
-        innerBackgroundDrawable.setTint(Color.BLACK);
-        Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorResId);
-        vectorDrawable.setBounds((int)(15 * scaleFac), (int)(17 * scaleFac), (int)(65 * scaleFac), (int)(60 * scaleFac));
-        vectorDrawable.setTint(colour);
-        Bitmap bitmap = Bitmap.createBitmap(right, bottom, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        background.draw(canvas);
-        innerBackgroundDrawable.draw(canvas);
-        vectorDrawable.draw(canvas);
-        return BitmapDescriptorFactory.fromBitmap(bitmap);
-    }
+
 
     private static void animateMarker(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
         TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {

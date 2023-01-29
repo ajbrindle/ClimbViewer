@@ -28,6 +28,7 @@ public class GPXRoute {
     private int projectionId;
     private int zone;
     private String time;
+    private int smoothDist;
 
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;

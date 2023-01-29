@@ -79,7 +79,6 @@ public class LocationMonitor {
         double dx = loc.x - xxyy.x;
         double dy = loc.y - xxyy.y;
         double distSq = dx * dx + dy * dy;
-        //Log.d(TAG, "Dist sq: " + distSq);
         return distSq < MAX_DIST_SQ;
     }
 
@@ -106,6 +105,9 @@ public class LocationMonitor {
         else {
             xx = a.x + param * C;
             yy = a.y + param * D;
+            PointF xxyy = new PointF((float)xx, (float)yy);
+            double dx = start.x - xxyy.x;
+            double dy = start.y - xxyy.y;
             return new PointF((float)xx, (float)yy);
         }
     }
@@ -132,7 +134,7 @@ public class LocationMonitor {
     }
 
     public static class ClimbLocationListener implements LocationListener {
-        private ActivityUpdateInterface notifyActivity;
+        private final ActivityUpdateInterface notifyActivity;
 
         public ClimbLocationListener(ActivityUpdateInterface parent) {
             this.notifyActivity = parent;

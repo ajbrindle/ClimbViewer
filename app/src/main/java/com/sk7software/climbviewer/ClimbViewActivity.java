@@ -10,6 +10,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,6 +19,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.AttemptPoint;
 import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
@@ -31,7 +33,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
-public class ClimbViewActivity extends AppCompatActivity {
+public class ClimbViewActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
     private ClimbView elevationView;
     private MapFragment map;
@@ -50,34 +52,11 @@ public class ClimbViewActivity extends AppCompatActivity {
 
         climbId = getIntent().getIntExtra("id", 0);
         climb = Database.getInstance().getClimb(climbId);
+        ClimbController.getInstance().loadClimb(climb);
 
-        if (climb != null) {
-            TextView txtDist = (TextView) findViewById(R.id.txtTotalDist);
-            int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
-            DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart(),
-                    "km", txtDist, true);
-        }
-
-        pb = Database.getInstance().getClimbPB(climbId);
-        TextView txtPB = (TextView) findViewById(R.id.txtPBTime);
-
-        if (pb != null && pb.getPoints() != null && pb.getPoints().size() > 0) {
-            int pbMins = (int)(pb.getDuration() / 60);
-            int pbSecs = pb.getDuration() % 60;
-            txtPB.setText(pbMins + ":" + pbSecs + "s");
-        } else {
-            txtPB.setText("-:--s");
-        }
-
-        // Display number of attempts
-        AttemptStats attempts = Database.getInstance().getLastAttempt(climbId);
-        if (attempts != null) {
-            TextView txtAttempts = (TextView) findViewById(R.id.txtAttempts);
-            txtAttempts.setText("Attempts: " + attempts.getTotal());
-        }
-
-        elevationView = (ClimbView) findViewById(R.id.elevationView);
-        elevationView.setClimb(climb);
+        elevationView = findViewById(R.id.elevationView);
+        elevationView.setParent(this);
+        elevationView.setClimb(climb, 20);
         setClimbViewHeight();
         elevationView.invalidate();
 
@@ -86,6 +65,10 @@ public class ClimbViewActivity extends AppCompatActivity {
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_DOWN || motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     elevationView.setShowGradientAt((int)motionEvent.getX());
+                    LatLng ll = elevationView.getLatLongAtX((int)motionEvent.getX());
+                    if (ll != null) {
+                        map.showPosition(ll);
+                    }
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
                     elevationView.setShowGradientAt(-1);
                 }
@@ -94,8 +77,32 @@ public class ClimbViewActivity extends AppCompatActivity {
             }
         });
 
+        SeekBar smoothDist = (SeekBar)findViewById(R.id.viewSmooth);
+
+        int smoothDistProgress = climb.getSmoothDist();
+        if (smoothDistProgress == 0) {
+            smoothDistProgress = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 50);
+        }
+        smoothDist.setProgress(smoothDistProgress);
+        smoothDist.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                Database.getInstance().updateSmoothDist(climbId, i);
+                climb.setSmoothDist(i);
+                elevationView.setClimb(climb, 20);
+                elevationView.clearPoints();
+                setClimbViewHeight();
+                elevationView.invalidate();
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) { }
+        });
+
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB, false);
+        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);
     }
 
     @Override
@@ -108,13 +115,73 @@ public class ClimbViewActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    @Override
+    public void updateAfterDraw(boolean resizeable) {
+        displayClimbInfo();
+    }
+
+    private void displayClimbInfo() {
+        if (climb != null) {
+            TextView txtDist = findViewById(R.id.txtSegmentDist);
+            int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
+            DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart(),
+                    "km", txtDist, true);
+
+            TextView txtAverageGradient = findViewById(R.id.txtAverageGradient);
+            TextView txtMaxGradient = findViewById(R.id.txtMaxGradient);
+            TextView txtElevationChange = findViewById(R.id.txtElevationChange);
+            TextView txtRating = findViewById(R.id.txtRating);
+
+            double maxElevation = Double.MIN_VALUE;
+            double minElevation = Double.MAX_VALUE;
+            RoutePoint lastPoint = null;
+            for (RoutePoint p : ClimbController.getInstance().getClimb().getPoints()) {
+                if (p.getElevation() < minElevation) {
+                    minElevation = p.getElevation();
+                }
+                if (p.getElevation() > maxElevation) {
+                    maxElevation = p.getElevation();
+                }
+            }
+
+            double elevationChange = maxElevation - minElevation;
+            double averageGradient = elevationChange / ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart();
+            long rating = (long)(averageGradient * 100 * (ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart()));
+
+            DisplayFormatter.setDistanceText((float)elevationChange,"m", txtElevationChange, true);
+            DisplayFormatter.setGradientText((float)averageGradient*100, txtAverageGradient);
+            DisplayFormatter.setGradientText((float)elevationView.getMaxSmoothedGradient(), txtMaxGradient);
+            txtRating.setText(String.valueOf(rating));
+        }
+
+        pb = Database.getInstance().getClimbPB(climbId);
+        TextView txtPB = findViewById(R.id.txtPB);
+
+        if (pb != null && pb.getPoints() != null && pb.getPoints().size() > 0) {
+            int pbMins = pb.getDuration() / 60;
+            int pbSecs = pb.getDuration() % 60;
+            txtPB.setText(pbMins + ":" + pbSecs + "s");
+        } else {
+            txtPB.setText("-:--s");
+        }
+
+        // Display number of attempts
+        AttemptStats attempts = Database.getInstance().getLastAttempt(climbId);
+        TextView txtAttempts = findViewById(R.id.txtAttempts);
+        if (attempts != null) {
+            txtAttempts.setText(String.valueOf(attempts.getTotal()));
+        } else {
+            txtAttempts.setText("0");
+        }
+
+    }
     private void setClimbViewHeight() {
         WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
 
-        LinearLayout panel = (LinearLayout)findViewById(R.id.panel);
+        LinearLayout panel = findViewById(R.id.panel);
 
         int s=0;
         int resource = ApplicationContextProvider.getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
@@ -122,7 +189,9 @@ public class ClimbViewActivity extends AppCompatActivity {
             s = ApplicationContextProvider.getContext().getResources().getDimensionPixelSize(resource);
         }
 
-        Log.d(TAG, "Setting climb view height: " + (size.y - panel.getHeight() - s) + "/" + size.y + " (" + s + ")");
-        elevationView.setHeight(size.y - panel.getHeight() - s, true);
+        // Set height to 1/2 screen
+        int height = (size.y - s) / 2;
+        Log.d(TAG, "Setting climb view height: " + height + "/" + size.y + " (" + s + ")");
+        elevationView.setHeight(height, false);
     }
 }

@@ -16,7 +16,7 @@ import com.sk7software.climbviewer.model.AttemptStats;
 public class SummaryPanel {
 
     private static boolean visible = false;
-    private static String TAG = SummaryPanel.class.getSimpleName();
+    private static final String TAG = SummaryPanel.class.getSimpleName();
 
     public SummaryPanel() {
         SummaryPanel.visible = false;
@@ -26,10 +26,10 @@ public class SummaryPanel {
         AttemptStats stats = ClimbController.getInstance().getLastAttemptStats(lastClimbId);
 
         if (stats != null) {
-            TextView txtLastDist = (TextView) panel.findViewById(R.id.txtSegmentDist);
-            TextView txtLastTime = (TextView) panel.findViewById(R.id.txtSegmentTime);
-            TextView txtPB = (TextView) panel.findViewById(R.id.txtSegmentPB);
-            TextView txtNewPB = (TextView) panel.findViewById(R.id.txtNewPB);
+            TextView txtLastDist = panel.findViewById(R.id.txtSegmentDist);
+            TextView txtLastTime = panel.findViewById(R.id.txtSegmentTime);
+            TextView txtPB = panel.findViewById(R.id.txtSegmentPB);
+            TextView txtNewPB = panel.findViewById(R.id.txtNewPB);
 
             DisplayFormatter.setDistanceText(stats.getDistanceM(), "km", txtLastDist, true);
             DisplayFormatter.setFullTimeText(stats.getDuration(), txtLastTime);

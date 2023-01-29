@@ -1,32 +1,45 @@
 package com.sk7software.climbviewer;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Point;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.model.GPXFile;
+import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
+import com.sk7software.climbviewer.view.PlotPoint;
+import com.sk7software.climbviewer.view.ScreenController;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class ClimbFinderActivity extends AppCompatActivity {
+public class ClimbFinderActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
     private MapFragment map;
     private ClimbView routeClimbView;
     private ClimbView zoomClimbView;
     private int routeId;
     private GPXRoute route;
+    private TextView txtClimbRating;
+    private LinearLayout zoomPanel;
+    private boolean layoutResizing;
 
     private static final String TAG = ClimbFinderActivity.class.getSimpleName();
 
@@ -37,23 +50,82 @@ public class ClimbFinderActivity extends AppCompatActivity {
         getSupportActionBar().hide();
 
         routeId = getIntent().getIntExtra("id", 0);
-        int startIdx = 0;
         route = Database.getInstance().getRoute(routeId);
         ClimbController.getInstance().loadRoute(route);
 
         int viewHeight = setClimbViewHeight();
 
-        routeClimbView = (ClimbView) findViewById(R.id.climbFinder);
-        routeClimbView.setClimb(route);
+        zoomPanel = (LinearLayout)findViewById(R.id.zoomPanel);
+        zoomPanel.setVisibility(View.GONE);
+
+        routeClimbView = findViewById(R.id.climbFinder);
+        routeClimbView.setParent(this);
+        routeClimbView.setClimb(route, 20);
         routeClimbView.setHeight(viewHeight, false);
         routeClimbView.setTransparency(0xFF);
         routeClimbView.invalidate();
 
-        zoomClimbView = (ClimbView) findViewById(R.id.climbZoom);
-        zoomClimbView.setClimb(route);
+        // Zoom view is 80% of the width
+        Point screenSize = ScreenController.getScreenSize();
+        int zoomPadding = (int)(screenSize.x - (0.8 * (float)screenSize.x)) / 2;
+        zoomClimbView = findViewById(R.id.climbZoom);
+        zoomClimbView.setParent(this);
+        zoomClimbView.setClimb(route, zoomPadding);
         zoomClimbView.setHeight(viewHeight, true);
         zoomClimbView.setTransparency(0xFF);
-        zoomClimbView.setZoomFac(5);
+
+        // Ajdust size of nudge buttons to fit within the padding area
+        ImageButton btnNudgeLRight = (ImageButton)findViewById(R.id.btnNudgeLRight);
+        ImageButton btnNudgeLLeft = (ImageButton)findViewById(R.id.btnNudgeLLeft);
+        btnNudgeLRight.setMaxWidth((int)(zoomPadding * 0.75));
+        btnNudgeLRight.setMaxHeight((int)(zoomPadding * 0.75));
+        btnNudgeLLeft.setMaxWidth((int)(zoomPadding * 0.75));
+        btnNudgeLLeft.setMaxHeight((int)(zoomPadding * 0.75));
+
+        btnNudgeLRight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                zoomClimbView.nudgeX0(true);
+                map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                zoomClimbView.invalidate();
+                showClimbRating();
+            }
+        });
+        btnNudgeLLeft.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                zoomClimbView.nudgeX0(false);
+                map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                zoomClimbView.invalidate();
+                showClimbRating();
+            }
+        });
+
+        ImageButton btnNudgeRRight = (ImageButton)findViewById(R.id.btnNudgeRRight);
+        ImageButton btnNudgeRLeft = (ImageButton)findViewById(R.id.btnNudgeRLeft);
+        btnNudgeRRight.setMaxWidth((int)(zoomPadding * 0.75));
+        btnNudgeRRight.setMaxHeight((int)(zoomPadding * 0.75));
+        btnNudgeRLeft.setMaxWidth((int)(zoomPadding * 0.75));
+        btnNudgeRLeft.setMaxHeight((int)(zoomPadding * 0.75));
+
+        btnNudgeRRight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                zoomClimbView.nudgeXN(true);
+                map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                zoomClimbView.invalidate();
+                showClimbRating();
+            }
+        });
+        btnNudgeRLeft.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                zoomClimbView.nudgeXN(false);
+                map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                zoomClimbView.invalidate();
+                showClimbRating();
+            }
+        });
 
         routeClimbView.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -62,21 +134,22 @@ public class ClimbFinderActivity extends AppCompatActivity {
                     Log.d(TAG, "X click: " + (int)motionEvent.getX());
                     routeClimbView.setShowGradientAt((int)motionEvent.getX());
                     routeClimbView.setX0((int)motionEvent.getX());
-                    zoomClimbView.setX0((int)motionEvent.getX());
+                    zoomClimbView.clearClimbMarker();
+
+                    // Calculate start index on the zoom plot based on where the x position is
+                    double startDistance = routeClimbView.getDistanceAtX((int)motionEvent.getX());
+                    zoomClimbView.setStartIndex(startDistance);
+                    map.setReady(false);
+                    layoutResizing = true;
+                    zoomPanel.setVisibility(View.VISIBLE);
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     routeClimbView.setShowGradientAt((int)motionEvent.getX());
-                    routeClimbView.setX1((int)motionEvent.getX());
-                    zoomClimbView.setX1((int)motionEvent.getX());
-                    LatLng ll = routeClimbView.getLatLongAtX((int)motionEvent.getX());
-                    if (ll != null) {
-                        List<LatLng> trackPoints = new ArrayList<>();
-                        for (int i=zoomClimbView.getTrackStartIndex(); i<= zoomClimbView.getTrackEndIndex(); i++) {
-                            trackPoints.add(new LatLng(route.getPoints().get(i).getLat(), route.getPoints().get(i).getLon()));
-                        }
-                        map.plotClimbTrack(trackPoints);
-                    }
-                } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    //routeClimbView.fixClimbPoint((int)motionEvent.getX());
+                    routeClimbView.setXN((int)motionEvent.getX());
+
+                    // Calculate distance to be shown on the zoom plot based on where the x position is
+                    double endDistance = routeClimbView.getDistanceAtX((int)motionEvent.getX());
+                    zoomClimbView.setTrackDistance(endDistance);
+                    map.plotClimbTrack(zoomClimbView.getTrackPoints());
                 }
                 routeClimbView.invalidate();
                 zoomClimbView.clearPoints();
@@ -92,20 +165,12 @@ public class ClimbFinderActivity extends AppCompatActivity {
                 if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
                     Log.d(TAG, "X click: " + (int) motionEvent.getX());
                     zoomClimbView.setShowGradientAt((int) motionEvent.getX());
-                    zoomClimbView.setX0Fine((int) motionEvent.getX());
+                    zoomClimbView.setX0((int) motionEvent.getX());
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     zoomClimbView.setShowGradientAt((int) motionEvent.getX());
-                    zoomClimbView.setX1Fine((int) motionEvent.getX());
-                    LatLng ll = zoomClimbView.getLatLongAtX((int) motionEvent.getX());
-                    if (ll != null) {
-                        List<LatLng> trackPoints = new ArrayList<>();
-                        for (int i = zoomClimbView.getTrackStartIndex(); i <= zoomClimbView.getTrackEndIndex(); i++) {
-                            trackPoints.add(new LatLng(route.getPoints().get(i).getLat(), route.getPoints().get(i).getLon()));
-                        }
-                        map.plotClimbTrack(trackPoints);
-                    }
-                } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    //routeClimbView.fixClimbPoint((int)motionEvent.getX());
+                    zoomClimbView.setXN((int) motionEvent.getX());
+                    map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                    showClimbRating();
                 }
                 zoomClimbView.invalidate();
                 return true;
@@ -114,6 +179,33 @@ public class ClimbFinderActivity extends AppCompatActivity {
 
         map = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.mapClimbView);
         map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
+
+        ImageButton findAuto = findViewById(R.id.btnAuto);
+        Button defineClimb = findViewById(R.id.btnSetClimb);
+        txtClimbRating = findViewById(R.id.txtRating);
+
+        findAuto.setMaxWidth((int)(zoomPadding * 0.75));
+        findAuto.setMaxHeight((int)(zoomPadding * 0.75));
+        findAuto.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                zoomClimbView.autoX0XN();
+                map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                zoomClimbView.invalidate();
+                showClimbRating();
+            }
+        });
+
+        defineClimb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showCreateClimbDialog(route.getName() + " climb");
+            }
+        });
+    }
+
+    private void showClimbRating() {
+        txtClimbRating.setText("Rating: " + zoomClimbView.getClimbRating());
     }
 
     private int setClimbViewHeight() {
@@ -131,4 +223,58 @@ public class ClimbFinderActivity extends AppCompatActivity {
         return (size.y - s)/3;
     }
 
+    private void showCreateClimbDialog(String defaultName) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Climb Name");
+
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(defaultName);
+        builder.setView(input);
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                createClimb(input.getText().toString());
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    private void createClimb(String climbName) {
+        GPXFile climbFile = new GPXFile();
+        GPXMetadata metadata = new GPXMetadata();
+
+        metadata.setName(climbName);
+        climbFile.setMetadata(metadata);
+
+        GPXRoute climbPoints = new GPXRoute();
+        for (PlotPoint p : zoomClimbView.getClimbPoints()) {
+            RoutePoint rp = new RoutePoint();
+            rp.setLat(p.getLocation().latitude);
+            rp.setLon(p.getLocation().longitude);
+            rp.setElevation(p.getElevation());
+            climbPoints.addPoint(rp);
+        }
+
+        climbFile.setRoute(climbPoints);
+        Database.getInstance().addClimb(climbFile);
+    }
+
+    @Override
+    public void updateAfterDraw(boolean resizeable) {
+        showClimbRating();
+
+        if (resizeable && layoutResizing) {
+            map.setReady(true);
+            layoutResizing = false;
+        }
+    }
 }
