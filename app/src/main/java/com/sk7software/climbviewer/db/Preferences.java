@@ -15,8 +15,8 @@ public class Preferences {
     public static final String PREFERENCES_ROUTE_START_IDX = "PREF_ROUTE_START_IDX";
     public static final String PREFERENCES_SMOOTH_DIST = "PREF_SMOOTH_DIST";
     public static final String PREFERENCES_SCREEN_DELAY_S = "PREF_SCREEN_DELAY_S";
+    public static final String PREFERENCES_AUTO_MONITOR_CLIMBS = "PREF_AUTO_MONITOR_CLIBMS";
     public static final String PREFS_SET = "Y";
-
     private static Preferences instance;
     private final SharedPreferences prefs;
 
@@ -76,6 +76,10 @@ public class Preferences {
 
     public boolean getBooleanPreference(String name) {
         return prefs.getBoolean(name, false);
+    }
+
+    public boolean getBooleanPreference(String name, boolean defVal) {
+        return prefs.getBoolean(name, defVal);
     }
 
     public void clearStringPreference(String name) {

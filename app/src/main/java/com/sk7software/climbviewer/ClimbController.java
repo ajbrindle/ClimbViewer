@@ -40,6 +40,7 @@ public class ClimbController {
     private GPXRoute route;
     private int lastRouteId;
     private boolean routeInProgress;
+    private int routeIdx;
 
     // Attempt data for items that are currently in progress
     Map<PointType, AttemptData> attempts;
@@ -133,6 +134,7 @@ public class ClimbController {
     }
 
     public void updateClimbData(RoutePoint point, ActivityUpdateInterface callbackActivity) {
+        Log.d(TAG, "Updating climb data " + point.getEasting() + "," + point.getNorthing() + " " + callbackActivity.getClass().getSimpleName());
         lastPointLL = new LatLng(point.getLat(), point.getLon());
 
         if (lastPoint == null) {
@@ -143,6 +145,7 @@ public class ClimbController {
         PointF currentPoint = new PointF((float)point.getEasting(), (float)point.getNorthing());
 
         if (attemptInProgress) {
+            Log.d(TAG, "Calculating attempt");
             LocalDateTime now = LocalDateTime.now();
             updateAttempt(point, now);
 
@@ -157,21 +160,30 @@ public class ClimbController {
 
         if (routeInProgress) {
             // Work out distances and times at this location
+            Log.d(TAG, "Calculating route distance");
             AttemptData routeData = attempts.get(PointType.ROUTE);
             routeData.calcDist(point, route);
             routeData.setBearing(calcBearing(route, routeData));
 
-            if (!stillOnTrack(route, currentPoint, point.getAccuracy())) {
+            if (!stillOnTrack(route, currentPoint, routeData.getMinIndex(), point.getAccuracy())) {
                 if (++offRouteCount > 3) {
                     // Deviated off route, so go back into monitoring mode
                     routeInProgress = false;
+                    Log.d(TAG, "Dropped off route");
                 }
             } else {
+                routeIdx = routeData.getMinIndex();
                 offRouteCount = 0;
             }
         }
 
         lastPoint = currentPoint;
+    }
+
+    public void rejoinRoute(int idx) {
+        routeInProgress = true;
+        AttemptData routeData = attempts.get(PointType.ROUTE);
+        routeData.setMinIndex(idx);
     }
 
     private void updateAttempt(RoutePoint point, LocalDateTime now) {
@@ -220,7 +232,7 @@ public class ClimbController {
             // Add to database then reset
             Database.getInstance().addAttempt(attempt, climb.getId());
             reset(PointType.ATTEMPT);
-        } else if (!stillOnTrack(climb, currentPoint, point.getAccuracy())) {
+        } else if (!stillOnTrack(climb, currentPoint, 0, point.getAccuracy())) {
             if (++offClimbCount > 5) {
                 // Deviated off climb, so reset
                 lastClimbId = -99; // Prevents summary panel on screen
@@ -373,9 +385,19 @@ public class ClimbController {
         }
     }
 
-    private boolean stillOnTrack(GPXRoute track, PointF point, float accuracy) {
+    private boolean stillOnTrack(GPXRoute track, PointF point, int minIndex, float accuracy) {
         PointF lastP = null;
-        for (RoutePoint pt : track.getPoints()) {
+        int maxIndex = track.getPoints().size();
+
+        if (minIndex > 0) {
+            maxIndex = minIndex + 10;
+            if (maxIndex > track.getPoints().size()) {
+                maxIndex = track.getPoints().size();
+            }
+        }
+
+        for (int i=minIndex; i<maxIndex; i++) {
+            RoutePoint pt = track.getPoints().get(i);
             PointF p = new PointF((float) pt.getEasting(), (float) pt.getNorthing());
             if (lastP == null) {
                 lastP = p;

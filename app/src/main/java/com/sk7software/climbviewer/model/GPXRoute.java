@@ -65,7 +65,7 @@ public class GPXRoute {
         RoutePoint end = this.getPoints().get(lastIdx);
 
         // Circular if start and end are within 50m of each other
-        Log.d("GPXRoute", "CIRCULAR DIST: " + Math.sqrt(Math.pow(end.getEasting() - start.getElevation(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)));
+        Log.d("GPXRoute", "CIRCULAR DIST: " + Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)));
         return (Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)) < 50);
     }
 
@@ -73,5 +73,20 @@ public class GPXRoute {
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || !(o instanceof GPXRoute)) {
+            return false;
+        }
+
+        GPXRoute that = (GPXRoute)o;
+        return (this.getId() == that.getId() && this.getName().equals(that.getName()));
+    }
+
+    @Override
+    public int hashCode() {
+        return id * name.hashCode();
     }
 }

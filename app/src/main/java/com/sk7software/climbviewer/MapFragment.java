@@ -70,6 +70,7 @@ public class MapFragment extends Fragment {
     private float posMarkerRadius = -1;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
     private Polyline climbTrack = null;
+    private Polyline localTrack = null;
 
     private static final String TAG = MapFragment.class.getSimpleName();
     private static final int MARKER_ANIMATION_MS = 1000;
@@ -219,6 +220,37 @@ public class MapFragment extends Fragment {
         updateView(boundsBuilder.build());
     }
 
+    public void plotLocalSection(int minIdx, int maxIdx) {
+        if (!mapReady || track == null) {
+            return;
+        }
+
+        List<LatLng> points = new ArrayList<>();
+        if (minIdx < 0) {
+            minIdx = 0;
+        }
+
+        if (maxIdx > track.getPoints().size()) {
+            maxIdx = track.getPoints().size();
+        }
+
+        for (int i=minIdx; i<maxIdx; i++) {
+            RoutePoint pt = track.getPoints().get(i);
+            LatLng point = new LatLng(pt.getLat(), pt.getLon());
+            points.add(point);
+        }
+
+        if (localTrack != null) {
+            localTrack.remove();
+        }
+
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(points)
+                .width(60)
+                .color(0xAA880088);
+        localTrack = map.addPolyline(lineOptions);
+    }
+
     public void plotClimbTrack(List<LatLng> points) {
         if (!mapReady || track == null || points == null) {
             return;
@@ -244,7 +276,7 @@ public class MapFragment extends Fragment {
         updateView(boundsBuilder.build());
     }
 
-    public void plotOffRouteTrack(double radius, LatLng currentPoint) {
+    public void plotOffRouteTrack(double radius, LatLng currentPoint, float bearing) {
         if (!mapReady || track == null) {
             return;
         }
@@ -280,15 +312,20 @@ public class MapFragment extends Fragment {
                 .color(0xBBFF0000);
         map.addPolyline(lineOptions);
 
-        updateView(boundsBuilder.build());
+        updateOffRouteView(boundsBuilder.build());
+    }
+
+    private void updateOffRouteView(LatLngBounds bounds) {
+        int padding = 50; // offset from edges of the map in pixels
+
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+        map.moveCamera(cu);
+        zoom = (int) map.getCameraPosition().zoom;
     }
 
     private void updateView(LatLngBounds bounds) {
         if (plotType == PlotType.ROUTE || plotType == PlotType.NORMAL) {
-            int padding = 50; // offset from edges of the map in pixels
-            CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
-            map.moveCamera(cu);
-            zoom = (int)map.getCameraPosition().zoom;
+            updateOffRouteView(bounds);
         } else if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.PURSUIT || plotType == PlotType.FOLLOW_ROUTE) {
             CameraPosition position = new CameraPosition.Builder()
                     .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()))

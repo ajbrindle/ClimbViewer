@@ -101,9 +101,8 @@ public class TrackFile {
         }
     }
 
-    private List<GPXRoute> matchToClimbs() {
-        GPXRoute[] allClimbs = Database.getInstance().getClimbs();
-        LocationMonitor monitor = new LocationMonitor();
+    public List<GPXRoute> matchToClimbs() {
+        List<GPXRoute> allClimbs = new ArrayList<>(Arrays.asList(Database.getInstance().getClimbs()));
         List<GPXRoute> startedClimbs = new ArrayList<>();
 
         PointF lastPoint = null;
@@ -124,10 +123,13 @@ public class TrackFile {
                     if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         startedClimbs.add(Database.getInstance().getClimb(climb.getId()));
+                        continue;
                     }
                 }
             }
 
+            // Remove any climbs already found from allClimbs
+            allClimbs.removeIf(c -> startedClimbs.contains(c));
             lastPoint = currentPoint;
         }
 
@@ -151,9 +153,11 @@ public class TrackFile {
                 if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
                     Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
                     completedClimbs.add(climb);
+                    continue;
                 }
             }
 
+            startedClimbs.removeIf(c -> completedClimbs.contains(c));
             lastPoint = currentPoint;
         }
 

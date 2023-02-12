@@ -50,19 +50,30 @@ public class AttemptData {
                 track.getPoints().get(lastIndex+1).getDistFromStart() :
                 track.getPoints().get(track.getPoints().size()-1).getDistFromStart();
 
-        // Look for point on climb that matches with current location
-        for (int i=startIndex+1; i<track.getPoints().size(); i++) {
+        // Look for point on track that matches with current location
+        // Only look a few points beyond the last one to prevent picking up return points
+        // on tracks that retrace themselves at some point
+        int searchToIndex = startIndex + 10;
+        if (searchToIndex >= track.getPoints().size()) {
+            searchToIndex = track.getPoints().size();
+        }
+
+        Log.d(TAG, "Searching from " + startIndex + " to " + searchToIndex + " for " + locPt.x + "," + locPt.y);
+
+        for (int i=startIndex+1; i<searchToIndex; i++) {
             RoutePoint pt = track.getPoints().get(i);
 
             PointF lastPointPt = new PointF((float)track.getPoints().get(i-1).getEasting(), (float)track.getPoints().get(i-1).getNorthing());
             PointF currentPointPt = new PointF((float)track.getPoints().get(i).getEasting(), (float)track.getPoints().get(i).getNorthing());
+
+//            Log.d(TAG, "Test " + i + ": (" + locPt.x + "," + locPt.y + ") " + lastPointPt.x + "," + lastPointPt.y + "; " + currentPointPt.x + "," + currentPointPt.y);
 
             // Determine if location is between this one and last one
             if (LocationMonitor.pointWithinLineSegment(locPt, lastPointPt, currentPointPt)) {
                 Log.d(TAG, type + " within line segment: " + (i-1) + " to " + i);
                 found = true;
 
-                // Find the point on the route
+                // Find the point on the track
                 PointF nearestPt = LocationMonitor.getXXYY(locPt, lastPointPt, currentPointPt);
                 RoutePoint routePt = new RoutePoint();
                 routePt.setEasting(nearestPt.x);
@@ -107,6 +118,7 @@ public class AttemptData {
             dist = calculatedDist;
             return calculatedDist;
         }
+        Log.d(TAG, "No close line segment");
         return -1;
 
     }

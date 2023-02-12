@@ -4,7 +4,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.widget.CompoundButton;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.sk7software.climbviewer.db.Preferences;
@@ -24,9 +26,11 @@ public class SettingsActivity extends AppCompatActivity {
         // Initialise seek bar locations
         int delay = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SCREEN_DELAY_S, 15);
         int smooth = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 50);
+        boolean auto = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
 
         SeekBar smoothDist = (SeekBar)findViewById(R.id.seekSmoothDistance);
         SeekBar delayS = (SeekBar)findViewById(R.id.seekScreenDelay);
+        Switch autoMonitor = (Switch)findViewById(R.id.swiAutoMonitor);
 
         TextView smoothLabel = (TextView)findViewById(R.id.txtSmoothDistance);
         TextView delayLabel = (TextView)findViewById(R.id.txtScreenDelay);
@@ -61,6 +65,13 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) { }
 
+        });
+
+        autoMonitor.setChecked(auto);
+        autoMonitor.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, isChecked);
+            }
         });
     }
 

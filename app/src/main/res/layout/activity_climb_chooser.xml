@@ -37,7 +37,7 @@
             android:adjustViewBounds="true"
             android:layout_weight="1"
             android:backgroundTint="#ffffff"
-            android:src="@drawable/routes"/>
+            android:src="@drawable/list_items"/>
         <ImageButton
             android:id="@+id/viewRouteBtn"
             android:layout_width="wrap_content"
@@ -46,7 +46,7 @@
             android:adjustViewBounds="true"
             android:layout_weight="1"
             android:backgroundTint="#ffffff"
-            android:src="@drawable/view_route"/>
+            android:src="@drawable/view"/>
         <ImageButton
             android:id="@+id/followRouteBtn"
             android:layout_width="wrap_content"
@@ -73,8 +73,7 @@
             android:adjustViewBounds="true"
             android:layout_weight="1"
             app:backgroundTint="#ffffff"
-            app:tint="#ff0000"
-            android:src="@drawable/ic_trash_can_regular"/>
+            android:src="@drawable/delete"/>
     </LinearLayout>
 
     <ListView
@@ -83,7 +82,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/routeButtons"
         android:paddingTop="3dp"
-        android:visibility="gone"></ListView>
+        android:visibility="visible"></ListView>
 
     <TextView
         android:layout_width="match_parent"
@@ -120,7 +119,7 @@
             android:adjustViewBounds="true"
             android:backgroundTint="#ffffff"
             android:scaleType="fitCenter"
-            android:src="@drawable/climbs" />
+            android:src="@drawable/list_items" />
 
         <ImageButton
             android:id="@+id/viewClimbBtn"
@@ -130,7 +129,7 @@
             android:adjustViewBounds="true"
             android:backgroundTint="#ffffff"
             android:scaleType="fitCenter"
-            android:src="@drawable/view_climb" />
+            android:src="@drawable/view" />
 
         <ImageButton
             android:id="@+id/monitorClimbBtn"
@@ -150,8 +149,7 @@
             android:adjustViewBounds="true"
             android:backgroundTint="#ffffff"
             android:scaleType="fitCenter"
-            android:src="@drawable/ic_trash_can_regular"
-            app:tint="#ff0000" />
+            android:src="@drawable/delete"/>
     </LinearLayout>
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/left_guideline"

@@ -1,6 +1,5 @@
 package com.sk7software.climbviewer;
 
-import android.content.Intent;
 import android.graphics.PointF;
 import android.util.Log;
 
@@ -31,6 +30,7 @@ public class PositionMonitor {
     private boolean onRoute;
     private boolean tryingToResume;
     private int routeStartIdx;
+    private int matchingSectionIdx;
     private int onClimbId;
 
     private PositionMonitor() {
@@ -68,7 +68,7 @@ public class PositionMonitor {
             for (GPXRoute climb : climbs) {
                 PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
                 if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon()) &&
-                        hasPassedCloseToStart(start, currentPoint)) {
+                        hasPassedCloseToPoint(start, currentPoint)) {
                     PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
                     if (checkDirection(second, currentPoint)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
@@ -80,15 +80,24 @@ public class PositionMonitor {
         }
         if (monitoring.contains(MonitorType.ROUTE)) {
             // Check if any point on selected route is between current point and one of the previous ones
-            GPXRoute route = Database.getInstance().getRoute(routeId);
+            GPXRoute route = ClimbController.getInstance().getRoute();
+            if (route == null) {
+                route = Database.getInstance().getRoute(routeId);
+            }
+//            Log.d(TAG, "Find " + currentPoint.x + "," + currentPoint.y);
             for (int i = 0; i < route.getPoints().size() - 1; i++) {
                 PointF routePt = new PointF((float) route.getPoints().get(i).getEasting(), (float) route.getPoints().get(i).getNorthing());
                 if (route.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon()) &&
-                        hasPassedCloseToStart(routePt, currentPoint)) {
+                        hasPassedCloseToPoint(routePt, currentPoint)) {
                     PointF second = new PointF((float) route.getPoints().get(i + 1).getEasting(), (float) route.getPoints().get(i + 1).getNorthing());
                     if (checkDirection(second, currentPoint)) {
-                        Log.d(TAG, "ON ROUTE " + route.getName());
+                        Log.d(TAG, "ON ROUTE " + route.getName() + " (index " + i + ": " +
+                                prevPoints.get(prevPoints.size()-1).x + "," + prevPoints.get(prevPoints.size()-1).y + " to " +
+                                        currentPoint.x + "," + currentPoint.y + "; " +
+                                        routePt.x + "," + routePt.y + ")");
                         onRoute = true;
+                        matchingSectionIdx = i;
+
                         if (!tryingToResume) {
                             routeStartIdx = i;
 
@@ -108,9 +117,10 @@ public class PositionMonitor {
         prevPoints.add(currentPoint);
     }
 
-    private boolean hasPassedCloseToStart(PointF start, PointF currentPoint) {
+    private boolean hasPassedCloseToPoint(PointF point, PointF currentPoint) {
         for (int i=prevPoints.size()-1; i>=0; i--) {
-            if (LocationMonitor.pointWithinLineSegment(start, prevPoints.get(i), currentPoint)) {
+            if (LocationMonitor.pointWithinLineSegment(point, prevPoints.get(i), currentPoint)) {
+//                Log.d(TAG, "Match: " + i + " " + prevPoints.get(i).x + "," + prevPoints.get(i).y);
                 return true;
             }
         }

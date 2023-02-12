@@ -42,10 +42,14 @@ import com.sk7software.climbviewer.list.RouteListActivity;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.model.Track;
+import com.sk7software.climbviewer.model.TrackFile;
+import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.network.NetworkRequest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -86,6 +90,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
     private static final String TAG = ClimbChooserActivity.class.getSimpleName();
     private static final int LOCATION_PERMISSION = 1;
+    private static final String BTN_FOLLOW = "FOLLOW";
+    private static final String BTN_RESUME = "RESUME";
 
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -118,8 +124,24 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         progressDialogBuilder.setView(R.layout.progress);
 
         climbListView = findViewById(R.id.climbListSel);
+        showClimbListButton = findViewById(R.id.showClimbListBtn);
+        showClimbButton = findViewById(R.id.viewClimbBtn);
+        findClimbsButton = findViewById(R.id.findClimbsBtn);
+        deleteClimbButton = findViewById(R.id.deleteClimb);
+        showRouteListButton = findViewById(R.id.showRouteListBtn);
+        followRouteButton = findViewById(R.id.followRouteBtn);
+        showRouteButton = findViewById(R.id.viewRouteBtn);
+        deleteRouteButton = findViewById(R.id.deleteRoute);
+        monitorButton = findViewById(R.id.monitorClimbBtn);
+
         HashMap<String,String> climbMap = new HashMap<String,String>();
-        climbMap.put("value", (currentClimb != null && currentClimb.length() > 0 ? currentClimb : "No climb selected"));
+        if (currentClimb != null && currentClimb.length() > 0) {
+            climbMap.put("value", currentClimb);
+            enableClimbButtons(true);
+        } else {
+            climbMap.put("value", "No climb selected");
+            enableClimbButtons(false);
+        }
         climbList.add(climbMap);
 
         climbListAdapter = new SimpleAdapter(this, climbList, R.layout.list_item,
@@ -127,7 +149,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         climbListView.setAdapter(climbListAdapter);
 
-        showClimbListButton = findViewById(R.id.showClimbListBtn);
         showClimbListButton.setOnClickListener(new View.OnClickListener(){
             public void onClick(View view) {
                 //selectedClimb = position;
@@ -136,7 +157,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        showClimbButton = findViewById(R.id.viewClimbBtn);
         showClimbButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -145,7 +165,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        findClimbsButton = findViewById(R.id.findClimbsBtn);
         findClimbsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -154,7 +173,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        deleteClimbButton = findViewById(R.id.deleteClimb);
         deleteClimbButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -162,27 +180,21 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        followRouteButton = findViewById(R.id.followRouteBtn);
-        followRouteButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton)) {
-                    PositionMonitor.getInstance().setRouteId(currentRouteId);
-                    boolean resuming = false;// TODO: followRouteButton.getText().toString().startsWith("RESUME");
-                    PositionMonitor.getInstance().setTryingToResume(resuming);
-                }
-            }
-        });
-
         routeListView = findViewById(R.id.routeListSel);
         HashMap<String,String> routeMap = new HashMap<String,String>();
-        routeMap.put("value", (currentRoute != null && currentRoute.length() > 0 ? currentRoute : "No route selected"));
+        if (currentRoute != null && currentRoute.length() > 0) {
+            routeMap.put("value", currentRoute);
+            enableRouteButtons(true);
+        } else {
+            routeMap.put("value", "No route selected");
+            enableRouteButtons(false);
+        }
+
         routeList.add(routeMap);
 
         routeListAdapter = new SimpleAdapter(this, routeList, R.layout.list_item,
                 new String[]{"value"}, new int[]{R.id.firstLine});
 
-        showRouteListButton = findViewById(R.id.showRouteListBtn);
         routeListView.setAdapter(routeListAdapter);
         showRouteListButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -191,14 +203,29 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 startActivityForResult(i,1);
             }
         });
-//        showRouteListButton.setOnItemClickListener(new AdapterView.OnItemClickListener(){
-//            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-//                selectedRoute = position;
-//                stopMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton);
-//            }
-//        });
 
-        showRouteButton = findViewById(R.id.viewRouteBtn);
+        followRouteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TextView t = (TextView)findViewById(R.id.labelRoutes);
+                if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton)) {
+                    PositionMonitor.getInstance().setRouteId(currentRouteId);
+                    boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
+                    if (autoMonitorClimbs) {
+                        PositionMonitor.getInstance().doMonitor(PositionMonitor.MonitorType.CLIMB);
+                        PositionMonitor.getInstance().setClimbs(findClimbsOnCurrentRoute());
+                    }
+                    boolean resuming = BTN_RESUME.equals(followRouteButton.getTag());
+                    PositionMonitor.getInstance().setTryingToResume(resuming);
+                    t.setBackgroundColor(Color.YELLOW);
+                    t.setText("Routes - FOLLOWING");
+                } else {
+                    t.setBackgroundColor(Color.WHITE);
+                    t.setText("Routes");
+                }
+            }
+        });
+
         showRouteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -207,7 +234,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        deleteRouteButton = findViewById(R.id.deleteRoute);
         deleteRouteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -215,15 +241,17 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
         });
 
-        monitorButton = findViewById(R.id.monitorClimbBtn);
         monitorButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                TextView t = (TextView)findViewById(R.id.labelClimbs);
                 if (toggleMonitoring(PositionMonitor.MonitorType.CLIMB, monitorButton)) {
                     PositionMonitor.getInstance().setClimbs(allClimbs);
-                    // TODO: monitorButton.setText("MONITORING RIDE");
+                    t.setBackgroundColor(Color.YELLOW);
+                    t.setText("Climbs - MONITORING");
                 } else {
-                    // TODO: monitorButton.setText("MONITOR RIDE");
+                    t.setBackgroundColor(Color.WHITE);
+                    t.setText("Climbs");
                 }
             }
         });
@@ -269,22 +297,17 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         }
 
         // Reset monitoring
-        PositionMonitor.getInstance().stopAllMonitors();
+        stopAllMonitors();
         PositionMonitor.getInstance().setOnRoute(false);
         PositionMonitor.getInstance().setOnClimbId(-1);
 
         LinearLayout climbButtons = (LinearLayout)findViewById(R.id.climbButtons);
         LinearLayout routeButtons = (LinearLayout)findViewById(R.id.routeButtons);
-        ViewGroup.LayoutParams routeLayoutParams = routeButtons.getLayoutParams();
-        ViewGroup.LayoutParams climbLayoutParams = climbButtons.getLayoutParams();
         ViewGroup.LayoutParams routeParams = deleteRouteButton.getLayoutParams();
         ViewGroup.LayoutParams climbParams = deleteClimbButton.getLayoutParams();
         climbParams.height = routeParams.height;
         climbParams.width = routeParams.width;
         deleteClimbButton.setLayoutParams(climbParams);
-        Log.d(TAG, "ROUTE: " + deleteRouteButton.getWidth() + "," + routeParams.height + " " + routeLayoutParams.width);
-        Log.d(TAG, "CLIMB: " + climbParams.width + "," + climbParams.height + " " + climbLayoutParams.width);
-
         super.onResume();
     }
 
@@ -311,6 +334,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     h = climbList.get(0);//this.selectedClimb);
                     h.put("value", currentClimb);
                     climbListAdapter.notifyDataSetChanged();
+                    enableClimbButtons(true);
                     Log.d(TAG, "Current climb: " + currentClimb + ":" + currentClimbId);
                 } else if (data.hasExtra("route")) {
                     currentRoute = data.getStringExtra("route");
@@ -319,12 +343,14 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     h = routeList.get(0);//this.selectedRoute);
                     h.put("value", currentRoute);
                     routeListAdapter.notifyDataSetChanged();
+                    enableRouteButtons(true);
                     Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
 
                     // Clear preferences (will be set when route starts)
                     Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
                     Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
-                    // TODO: followRouteButton.setText("FOLLOW ROUTE");
+                    followRouteButton.setImageResource(R.drawable.follow_route);
+                    followRouteButton.setTag(BTN_FOLLOW);
                 }
             }
         }
@@ -501,7 +527,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private boolean toggleMonitoring(PositionMonitor.MonitorType type, ImageButton button) {
         if (!PositionMonitor.getInstance().getMonitoring().contains(type)) {
             PositionMonitor.getInstance().doMonitor(type);
-            button.setBackgroundColor(Color.RED);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             if (monitor == null) {
@@ -514,9 +539,18 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         return false;
     }
 
+    private void stopAllMonitors() {
+        PositionMonitor.getInstance().stopAllMonitors();
+        TextView routesLabel = (TextView) findViewById(R.id.labelRoutes);
+        routesLabel.setBackgroundColor(Color.WHITE);
+        routesLabel.setText("Routes");
+        TextView climbsLabel = (TextView) findViewById(R.id.labelClimbs);
+        climbsLabel.setBackgroundColor(Color.WHITE);
+        climbsLabel.setText("Climbs");
+    }
+
     private void stopMonitoring(PositionMonitor.MonitorType type, ImageButton button) {
         PositionMonitor.getInstance().stopMonitor(type);
-        button.setBackgroundColor(getResources().getColor(R.color.purple_500));
 
         if (PositionMonitor.getInstance().getMonitoring().isEmpty()) {
             // Not monitoring anything else, so clear listener and screen flags
@@ -526,6 +560,39 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+    }
+
+    private void enableClimbButtons(boolean enable) {
+        showClimbButton.setEnabled(enable);
+        monitorButton.setEnabled(true); // Always available
+        deleteClimbButton.setEnabled(enable);
+    }
+
+    private void enableRouteButtons(boolean enable) {
+        findClimbsButton.setEnabled(enable);
+        showRouteButton.setEnabled(enable);
+        followRouteButton.setEnabled(enable);
+        deleteRouteButton.setEnabled(enable);
+
+        if (followRouteButton.getTag() == BTN_RESUME) {
+            followRouteButton.setEnabled(true);
+        }
+    }
+
+    private List<GPXRoute> findClimbsOnCurrentRoute() {
+        // Create a track from the current route
+        GPXRoute route = Database.getInstance().getRoute(currentRouteId);
+        if (route != null) {
+            TrackFile tf = new TrackFile();
+            Track track = new Track();
+            TrackSegment ts = new TrackSegment();
+            ts.setPoints(route.getPoints());
+            track.setTrackSegment(ts);
+            tf.setRoute(track);
+            return tf.matchToClimbs();
+        }
+
+        return Collections.emptyList();
     }
 
     private void setUpSwitch(Switch swi, String pref) {
@@ -550,7 +617,9 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             h = routeList.get(0);
             h.put("value", currentRoute);
             routeListAdapter.notifyDataSetChanged();
-            // TODO: followRouteButton.setText("RESUME ROUTE");
+            followRouteButton.setImageResource(R.drawable.resume);
+            followRouteButton.setTag(BTN_RESUME);
+            enableRouteButtons(true);
         }
     }
 

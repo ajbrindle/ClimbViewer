@@ -163,10 +163,11 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             if (PositionMonitor.getInstance().isOnRoute()) {
                 // Looks like we've returned to the route
                 offRoutePanel.setVisibility(View.GONE);
-                ClimbController.getInstance().setRouteInProgress(true);
+                ClimbController.getInstance().rejoinRoute(PositionMonitor.getInstance().getMatchingSectionIdx());
                 PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.ROUTE);
                 setMapForFollowing();
                 map.setTrackRider(true);
+                map.plotLocalSection(PositionMonitor.getInstance().getMatchingSectionIdx()-1, PositionMonitor.getInstance().getMatchingSectionIdx()+10);
                 fullRouteView.addPlot(ClimbController.PointType.ROUTE);
             }
         }
@@ -184,6 +185,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 lastRoutePoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
                 map.addMarker(lastRoutePoint, ClimbController.PointType.ROUTE,
                         ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.LARGE);
+                map.plotLocalSection(ClimbController.getInstance().getRouteIdx()-1, ClimbController.getInstance().getRouteIdx()+10);
                 map.moveCamera(point, false, false);
             }
         } else if (prepareForFinish < 0) {
@@ -199,7 +201,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
                 // Calculate distance from current point to last route point
                 double radius = calcDistBetweenPoints(point, lastRoutePoint);
-                map.plotOffRouteTrack(radius, new LatLng(point.getLat(), point.getLon()));
+                map.plotOffRouteTrack(radius, new LatLng(point.getLat(), point.getLon()), point.getBearing());
                 map.addMarker(new LatLng(point.getLat(), point.getLon()), ClimbController.PointType.ROUTE,
                         ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);
             }
