@@ -4,6 +4,10 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.view.PlotPoint;
+
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
@@ -32,6 +36,8 @@ public class GPXRoute {
 
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;
+
+    private List<RoutePoint> smoothedPoints;
 
     public void addPoint(RoutePoint point) {
         if (points == null) {
@@ -88,5 +94,48 @@ public class GPXRoute {
     @Override
     public int hashCode() {
         return id * name.hashCode();
+    }
+
+    public void calcSmoothedPoints() {
+        float distFromLast = 0;
+        boolean first = true;
+        int lastIndex = 0;
+        smoothedPoints = new ArrayList<>();
+
+        int smoothDist = getSmoothDist();
+        if (smoothDist == 0) {
+            smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 20);
+        }
+
+        // Determine cumulative delta to all points
+        for (int i = 0; i < getPoints().size(); i++) {
+            RoutePoint pt = getPoints().get(i);
+
+            if (first) {
+                first = false;
+                pt.setSmoothedElevation(pt.getElevation());
+            } else {
+                distFromLast += (float)calcDelta(pt, getPoints().get(i-1).getEasting(), getPoints().get(i-1).getNorthing());
+
+                // Not reached smoothed distance, so move on to next point
+                if (distFromLast < smoothDist && i != getPoints().size() - 1) continue;
+
+                // Work out elevation difference with last smooted point
+                double elevDiff = pt.getElevation() - getPoints().get(lastIndex).getElevation();
+
+                // Interpolate along the length and set the interim elevations
+                for (int j=lastIndex+1; j<=i; j++) {
+                    getPoints().get(j).setSmoothedElevation(getPoints().get(lastIndex).getElevation() +
+                            (elevDiff * (float)calcDelta(getPoints().get(j), getPoints().get(lastIndex).getEasting(), getPoints().get(lastIndex).getNorthing()) / distFromLast));
+                }
+            }
+
+            lastIndex = i;
+            distFromLast = 0;
+        }
+    }
+
+    private double calcDelta(RoutePoint pt, double e, double n) {
+        return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
     }
 }

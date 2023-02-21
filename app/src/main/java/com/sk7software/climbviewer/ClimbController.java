@@ -6,17 +6,21 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.AttemptPoint;
 import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.AttemptData;
+import com.sk7software.climbviewer.view.PlotPoint;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
@@ -359,6 +363,7 @@ public class ClimbController {
         this.climb = climb;
         this.lastClimbId = climb.getId();
         setPointsDist(this.climb);
+        this.climb.calcSmoothedPoints();
     }
 
     public void loadRoute(GPXRoute route) {
@@ -370,19 +375,75 @@ public class ClimbController {
     private void setPointsDist(GPXRoute gpxRoute) {
         float dist = 0;
         float elev = 0;
+
         gpxRoute.getPoints().get(0).setDistFromStart(0);
         gpxRoute.getPoints().get(0).setElevFromStart(0);
 
         for (int i=1; i<gpxRoute.getPoints().size(); i++) {
-            dist += Math.sqrt(Math.pow(gpxRoute.getPoints().get(i).getEasting() - gpxRoute.getPoints().get(i-1).getEasting(), 2.0) +
-                    Math.pow(gpxRoute.getPoints().get(i).getNorthing() - gpxRoute.getPoints().get(i-1).getNorthing(), 2.0));
+            dist += Math.sqrt(Math.pow(gpxRoute.getPoints().get(i).getEasting() - gpxRoute.getPoints().get(i - 1).getEasting(), 2.0) +
+                    Math.pow(gpxRoute.getPoints().get(i).getNorthing() - gpxRoute.getPoints().get(i - 1).getNorthing(), 2.0));
             gpxRoute.getPoints().get(i).setDistFromStart(dist);
+        }
 
+        // Calculate elevations
+        for (int i=1; i<gpxRoute.getPoints().size(); i++) {
             if (gpxRoute.getPoints().get(i).getElevation() > gpxRoute.getPoints().get(i-1).getElevation()) {
                 elev += gpxRoute.getPoints().get(i).getElevation() - gpxRoute.getPoints().get(i-1).getElevation();
             }
             gpxRoute.getPoints().get(i).setElevFromStart(elev);
         }
+    }
+
+    public List<PlotPoint> getClimbPoints(GPXRoute profile, int startIdx, double targetDist, boolean smooth) {
+        float distFromLast = 0;
+        float totalDist = 0;
+        boolean first = true;
+        float lastX = 0;
+        double lastGradient = 0;
+        int lastIndex = 0;
+        List<PlotPoint> points = new ArrayList<>();
+
+        int smoothDist = profile.getSmoothDist();
+        if (smoothDist == 0) {
+            smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 20);
+        }
+
+        // Determine cumulative delta to all points
+        for (int i = startIdx; i < profile.getPoints().size(); i++) {
+            RoutePoint pt = profile.getPoints().get(i);
+            PlotPoint p = new PlotPoint();
+            p.setLocation(new LatLng(pt.getLat(), pt.getLon()));
+
+            if (first) {
+                first = false;
+                p.setX(profile.getPoints().get(i).getDistFromStart());
+                p.setElevation((float) pt.getElevation());
+                lastIndex = startIdx;
+            } else {
+                distFromLast += (float) calcDelta(pt, profile.getPoints().get(lastIndex).getEasting(), profile.getPoints().get(lastIndex).getNorthing());
+                lastIndex++;
+
+                if (smooth && distFromLast < smoothDist) continue;
+
+                p.setX(distFromLast + lastX);
+                p.setElevation((float) pt.getElevation());
+                distFromLast = 0;
+            }
+
+            points.add(p);
+            lastX = p.getX();
+            totalDist = p.getX();
+
+            if (totalDist - points.get(0).getX() >= targetDist) {
+                break;
+            }
+        }
+
+        return points;
+    }
+
+    private double calcDelta(RoutePoint pt, double e, double n) {
+        return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
     }
 
     private boolean stillOnTrack(GPXRoute track, PointF point, int minIndex, float accuracy) {

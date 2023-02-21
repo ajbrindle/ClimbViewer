@@ -197,7 +197,7 @@ public class MapFragment extends Fragment {
                 if (i < track.getPoints().size() - 2) {
                     //line.add(new LatLng(track.getPoints().get(i + 1).getLat(), track.getPoints().get(i + 1).getLon()));
                 }
-                double elevDiff = track.getPoints().get(i).getElevation() - track.getPoints().get(i - 1).getElevation();
+                double elevDiff = track.getPoints().get(i).getSmoothedElevation() - track.getPoints().get(i - 1).getSmoothedElevation();
                 double distBetween = track.getPoints().get(i).getDistFromStart() - track.getPoints().get(i - 1).getDistFromStart();
                 double gradient = elevDiff * 100 / distBetween;
 

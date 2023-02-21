@@ -102,8 +102,18 @@ public class AttemptData {
                 // Calculate gradients
                 currentGradient = calcGradient(track.getPoints().get(i-1), track.getPoints().get(i));
 
-                if (i < track.getPoints().size() - 1) {
-                    nextGradient = calcGradient(pt, track.getPoints().get(i + 1));
+                // Find index where gradient changes by more than 0.2%
+                int nextIndex = i;
+                for (int j=i; j<track.getPoints().size()-1; j++) {
+                    if (Math.abs(calcGradient(track.getPoints().get(j), track.getPoints().get(j+1)) - currentGradient) > 0.2) {
+                        nextIndex = j;
+                        pt = track.getPoints().get(j);
+                        break;
+                    }
+                }
+
+                if (nextIndex < track.getPoints().size() - 1) {
+                    nextGradient = calcGradient(pt, track.getPoints().get(nextIndex + 1));
                 } else {
                     nextGradient = 0;
                 }
@@ -126,7 +136,7 @@ public class AttemptData {
     private static float calcGradient(RoutePoint p1, RoutePoint p2) {
         double length = Math.sqrt(Math.pow(p2.getEasting() - p1.getEasting(), 2.0) +
                 Math.pow(p2.getNorthing() - p1.getNorthing(), 2.0));
-        double elevDiff = p2.getElevation() - p1.getElevation();
+        double elevDiff = p2.getSmoothedElevation() - p1.getSmoothedElevation();
         return (float)(100.0 * elevDiff / length);
     }
 

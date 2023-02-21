@@ -7,12 +7,18 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Root(strict=false)
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RoutePoint {
     @Attribute
     private double lat;
@@ -46,6 +52,9 @@ public class RoutePoint {
 
     @Attribute(required = false)
     private float elevFromStart;
+
+    @Attribute(required = false)
+    private double smoothedElevation;
 
     public void setENFromLL(Projection proj, int zone) {
         RoutePoint tmpPt = new RoutePoint();

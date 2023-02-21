@@ -572,7 +572,7 @@ public class ClimbView extends View {
                 distFromLast += (float)calcDelta(pt, profile.getPoints().get(lastIndex).getEasting(), profile.getPoints().get(lastIndex).getNorthing());
                 lastIndex++;
 
-                if (smooth && distFromLast < smoothDist) continue;
+                if (smooth && distFromLast < smoothDist && i != profile.getPoints().size() - 1) continue;
 
                 p.setX(distFromLast + lastX);
                 p.setElevation((float) pt.getElevation());
