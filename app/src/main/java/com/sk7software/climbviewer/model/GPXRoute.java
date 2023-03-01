@@ -71,7 +71,6 @@ public class GPXRoute {
         RoutePoint end = this.getPoints().get(lastIdx);
 
         // Circular if start and end are within 50m of each other
-        Log.d("GPXRoute", "CIRCULAR DIST: " + Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)));
         return (Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)) < 50);
     }
 

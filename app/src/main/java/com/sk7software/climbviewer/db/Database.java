@@ -446,7 +446,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, new String[] {String.valueOf(id)})){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
                 GPXRoute climb = new GPXRoute();
                 climb.setId(id);
@@ -486,7 +485,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, new String[] {String.valueOf(id)})){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
                 GPXRoute climb = new GPXRoute();
                 climb.setId(id);
@@ -530,7 +528,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, null)){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
 
                 while (!cursor.isAfterLast()) {
@@ -571,7 +568,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, null)){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
 
                 while (!cursor.isAfterLast()) {
@@ -712,7 +708,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
                 pbId = cursor.getInt(0);
                 Log.d(TAG, "PB: ClimbId " + climbId + "; Attempt: " + pbId);
@@ -772,7 +767,6 @@ public class Database extends SQLiteOpenHelper {
         // Set stats for this attempt
         try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 boolean first = true;
                 int pbDuration = Integer.MAX_VALUE;
                 int pos = 1;
@@ -878,7 +872,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, null)) {
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
 
                 while (!cursor.isAfterLast()) {
@@ -959,7 +952,6 @@ public class Database extends SQLiteOpenHelper {
 
         try (Cursor cursor = db.rawQuery(query, new String[] {String.valueOf(climbId)})){
             if (cursor != null && cursor.getCount() > 0) {
-                Log.d(TAG, "Found " + cursor.getCount());
                 cursor.moveToFirst();
                 int attemptId = -1;
                 ClimbAttempt attempt = new ClimbAttempt();
@@ -1044,7 +1036,6 @@ public class Database extends SQLiteOpenHelper {
             sql.append(table);
             try (Cursor cursor = db.rawQuery(sql.toString(), null)) {
                 if (cursor != null && cursor.getCount() > 0) {
-                    Log.d(TAG, "Found " + cursor.getCount());
                     cursor.moveToFirst();
 
                     while (!cursor.isAfterLast()) {
