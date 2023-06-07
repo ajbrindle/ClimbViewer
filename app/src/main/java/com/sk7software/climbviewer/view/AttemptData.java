@@ -12,6 +12,7 @@ import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,13 +37,14 @@ public class AttemptData {
 
     private static final String TAG = AttemptData.class.getSimpleName();
 
-    public float calcDist(RoutePoint loc, GPXRoute track) {
+    @DebugTrace
+    public float calcDist(RoutePoint loc, GPXRoute track, int index) {
         boolean found = false;
         PointF locPt = new PointF((float)loc.getEasting(), (float)loc.getNorthing());
         Projection proj = Database.getProjection(track.getProjectionId());
         int zone = track.getZone();
 
-        int startIndex = minIndex;
+        int startIndex = index;
         int lastIndex = startIndex;
 
         // Get previous distance from start
@@ -66,7 +68,7 @@ public class AttemptData {
             PointF lastPointPt = new PointF((float)track.getPoints().get(i-1).getEasting(), (float)track.getPoints().get(i-1).getNorthing());
             PointF currentPointPt = new PointF((float)track.getPoints().get(i).getEasting(), (float)track.getPoints().get(i).getNorthing());
 
-//            Log.d(TAG, "Test " + i + ": (" + locPt.x + "," + locPt.y + ") " + lastPointPt.x + "," + lastPointPt.y + "; " + currentPointPt.x + "," + currentPointPt.y);
+            Log.d(TAG, "Test " + i + ": (" + locPt.x + "," + locPt.y + ") " + lastPointPt.x + "," + lastPointPt.y + "; " + currentPointPt.x + "," + currentPointPt.y);
 
             // Determine if location is between this one and last one
             if (LocationMonitor.pointWithinLineSegment(locPt, lastPointPt, currentPointPt)) {
@@ -85,7 +87,7 @@ public class AttemptData {
 
                 // Calculate how far along this line segment the current point is
                 calculatedDist = (float) calcDelta(routePt, track.getPoints().get(i-1));
-                calculatedDist+= track.getPoints().get(i-1).getDistFromStart();
+                calculatedDist += track.getPoints().get(i-1).getDistFromStart();
 
                 // Calculate elevation climbed - it is the climb to the previous point plus
                 // the fraction of the elevation gain on this line segment
@@ -118,7 +120,6 @@ public class AttemptData {
                     nextGradient = 0;
                 }
                 segmentToGo = pt.getDistFromStart() - calculatedDist;
-
                 break;
             }
         }
@@ -130,7 +131,10 @@ public class AttemptData {
         }
         Log.d(TAG, "No close line segment");
         return -1;
+    }
 
+    public float calcDist(RoutePoint loc, GPXRoute track) {
+        return calcDist(loc, track, minIndex);
     }
 
     private static float calcGradient(RoutePoint p1, RoutePoint p2) {

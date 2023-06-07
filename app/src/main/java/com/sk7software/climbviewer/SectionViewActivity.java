@@ -26,6 +26,7 @@ import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.climbviewer.view.SummaryPanel;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.Date;
 import java.util.Map;
@@ -99,7 +100,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
         if (ClimbController.getInstance().isAttemptInProgress()) {
             climbView.addPlot(ClimbController.PointType.ATTEMPT);
-            monitor = new LocationMonitor(this);
+            monitor = LocationMonitor.getInstance(this);
         }
     }
 
@@ -107,16 +108,12 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     protected void onResume() {
         super.onResume();
         loadTime = new Date().getTime();
-        if (monitor != null && !monitor.isListenerRunning()) {
-            monitor.resumeListener();
-        }
+        monitor = LocationMonitor.getInstance(this);
     }
 
     @Override
     protected void onStop() {
-        if (monitor != null && monitor.isListenerRunning()) {
-            monitor.stopListener();
-        }
+        Log.d(TAG, "SectionViewActivity onStop");
         super.onStop();
     }
 
@@ -143,9 +140,10 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     }
 
     @Override
+    @DebugTrace
     public void locationChanged(RoutePoint point) {
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB)) {
-            PositionMonitor.getInstance().locationChanged(point);
+            //PositionMonitor.getInstance().locationChanged(point);
 
             if (ClimbController.getInstance().isAttemptInProgress()) {
                 if (!climbView.isInitialised()) {
@@ -185,17 +183,19 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
             if (ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null) {
                 RoutePoint pbPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB).getSnappedPosition();
-                map.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
-                        ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.LARGE);
+                if (pbPos != null) {
+                    map.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
+                            ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.LARGE);
 
-                if (plotType == MapFragment.PlotType.PURSUIT) {
-                    mirrorMap.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
-                            ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.MEDIUM);
+                    if (plotType == MapFragment.PlotType.PURSUIT) {
+                        mirrorMap.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
+                                ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.MEDIUM);
 
-                    if (ClimbController.getInstance().getDistToPB() > 20) {
-                        mirrorPanel.setVisibility(View.VISIBLE);
-                    } else {
-                        mirrorPanel.setVisibility(View.INVISIBLE);
+                        if (ClimbController.getInstance().getDistToPB() > 20) {
+                            mirrorPanel.setVisibility(View.VISIBLE);
+                        } else {
+                            mirrorPanel.setVisibility(View.INVISIBLE);
+                        }
                     }
                 }
             }

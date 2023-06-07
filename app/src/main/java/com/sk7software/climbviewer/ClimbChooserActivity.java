@@ -3,7 +3,6 @@ package com.sk7software.climbviewer;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -16,7 +15,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
@@ -32,6 +30,7 @@ import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.list.RouteListActivity;
+import com.sk7software.util.aspectlogger.DebugTrace;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -55,6 +54,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private String currentClimb;
     private List<GPXRoute> allClimbs;
     private LocationMonitor monitor;
+    private boolean routeCheckDone;
 
     private final ArrayList<HashMap<String,String>> routeList = new ArrayList<>();
     private ListView routeListView;
@@ -92,6 +92,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     };
 
     @Override
+    @DebugTrace
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_climb_chooser);
@@ -185,6 +186,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 TextView t = (TextView)findViewById(R.id.labelRoutes);
                 if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton)) {
                     PositionMonitor.getInstance().setRouteId(currentRouteId);
+                    PositionMonitor.getInstance().resetRejoin();
                     boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
                     if (autoMonitorClimbs) {
                         PositionMonitor.getInstance().doMonitor(PositionMonitor.MonitorType.CLIMB);
@@ -205,7 +207,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             @Override
             public void onClick(View v) {
                 Intent i = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
-                showRoute(i, 0, null);
+                showRoute(i, -1, null);
             }
         });
 
@@ -262,19 +264,19 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         // See if there is a route that needs resuming
         checkRouteResume();
+
+        Log.d(TAG, "Stop location listener");
+        LocationMonitor.stopListener();
     }
 
     @Override
     public void onResume() {
-        if (monitor != null && !monitor.isListenerRunning()) {
-            Log.d(TAG, "Resume location listener");
-            monitor.resumeListener();
-        }
-
+        Log.d(TAG, "ClimbChooserActivity onResume");
         // Reset monitoring
         stopAllMonitors();
         PositionMonitor.getInstance().setOnRoute(false);
         PositionMonitor.getInstance().setOnClimbId(-1);
+        PositionMonitor.getInstance().resetRejoin();
 
         ViewGroup.LayoutParams routeParams = deleteRouteButton.getLayoutParams();
         ViewGroup.LayoutParams climbParams = deleteClimbButton.getLayoutParams();
@@ -287,9 +289,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     @Override
     protected void onStop() {
         Log.d(TAG, "onStop");
-        if (monitor != null && monitor.isListenerRunning()) {
-            monitor.stopListener();
-        }
         super.onStop();
     }
 
@@ -317,6 +316,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     h.put("value", currentRoute);
                     routeListAdapter.notifyDataSetChanged();
                     enableRouteButtons(true);
+                    ClimbController.getInstance();
                     Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
 
                     // Clear preferences (will be set when route starts)
@@ -337,6 +337,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.ROUTE) && PositionMonitor.getInstance().isOnRoute()) {
             // Stop monitoring route, as this will now be managed from the route view
             PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.ROUTE);
+            PositionMonitor.getInstance().resetRejoin();
             Intent intent = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
             intent.putExtra("follow", 1);
             ClimbController.getInstance().startRoute();
@@ -344,9 +345,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         }
 
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
-            if (monitor != null && monitor.isListenerRunning()) {
-                monitor.stopListener();
-            }
             showClimb(PositionMonitor.getInstance().getOnClimbId(), null);
         }
     }
@@ -366,16 +364,24 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         }
     }
 
+    @DebugTrace
     private void showRoute(Intent nextIntent, int startIdx, RoutePoint point) {
         GPXRoute rt = Database.getInstance().getRoute(currentRouteId);
-        rt.adjustRoute(startIdx);
-        ClimbController.getInstance().loadRoute(rt);
+        if (startIdx >= 0) {
+            rt.adjustRoute(startIdx);
 
-        if (point != null) {
-            // Recalculate matching index
-            if (PositionMonitor.getInstance().checkOnRoute(rt, point)) {
-                int matchingIdx = PositionMonitor.getInstance().getMatchingSectionIdx();
-                ClimbController.getInstance().rejoinRoute(matchingIdx);
+            // Amend matching section index
+            int matchingIndex = PositionMonitor.getInstance().getMatchingSectionIdx();
+            matchingIndex -= startIdx;
+            if (matchingIndex < 0) {
+                matchingIndex += rt.getPoints().size();
+            }
+
+            PositionMonitor.getInstance().setMatchingSectionIdx(matchingIndex);
+            ClimbController.getInstance().loadRoute(rt);
+
+            if (point != null) {
+                ClimbController.getInstance().rejoinRoute(matchingIndex);
             }
         }
 
@@ -431,18 +437,21 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 return true;
             case R.id.action_restore_db:
                 Toast.makeText(getApplicationContext(), "Fetching data...", Toast.LENGTH_SHORT).show();
+                setProgress(true, "Resstoring databaase");
                 NetworkRequest.restoreDB(getApplicationContext(), 1, new NetworkRequest.NetworkCallback() {
                     @Override
                     public void onRequestCompleted(Object callbackData) {
                         Toast.makeText(getApplicationContext(), "Restoring data...", Toast.LENGTH_SHORT).show();
                         String[] rows = callbackData.toString().split("~");
                         Database.getInstance().restore(rows);
+                        setProgress(false, null);
                         Toast.makeText(getApplicationContext(), "Database restore complete", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "Database restore completed");
                     }
 
                     @Override
                     public void onError(Exception e) {
+                        setProgress(false, null);
                         Toast.makeText(getApplicationContext(), "Unable to restore data", Toast.LENGTH_LONG).show();
                     }
                 });
@@ -511,7 +520,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             if (monitor == null) {
-                monitor = new LocationMonitor(ClimbChooserActivity.this);
+                monitor = LocationMonitor.getInstance(ClimbChooserActivity.this);
             }
             return true;
         } else {
@@ -536,7 +545,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         if (PositionMonitor.getInstance().getMonitoring().isEmpty()) {
             // Not monitoring anything else, so clear listener and screen flags
             if (monitor != null) {
-                monitor.stopListener();
+                LocationMonitor.stopListener();
                 monitor = null;
             }
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -575,7 +584,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         return Collections.emptyList();
     }
-
+    @DebugTrace
     private void setUpSwitch(Switch swi, String pref) {
         boolean prefSet = Preferences.getInstance().getBooleanPreference(pref);
         swi.setChecked(prefSet);

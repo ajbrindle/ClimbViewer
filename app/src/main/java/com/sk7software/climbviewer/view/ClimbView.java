@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.drawable.VectorDrawable;
 import android.util.AttributeSet;
@@ -18,18 +19,23 @@ import android.view.ViewGroup;
 import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 
+import com.google.android.gms.common.util.Strings;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.DrawableUpdateInterface;
+import com.sk7software.climbviewer.LocationMonitor;
 import com.sk7software.climbviewer.R;
+import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -67,6 +73,7 @@ public class ClimbView extends View {
     private int height;
     private boolean heightSet;
     private boolean initialised;
+    private String showClimbsList;
 
     // Plots that are represented on this view (e.g. ATTEMPT, PB)
     private Set<ClimbController.PointType> plots;
@@ -245,6 +252,10 @@ public class ClimbView extends View {
         startIndex = findIndexAtDistance(distance);
     }
 
+    public void setShowClimbsList(String ids) {
+        this.showClimbsList = ids;
+    }
+
     public void setTrackDistance(double distance) {
         this.trackDist = distance - profile.getPoints().get(startIndex).getDistFromStart();
     }
@@ -356,10 +367,44 @@ public class ClimbView extends View {
             markClimb(canvas, x0, xN, 0);
         }
 
+        drawClimbs(canvas);
+
         initialised = true;
         if (parent != null) {
             // TODO: Sort out how we can tell that the screen is ready
             parent.updateAfterDraw(zoomView && scaleFacX < Integer.MAX_VALUE);
+        }
+    }
+
+    private void drawClimbs(Canvas canvas) {
+        if (!Strings.isEmptyOrWhitespace(showClimbsList)) {
+            // Show climbs on route
+            List<String> ids = Arrays.asList(showClimbsList.split(","));
+            for (String id : ids) {
+                // Get route
+                int climbId = Integer.parseInt(id);
+                GPXRoute rt = Database.getInstance().getClimb(climbId);
+                List<Integer> indexes = findRouteIndexes(rt);
+
+                float xStart = -1;
+                float xEnd = -1;
+
+                for (int i=0; i<points.size(); i++) {
+                    PlotPoint p = points.get(i);
+                    if (xStart < 0 && p.getProfileIndex() >= indexes.get(0)) {
+                        xStart = p.getX();
+                    }
+                    if (xEnd < 0 && p.getProfileIndex() >= indexes.get(1)) {
+                        xEnd = p.getX();
+                    }
+                }
+
+                Log.d(TAG, "Climb range: " + xStart + "," + xEnd);
+
+                if (xStart >= 0 && xEnd >= 0) {
+                    markClimb(canvas, (int)xStart, (int)xEnd, 0);
+                }
+            }
         }
     }
 
@@ -458,6 +503,9 @@ public class ClimbView extends View {
             }
 
             climbRating = (int)(distance * gradient);
+            climbRating = (int)((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
+                    (distance / 1000)) * 100);// + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
+
         }
 
         DecimalFormat df1 = new DecimalFormat();
@@ -567,6 +615,7 @@ public class ClimbView extends View {
                 first = false;
                 p.setX(profile.getPoints().get(i).getDistFromStart());
                 p.setElevation((float)pt.getElevation());
+                p.setProfileIndex(i);
                 lastIndex = startIdx;
             } else {
                 distFromLast += (float)calcDelta(pt, profile.getPoints().get(lastIndex).getEasting(), profile.getPoints().get(lastIndex).getNorthing());
@@ -576,6 +625,7 @@ public class ClimbView extends View {
 
                 p.setX(distFromLast + lastX);
                 p.setElevation((float) pt.getElevation());
+                p.setProfileIndex(i);
                 distFromLast = 0;
             }
 
@@ -767,5 +817,65 @@ public class ClimbView extends View {
 
     public void setTransparency(int transparency) {
         this.transparency = transparency;
+    }
+
+    @DebugTrace
+    private List<Integer> findRouteIndexes(GPXRoute climb) {
+        PointF lastPoint = null;
+        int startIdx = -1;
+        int endIdx = -1;
+
+        // Find all climbs whose start point is on the route
+        for (int i=0; i<profile.getPoints().size(); i++) {
+            RoutePoint pt = profile.getPoints().get(i);
+
+            if (lastPoint == null) {
+                lastPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
+                continue;
+            }
+
+            PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
+
+            PointF start = new PointF((float)climb.getPoints().get(0).getEasting(), (float)climb.getPoints().get(0).getNorthing());
+            if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+                PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
+                if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
+                    Log.d(TAG, "STARTED CLIMB " + climb.getName());
+                    startIdx = i;
+                    break;
+                }
+            }
+
+            // Remove any climbs already found from allClimbs
+            lastPoint = currentPoint;
+        }
+
+        lastPoint = null;
+        // From the started climbs, find the ones that finish
+        for (int i=startIdx; i<profile.getPoints().size(); i++) {
+            RoutePoint pt = profile.getPoints().get(i);
+
+            if (lastPoint == null) {
+                lastPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
+                continue;
+            }
+
+            PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
+
+            int lastIdx = climb.getPoints().size()-1;
+            PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
+            if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
+                Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
+                endIdx = i;
+                break;
+            }
+
+            lastPoint = currentPoint;
+        }
+
+        List<Integer> indexes = new ArrayList<>();
+        indexes.add(startIdx);
+        indexes.add(endIdx);
+        return indexes;
     }
 }

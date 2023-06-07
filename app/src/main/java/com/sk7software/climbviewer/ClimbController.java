@@ -14,6 +14,7 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.AttemptData;
 import com.sk7software.climbviewer.view.PlotPoint;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -122,7 +123,7 @@ public class ClimbController {
 
     public void loadPB() {
         if (climb != null) {
-            ClimbAttempt pbAttempt = Database.getInstance().getClimbPB(climb.getId());
+            ClimbAttempt pbAttempt = Database.getInstance().getClimbTime(climb.getId(), true);
             if (pbAttempt != null && pbAttempt.getPoints() != null && !pbAttempt.getPoints().isEmpty()) {
                 LocalDateTime pbStart = pbAttempt.getPoints().get(0).getTimestamp();
                 pbAttempt.getPoints().stream()
@@ -137,6 +138,7 @@ public class ClimbController {
         }
     }
 
+    @DebugTrace
     public void updateClimbData(RoutePoint point, ActivityUpdateInterface callbackActivity) {
         Log.d(TAG, "Updating climb data " + point.getEasting() + "," + point.getNorthing() + " " + callbackActivity.getClass().getSimpleName());
         lastPointLL = new LatLng(point.getLat(), point.getLon());
@@ -210,6 +212,7 @@ public class ClimbController {
         distToPB = attempts.get(PointType.ATTEMPT).getDist() - pb.getDist();
     }
 
+    @DebugTrace
     private void checkIfFinished(PointF currentPoint, RoutePoint point) {
         AttemptData attemptData = attempts.get(PointType.ATTEMPT);
         ClimbAttempt attempt = attemptData.getAttempt();
@@ -237,7 +240,7 @@ public class ClimbController {
             Database.getInstance().addAttempt(attempt, climb.getId());
             reset(PointType.ATTEMPT);
         } else if (!stillOnTrack(climb, currentPoint, 0, point.getAccuracy())) {
-            if (++offClimbCount > 5) {
+            if (++offClimbCount > 10) {
                 // Deviated off climb, so reset
                 lastClimbId = -99; // Prevents summary panel on screen
                 reset(PointType.ATTEMPT);
@@ -372,6 +375,11 @@ public class ClimbController {
         setPointsDist(this.route);
     }
 
+    public void clearRoute() {
+        this.route = null;
+        this.lastRouteId = -1;
+    }
+
     private void setPointsDist(GPXRoute gpxRoute) {
         float dist = 0;
         float elev = 0;
@@ -446,6 +454,7 @@ public class ClimbController {
         return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
     }
 
+    @DebugTrace
     private boolean stillOnTrack(GPXRoute track, PointF point, int minIndex, float accuracy) {
         PointF lastP = null;
         int maxIndex = track.getPoints().size();
@@ -474,10 +483,12 @@ public class ClimbController {
 
     public AttemptStats getLastAttemptStats(int lastClimbId) {
         AttemptStats stats = Database.getInstance().getLastAttempt(lastClimbId);
-        GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
-        setPointsDist(lastClimb);
-        int numClimbPoints = lastClimb.getPoints().size();
-        stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints-1).getDistFromStart());
+        if (stats != null) {
+            GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
+            setPointsDist(lastClimb);
+            int numClimbPoints = lastClimb.getPoints().size();
+            stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints - 1).getDistFromStart());
+        }
         return stats;
     }
 }

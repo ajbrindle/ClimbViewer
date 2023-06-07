@@ -4,7 +4,6 @@
     android:id="@+id/summaryPanel"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="10dp"
     android:layout_weight="50"
     android:background="@drawable/layout_border"
     android:orientation="vertical"

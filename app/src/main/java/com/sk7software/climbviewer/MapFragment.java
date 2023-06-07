@@ -58,7 +58,7 @@ public class MapFragment extends Fragment {
 
     private GPXRoute track;
     private GoogleMap map;
-    private Map<ClimbController.PointType, Marker> marker;
+    private Map<ClimbController.PointType, Map<PositionMarker.Size, Marker>> marker;
     private boolean mapReady = false;
     private boolean trackRider = false;
     private boolean mirror = false;
@@ -388,13 +388,33 @@ public class MapFragment extends Fragment {
             return;
         }
 
-        Marker m = marker.get(type);
+        Marker m = null;
+        Map<PositionMarker.Size, Marker> sizeMarkers = marker.get(type);
+        if (sizeMarkers != null) {
+            m = sizeMarkers.get(size);
+        } else {
+            sizeMarkers = new HashMap<>();
+        }
+
         if (m != null) {
             animateMarker(m, ll, new LatLngInterpolator.LinearFixed());
         } else {
-            marker.put(type, map.addMarker(new MarkerOptions()
+            sizeMarkers.put(size, map.addMarker(new MarkerOptions()
                     .position(ll)
                     .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(size, colour)))));
+            marker.put(type, sizeMarkers);
+        }
+    }
+
+    public void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size) {
+        Marker m = null;
+        Map<PositionMarker.Size, Marker> sizeMarkers = marker.get(type);
+        if (sizeMarkers != null) {
+            m = sizeMarkers.get(size);
+            if (m != null) {
+                m.remove();
+                sizeMarkers.remove(size);
+            }
         }
     }
 

@@ -26,9 +26,15 @@ import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.model.Track;
+import com.sk7software.climbviewer.model.TrackFile;
+import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.PlotPoint;
 import com.sk7software.climbviewer.view.ScreenController;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClimbFinderActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
@@ -58,11 +64,18 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         zoomPanel = (LinearLayout)findViewById(R.id.zoomPanel);
         zoomPanel.setVisibility(View.GONE);
 
+        // Find climbs on the route
+        List<GPXRoute> climbsOnRoute = findClimbsOnRoute();
+        String climbIds = climbsOnRoute.stream()
+                .map(r -> String.valueOf(r.getId()))
+                .collect(Collectors.joining(","));
+
         routeClimbView = findViewById(R.id.climbFinder);
         routeClimbView.setParent(this);
         routeClimbView.setClimb(route, 20);
         routeClimbView.setHeight(viewHeight, false);
         routeClimbView.setTransparency(0xFF);
+        routeClimbView.setShowClimbsList(climbIds);
         routeClimbView.invalidate();
 
         // Zoom view is 80% of the width
@@ -266,6 +279,23 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
 
         climbFile.setRoute(climbPoints);
         Database.getInstance().addClimb(climbFile);
+    }
+
+    private List<GPXRoute> findClimbsOnRoute() {
+        TrackFile dummyFile = new TrackFile();
+        Track track = new Track();
+        TrackSegment segment = new TrackSegment();
+        segment.setPoints(route.getPoints());
+        track.setTrackSegment(segment);
+        dummyFile.setRoute(track);
+
+        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
+
+        for (GPXRoute r : climbsOnRoute) {
+            Log.d(TAG, "Climbs on route: " + r.getName());
+        }
+
+        return climbsOnRoute;
     }
 
     @Override

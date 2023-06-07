@@ -39,7 +39,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     private MapFragment map;
     private int climbId;
     private GPXRoute climb;
-    private ClimbAttempt pb;
+    private boolean infoShown;
 
     private static final String TAG = ClimbViewActivity.class.getSimpleName();
 
@@ -50,6 +50,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         setContentView(R.layout.activity_climb_view);
         getSupportActionBar().hide();
 
+        infoShown = false;
         climbId = getIntent().getIntExtra("id", 0);
         climb = Database.getInstance().getClimb(climbId);
         ClimbController.getInstance().loadClimb(climb);
@@ -121,6 +122,8 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     }
 
     private void displayClimbInfo() {
+        if (infoShown) return;
+
         if (climb != null) {
             TextView txtDist = findViewById(R.id.txtSegmentDist);
             int numClimbPoints = ClimbController.getInstance().getClimb().getPoints().size();
@@ -146,7 +149,8 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
             double elevationChange = maxElevation - minElevation;
             double averageGradient = elevationChange / ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart();
-            long rating = (long)(averageGradient * 100 * (ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart()));
+            long rating = ClimbController.getInstance().getClimb().calcRating();
+                    //(long)(averageGradient * 100 * (ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart()));
 
             DisplayFormatter.setDistanceText((float)elevationChange,"m", txtElevationChange, true);
             DisplayFormatter.setGradientText((float)averageGradient*100, txtAverageGradient);
@@ -154,16 +158,13 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             txtRating.setText(String.valueOf(rating));
         }
 
-        pb = Database.getInstance().getClimbPB(climbId);
+        ClimbAttempt pb = Database.getInstance().getClimbTime(climbId, true);
         TextView txtPB = findViewById(R.id.txtPB);
+        setTimeText(pb, txtPB);
 
-        if (pb != null && pb.getPoints() != null && pb.getPoints().size() > 0) {
-            int pbMins = pb.getDuration() / 60;
-            int pbSecs = pb.getDuration() % 60;
-            txtPB.setText(pbMins + ":" + pbSecs + "s");
-        } else {
-            txtPB.setText("-:--s");
-        }
+        ClimbAttempt last = Database.getInstance().getClimbTime(climbId, false);
+        TextView txtLastAttempt = findViewById(R.id.txtLastAttempt);
+        setTimeText(last, txtLastAttempt);
 
         // Display number of attempts
         AttemptStats attempts = Database.getInstance().getLastAttempt(climbId);
@@ -173,8 +174,19 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         } else {
             txtAttempts.setText("0");
         }
-
+        infoShown = true;
     }
+
+    private void setTimeText(ClimbAttempt attempt, TextView txtTime) {
+        if (attempt != null && attempt.getPoints() != null && attempt.getPoints().size() > 0) {
+            int attMins = attempt.getDuration() / 60;
+            int attSecs = attempt.getDuration() % 60;
+            txtTime.setText(attMins + ":" + String.format("%02d", attSecs) + "s");
+        } else {
+            txtTime.setText("-:--s");
+        }
+    }
+
     private void setClimbViewHeight() {
         WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();

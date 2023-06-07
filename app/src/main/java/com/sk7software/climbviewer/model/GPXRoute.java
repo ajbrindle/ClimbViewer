@@ -5,6 +5,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.view.PlotPoint;
 
@@ -131,6 +132,31 @@ public class GPXRoute {
 
             lastIndex = i;
             distFromLast = 0;
+        }
+    }
+
+    public long calcRating() {
+        double maxElevation = Double.MIN_VALUE;
+        double minElevation = Double.MAX_VALUE;
+
+        for (RoutePoint p : this.getPoints()) {
+            if (p.getElevation() < minElevation) {
+                minElevation = p.getElevation();
+            }
+            if (p.getElevation() > maxElevation) {
+                maxElevation = p.getElevation();
+            }
+        }
+
+        double elevationChange = maxElevation - minElevation;
+        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
+        //Log.d("GPXRoute", "Min: " + minElevation + "; Max: " + maxElevation + "; Dist: " + dist);
+
+        if (dist != 0) {
+            return (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
+                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
+        } else {
+            return 0;
         }
     }
 

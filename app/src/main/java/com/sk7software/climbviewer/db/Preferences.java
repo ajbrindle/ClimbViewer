@@ -5,6 +5,8 @@ import static java.lang.reflect.Array.getInt;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.sk7software.climbviewer.ApplicationContextProvider;
+
 public class Preferences {
     public static final String APP_PREFERENCES_KEY = "SK7_CLIMBER_PREFS";
     public static final String PREFERNECE_2D = "PREF_2D";
@@ -32,10 +34,9 @@ public class Preferences {
 
     public static Preferences getInstance() {
         if (instance == null) {
-            throw new IllegalStateException("Preferences not initialised");
-        } else {
-            return instance;
+            init(ApplicationContextProvider.getContext());
         }
+        return instance;
     }
 
     public static boolean isPrefsSet() {

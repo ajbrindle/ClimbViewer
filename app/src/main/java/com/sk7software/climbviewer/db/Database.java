@@ -696,26 +696,25 @@ public class Database extends SQLiteOpenHelper {
         db.execSQL(del);
     }
 
-    public ClimbAttempt getClimbPB(int climbId) {
+    public ClimbAttempt getClimbTime(int climbId, boolean isPb) {
         SQLiteDatabase db = getReadableDatabase();
-        ClimbAttempt pb = new ClimbAttempt();
-        int pbId;
+        ClimbAttempt attempt = new ClimbAttempt();
+        int attemptId;
 
         String query = "SELECT attempt_id, duration, timestamp " +
                 "FROM CLIMB_ATTEMPT  " +
                 "WHERE id = ? " +
-                "ORDER BY DURATION ASC";
+                "ORDER BY " + (isPb ? "DURATION ASC" : "TIMESTAMP DESC");
 
         try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
             if (cursor != null && cursor.getCount() > 0) {
                 cursor.moveToFirst();
-                pbId = cursor.getInt(0);
-                Log.d(TAG, "PB: ClimbId " + climbId + "; Attempt: " + pbId);
+                attemptId = cursor.getInt(0);
 
                 LocalDateTime datetime =
                         LocalDateTime.ofInstant(Instant.ofEpochSecond(cursor.getInt(2)), ZoneId.systemDefault());
-                pb.setDatetime(datetime);
-                pb.setDuration(cursor.getInt(1));
+                attempt.setDatetime(datetime);
+                attempt.setDuration(cursor.getInt(1));
             } else {
                 return null;
             }
@@ -724,14 +723,14 @@ public class Database extends SQLiteOpenHelper {
             return null;
         }
 
-        if (pbId > 0) {
+        if (attemptId > 0) {
             // Fetch the full attempt
             String attemptQuery = "SELECT point_no, timestamp, easting, northing, lat, lon " +
                     "FROM CLIMB_ATTEMPT_POINT " +
                     "WHERE ATTEMPT_ID = ? " +
                     "AND ID = ? " +
                     "ORDER BY POINT_NO ASC";
-            try (Cursor cursor = db.rawQuery(attemptQuery, new String[]{String.valueOf(pbId), String.valueOf(climbId)})) {
+            try (Cursor cursor = db.rawQuery(attemptQuery, new String[]{String.valueOf(attemptId), String.valueOf(climbId)})) {
                 if (cursor != null && cursor.getCount() > 0) {
                     cursor.moveToFirst();
                     while (!cursor.isAfterLast()) {
@@ -742,7 +741,7 @@ public class Database extends SQLiteOpenHelper {
                         pt.setLon(cursor.getFloat(5));
                         LocalDateTime datetime =
                                 LocalDateTime.ofInstant(Instant.ofEpochSecond(cursor.getInt(1)), ZoneId.systemDefault());
-                        pb.addPoint(pt, datetime);
+                        attempt.addPoint(pt, datetime);
                         cursor.moveToNext();
                     }
                 }
@@ -750,8 +749,8 @@ public class Database extends SQLiteOpenHelper {
                 Log.d(TAG, "Error looking up attempt: " + e.getMessage());
             }
         }
-        Log.d(TAG, "Got PB - duration " + pb.getDuration() + " seconds");
-        return pb;
+        Log.d(TAG, "Got PB - duration " + attempt.getDuration() + " seconds");
+        return attempt;
     }
 
 

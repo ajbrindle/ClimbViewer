@@ -15,6 +15,7 @@ public class PlotPoint {
     private float elevation;
     private float gradient;
     private LatLng location;
+    private int profileIndex;
 
     @NonNull
     @Override

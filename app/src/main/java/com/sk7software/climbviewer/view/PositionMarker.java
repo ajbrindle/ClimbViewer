@@ -5,11 +5,10 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 
 import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.R;
 
@@ -25,7 +24,7 @@ public class PositionMarker {
 
         float scale;
 
-        private Size(float scale) {
+        Size(float scale) {
             this.scale = scale;
         }
 
@@ -34,7 +33,7 @@ public class PositionMarker {
         }
     }
 
-    private Map<Integer, Map<Size, Bitmap>> icons;
+    private final Map<Integer, Map<Size, Bitmap>> icons;
     private static PositionMarker INSTANCE = null;
 
     private PositionMarker() {
