@@ -42,6 +42,6 @@ public class DisplayFormatter {
     public static void setFullTimeText(float time, TextView txt) {
         int mins = (int)(time / 60);
         int secs = (int)(time % 60);
-        txt.setText(mins + ":" + secs);
+        txt.setText(mins + ":" + String.format("%02d", secs));
     }
 }

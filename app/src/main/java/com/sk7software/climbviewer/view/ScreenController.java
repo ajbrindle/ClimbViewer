@@ -1,26 +1,24 @@
 package com.sk7software.climbviewer.view;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.PointF;
+import android.graphics.Point;
 import android.util.Log;
+import android.view.Display;
+import android.view.WindowManager;
 
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbChooserActivity;
 import com.sk7software.climbviewer.ClimbController;
-import com.sk7software.climbviewer.FullClimbActivity;
-import com.sk7software.climbviewer.MapActivity;
+import com.sk7software.climbviewer.MapFragment;
 import com.sk7software.climbviewer.PositionMonitor;
-import com.sk7software.climbviewer.PursuitActivity;
 import com.sk7software.climbviewer.RouteViewActivity;
+import com.sk7software.climbviewer.SectionViewActivity;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.model.GPXRoute;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ScreenController {
     private static ScreenController INSTANCE = null;
@@ -36,20 +34,48 @@ public class ScreenController {
         return INSTANCE;
     }
 
+    public MapFragment.PlotType getNextPlotType(MapFragment.PlotType currentType, boolean inPursuit) {
+        // For climbs, loop through selected screens
+        if (ClimbController.getInstance().isAttemptInProgress()) {
+            List<MapFragment.PlotType> availableScreens = new ArrayList<>();
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
+                availableScreens.add(MapFragment.PlotType.NORMAL);
+            }
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
+                availableScreens.add(MapFragment.PlotType.FULL_CLIMB);
+            }
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT) && inPursuit) {
+                availableScreens.add(MapFragment.PlotType.PURSUIT);
+            }
+
+            if (availableScreens.size() == 1 && currentType != null) {
+                // Just stay on current screen
+                return null;
+            } else if (!availableScreens.isEmpty() && currentType == null) {
+                return availableScreens.get(0);
+            }
+
+            for (int i = 0; i < availableScreens.size(); i++) {
+                if (availableScreens.get(i) == currentType) {
+                    int nextIdx = i + 1;
+                    if (nextIdx >= availableScreens.size()) {
+                        nextIdx = 0;
+                    }
+                    Log.d(TAG, "Next screen: " + availableScreens.get(nextIdx).name());
+                    return availableScreens.get(nextIdx);
+                }
+            }
+        }
+        return null;
+    }
+
     public Intent getNextIntent(Activity currentScreen) {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
             List<Class<?>> availableScreens = new ArrayList<>();
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-                availableScreens.add(MapActivity.class);
-            }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-                availableScreens.add(FullClimbActivity.class);
+                availableScreens.add(SectionViewActivity.class);
             }
-            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT)) {
-                availableScreens.add(PursuitActivity.class);
-            }
-
             if (availableScreens.size() == 1) {
                 // Just stay on current screen
                 return null;
@@ -80,5 +106,14 @@ public class ScreenController {
         }
 
         return null;
+    }
+
+    public static Point getScreenSize() {
+        // Find screen width
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        return size;
     }
 }

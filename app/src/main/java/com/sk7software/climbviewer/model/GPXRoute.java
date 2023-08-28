@@ -4,6 +4,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.sk7software.climbviewer.ClimbController;
+import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.view.PlotPoint;
+
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
@@ -28,9 +33,12 @@ public class GPXRoute {
     private int projectionId;
     private int zone;
     private String time;
+    private int smoothDist;
 
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;
+
+    private List<RoutePoint> smoothedPoints;
 
     public void addPoint(RoutePoint point) {
         if (points == null) {
@@ -64,7 +72,6 @@ public class GPXRoute {
         RoutePoint end = this.getPoints().get(lastIdx);
 
         // Circular if start and end are within 50m of each other
-        Log.d("GPXRoute", "CIRCULAR DIST: " + Math.sqrt(Math.pow(end.getEasting() - start.getElevation(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)));
         return (Math.sqrt(Math.pow(end.getEasting() - start.getEasting(),2) + Math.pow(end.getNorthing() - start.getNorthing(),2)) < 50);
     }
 
@@ -72,5 +79,88 @@ public class GPXRoute {
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || !(o instanceof GPXRoute)) {
+            return false;
+        }
+
+        GPXRoute that = (GPXRoute)o;
+        return (this.getId() == that.getId() && this.getName().equals(that.getName()));
+    }
+
+    @Override
+    public int hashCode() {
+        return id * name.hashCode();
+    }
+
+    public void calcSmoothedPoints() {
+        float distFromLast = 0;
+        boolean first = true;
+        int lastIndex = 0;
+        smoothedPoints = new ArrayList<>();
+
+        int smoothDist = getSmoothDist();
+        if (smoothDist == 0) {
+            smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 20);
+        }
+
+        // Determine cumulative delta to all points
+        for (int i = 0; i < getPoints().size(); i++) {
+            RoutePoint pt = getPoints().get(i);
+
+            if (first) {
+                first = false;
+                pt.setSmoothedElevation(pt.getElevation());
+            } else {
+                distFromLast += (float)calcDelta(pt, getPoints().get(i-1).getEasting(), getPoints().get(i-1).getNorthing());
+
+                // Not reached smoothed distance, so move on to next point
+                if (distFromLast < smoothDist && i != getPoints().size() - 1) continue;
+
+                // Work out elevation difference with last smooted point
+                double elevDiff = pt.getElevation() - getPoints().get(lastIndex).getElevation();
+
+                // Interpolate along the length and set the interim elevations
+                for (int j=lastIndex+1; j<=i; j++) {
+                    getPoints().get(j).setSmoothedElevation(getPoints().get(lastIndex).getElevation() +
+                            (elevDiff * (float)calcDelta(getPoints().get(j), getPoints().get(lastIndex).getEasting(), getPoints().get(lastIndex).getNorthing()) / distFromLast));
+                }
+            }
+
+            lastIndex = i;
+            distFromLast = 0;
+        }
+    }
+
+    public long calcRating() {
+        double maxElevation = Double.MIN_VALUE;
+        double minElevation = Double.MAX_VALUE;
+
+        for (RoutePoint p : this.getPoints()) {
+            if (p.getElevation() < minElevation) {
+                minElevation = p.getElevation();
+            }
+            if (p.getElevation() > maxElevation) {
+                maxElevation = p.getElevation();
+            }
+        }
+
+        double elevationChange = maxElevation - minElevation;
+        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
+        //Log.d("GPXRoute", "Min: " + minElevation + "; Max: " + maxElevation + "; Dist: " + dist);
+
+        if (dist != 0) {
+            return (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
+                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
+        } else {
+            return 0;
+        }
+    }
+
+    private double calcDelta(RoutePoint pt, double e, double n) {
+        return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
     }
 }

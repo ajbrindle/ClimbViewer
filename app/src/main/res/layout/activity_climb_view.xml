@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".ClimbViewActivity"-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -18,7 +12,7 @@
         android:id="@+id/panel">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="3dp"
             android:layout_weight="50"
@@ -26,77 +20,264 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <TextView
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="DISTANCE"
-                android:textSize="28dp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtTotalDist"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Distance"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtSegmentDist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="88.88km"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8.88km"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Elevation Change"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtElevationChange"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="8888m"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="PB"
-                android:textSize="28dp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtPBTime"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Average Gradient"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtAverageGradient"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="8.8%"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8:88s"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Max Gradient"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtMaxGradient"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="8.8%"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Rating"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtRating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="8888"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Last Attempt"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtLastAttempt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="88:88s"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="PB"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtPB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="88:88s"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="Attempts"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentLeft="true"/>
+                <TextView
+                    android:id="@+id/txtAttempts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/oswald_bold"
+                    android:text="88:88s"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    android:autoSizeMaxTextSize="18sp"
+                    android:autoSizeMinTextSize="14sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:layout_alignParentRight="true"
+                    android:textStyle="bold" />
+            </RelativeLayout>
         </LinearLayout>
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/txtAttempts"
+    <SeekBar
+        android:id="@+id/viewSmooth"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/oswald_bold"
-        android:layout_margin="5dp"
-        android:text="Attempts: 0"
-        android:maxLines="1"
-        android:paddingLeft="5dp"
-        android:textSize="35sp"
-        android:textColor="#aa33aa"
-        android:textStyle="bold" />
+        android:max="250"
+        android:min="10"
+        android:progress="50"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:text="Smooth Distance"/>
 
     <com.sk7software.climbviewer.view.ClimbView
         android:id="@+id/elevationView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
         android:background="#ffffff" />
 
     <androidx.fragment.app.FragmentContainerView

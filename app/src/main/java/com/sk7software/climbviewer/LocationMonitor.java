@@ -14,16 +14,18 @@ import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.text.DecimalFormat;
 
 public class LocationMonitor {
+    private static LocationMonitor INSTANCE = null;
     private LocationManager lm;
     private LocationListener locationListener;
     private boolean listenerRunning;
     private ActivityUpdateInterface parent;
 
-    private static final float MAX_DIST = 25;
+    private static final float MAX_DIST = 12;
     private static final float MAX_DIST_SQ = MAX_DIST * MAX_DIST;
 
     // Time (in seconds) and distance (in metres) between updates to the location manager
@@ -32,38 +34,57 @@ public class LocationMonitor {
 
     private static final String TAG = LocationMonitor.class.getSimpleName();
 
-    public LocationMonitor() {
+    private LocationMonitor() {
         super();
     }
 
-    public LocationMonitor(ActivityUpdateInterface activity) {
+    private LocationMonitor(ActivityUpdateInterface activity) {
         this.parent = activity;
         lm = (LocationManager) ((Activity)parent).getSystemService(LOCATION_SERVICE);
         locationListener = new ClimbLocationListener(parent);
         resumeListener();
     }
 
+    public static LocationMonitor getInstance(ActivityUpdateInterface activity) {
+        if (INSTANCE == null) {
+            INSTANCE = new LocationMonitor(activity);
+        } else {
+            ((ClimbLocationListener) INSTANCE.locationListener).setNotifyActivity(activity);
+            INSTANCE.resumeListener();
+        }
+        return INSTANCE;
+    }
+
     @SuppressLint("MissingPermission")
+    @DebugTrace
     public void resumeListener() {
         if (!listenerRunning) {
+            Log.d(TAG, "Starting location monitor");
             lm.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
                     LM_UPDATE_INTERVAL * 1000,
                     LM_UPDATE_DISTANCE,
                     locationListener);
             listenerRunning = true;
+        } else {
+            Log.d(TAG, "Monitor already running");
         }
     }
 
-    public void stopListener() {
-        lm.removeUpdates(locationListener);
-        listenerRunning = false;
+    public static void stopListener() {
+        Log.d(TAG, "Stopping location monitor");
+        if (INSTANCE != null) {
+            if (INSTANCE.lm != null) {
+                INSTANCE.lm.removeUpdates(INSTANCE.locationListener);
+            }
+            INSTANCE.listenerRunning = false;
+        }
     }
 
     /**
-     * Determines if the current point of the climb (loc) is within the line segment of the last two live
-     * location updates. In order to be valid, the perpendicular distance must be within 15 metres
-     * @param loc - current location on route (E, N)
+     * Determines if the reference point (loc) is within the line segment bounded by a and b
+     * In order to be valid, the perpendicular distance must be within the defined number of metres
+     * @param loc - reference point (E, N)
      * @param a - last-but-one location update (E, N)
      * @param b - last location update (E, N)
      * @return true if point is within line segment (and close enough)
@@ -79,7 +100,6 @@ public class LocationMonitor {
         double dx = loc.x - xxyy.x;
         double dy = loc.y - xxyy.y;
         double distSq = dx * dx + dy * dy;
-        //Log.d(TAG, "Dist sq: " + distSq);
         return distSq < MAX_DIST_SQ;
     }
 
@@ -106,6 +126,9 @@ public class LocationMonitor {
         else {
             xx = a.x + param * C;
             yy = a.y + param * D;
+            PointF xxyy = new PointF((float)xx, (float)yy);
+            double dx = start.x - xxyy.x;
+            double dy = start.y - xxyy.y;
             return new PointF((float)xx, (float)yy);
         }
     }
@@ -133,13 +156,25 @@ public class LocationMonitor {
 
     public static class ClimbLocationListener implements LocationListener {
         private ActivityUpdateInterface notifyActivity;
+        private boolean firstUpdate;
 
         public ClimbLocationListener(ActivityUpdateInterface parent) {
+            this.notifyActivity = parent;
+            firstUpdate = true;
+        }
+
+        public void setNotifyActivity(ActivityUpdateInterface parent) {
             this.notifyActivity = parent;
         }
 
         @Override
+        @DebugTrace
         public synchronized void onLocationChanged(Location loc) {
+            if (firstUpdate) {
+                firstUpdate = false;
+                return;
+            }
+
             if (loc != null) {
                 // Check lat and lon are > 0
                 if (Math.abs(loc.getLatitude()) > 0.001 && Math.abs(loc.getLongitude()) > 0.001) {

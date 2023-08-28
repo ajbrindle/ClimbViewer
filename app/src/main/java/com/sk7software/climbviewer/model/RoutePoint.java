@@ -7,12 +7,21 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Root(strict=false)
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RoutePoint {
     @Attribute
     private double lat;
@@ -47,10 +56,29 @@ public class RoutePoint {
     @Attribute(required = false)
     private float elevFromStart;
 
+    @Attribute(required = false)
+    private double smoothedElevation;
+
     public void setENFromLL(Projection proj, int zone) {
         RoutePoint tmpPt = new RoutePoint();
         tmpPt = GeoConvert.convertLLToGrid(proj, this, zone);
         this.setEasting(tmpPt.getEasting());
         this.setNorthing(tmpPt.getNorthing());
+    }
+
+    @Override
+    public String toString() {
+        NumberFormat df = NumberFormat.getInstance();
+        df.setMaximumFractionDigits(4);
+        df.setGroupingUsed(false);
+        StringBuilder sb = new StringBuilder("RoutePoint[");
+        sb.append("Lat: " + df.format(lat) + "; ");
+        sb.append("Lon: " + df.format(lon) + "; ");
+        df.setMaximumFractionDigits(1);
+        sb.append("Elev: " + df.format(elevation) + "; ");
+        sb.append("E: " + df.format(easting) + "; ");
+        sb.append("N: " + df.format(northing) + "; ");
+        sb.append("Dist: " + df.format(distFromStart) + "]");
+        return sb.toString();
     }
 }

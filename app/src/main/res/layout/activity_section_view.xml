@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true"
-    tools:context=".FullClimbActivity">
+    tools:context=".SectionViewActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +13,6 @@
         android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/displayPanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -30,16 +29,18 @@
                     android:layout_weight="50"
                     android:background="@drawable/layout_border"
                     android:orientation="vertical"
+                    android:id="@+id/panel1"
                     android:padding="8dp">
 
                     <TextView
+                        android:id="@+id/lblPanel1"
                         style="@style/panelTitleStyle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="GRADIENT"/>
+                        android:text="GRADIENT" />
 
                     <TextView
-                        android:id="@+id/txtGradientNow"
+                        android:id="@+id/txtPanel1"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:autoSizeMaxTextSize="60sp"
@@ -48,7 +49,7 @@
                         android:autoSizeTextType="uniform"
                         android:fontFamily="@font/oswald_bold"
                         android:maxLines="1"
-                        android:text="88.8%"
+                        android:text="8.88km"
                         android:textSize="60sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -60,16 +61,18 @@
                     android:layout_weight="50"
                     android:background="@drawable/layout_border"
                     android:orientation="vertical"
+                    android:id="@+id/panel2"
                     android:padding="8dp">
 
                     <TextView
+                        android:id="@+id/lblPanel2"
                         style="@style/panelTitleStyle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="REMAINING"/>
+                        android:text="REMAINING" />
 
                     <TextView
-                        android:id="@+id/txtRemaining"
+                        android:id="@+id/txtPanel2"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:autoSizeMaxTextSize="60sp"
@@ -78,7 +81,7 @@
                         android:autoSizeTextType="uniform"
                         android:fontFamily="@font/oswald_bold"
                         android:maxLines="1"
-                        android:text="88.8m"
+                        android:text="888m"
                         android:textSize="60sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -96,46 +99,18 @@
                     android:layout_weight="50"
                     android:background="@drawable/layout_border"
                     android:orientation="vertical"
+                    android:id="@+id/panel3"
                     android:padding="8dp">
 
                     <TextView
+                        android:id="@+id/lblPanel3"
                         style="@style/panelTitleStyle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="NEXT"/>
+                        android:text="NEXT" />
 
                     <TextView
-                        android:id="@+id/txtGradientNext"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:autoSizeMaxTextSize="60sp"
-                        android:autoSizeMinTextSize="28sp"
-                        android:autoSizeStepGranularity="2sp"
-                        android:autoSizeTextType="uniform"
-                        android:fontFamily="@font/oswald_bold"
-                        android:maxLines="1"
-                        android:text="88.8%"
-                        android:textSize="60sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="3dp"
-                    android:layout_weight="50"
-                    android:background="@drawable/layout_border"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-
-                    <TextView
-                        style="@style/panelTitleStyle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="DIST LEFT"/>
-
-                    <TextView
-                        android:id="@+id/txtTotRemaining"
+                        android:id="@+id/txtPanel3"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:autoSizeMaxTextSize="60sp"
@@ -148,15 +123,86 @@
                         android:textSize="60sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="3dp"
+                    android:layout_weight="50"
+                    android:background="@drawable/layout_border"
+                    android:orientation="vertical"
+                    android:id="@+id/panel4"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/lblPanel4"
+                        style="@style/panelTitleStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="DIST LEFT" />
+
+                    <TextView
+                        android:id="@+id/txtPanel4"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:autoSizeMaxTextSize="60sp"
+                        android:autoSizeMinTextSize="28sp"
+                        android:autoSizeStepGranularity="2sp"
+                        android:autoSizeTextType="uniform"
+                        android:fontFamily="@font/oswald_bold"
+                        android:maxLines="1"
+                        android:text="888m"
+                        android:textSize="60sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>
 
-        <com.sk7software.climbviewer.view.ClimbView
-            android:id="@+id/elevationView"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#ffffff" />
+            android:layout_height="wrap_content">
+
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/mapView"
+                android:name="com.sk7software.climbviewer.MapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:layout="@layout/fragment_map" />
+
+                <LinearLayout
+                    android:id="@+id/mirror"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/layout_border"
+                    android:backgroundTint="@color/white"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignTop="@+id/mapView"
+                    android:padding="8dp"
+                    android:orientation="vertical"
+                    android:layout_margin="5dp"
+                    android:visibility="invisible">
+
+                    <androidx.fragment.app.FragmentContainerView
+                        android:id="@+id/mirrorMap"
+                        android:name="com.sk7software.climbviewer.MapFragment"
+                        android:layout_width="150dp"
+                        android:layout_height="150dp" />
+                </LinearLayout>
+
+            <RelativeLayout
+                android:id="@+id/sectionPanel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@+id/mapView">
+
+                <com.sk7software.climbviewer.view.ClimbView
+                    android:id="@+id/sectionView"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:background="#00ffffff" />
+            </RelativeLayout>
+        </RelativeLayout>
     </LinearLayout>
 
     <RelativeLayout

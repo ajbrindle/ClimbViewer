@@ -31,7 +31,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 public class NetworkRequest {
 
@@ -44,8 +47,8 @@ public class NetworkRequest {
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
-        public void onRequestCompleted(Object callbackData);
-        public void onError(Exception e);
+        void onRequestCompleted(Object callbackData);
+        void onError(Exception e);
     }
 
     private synchronized static RequestQueue getQueue(Context context) {
@@ -55,9 +58,10 @@ public class NetworkRequest {
         return queue;
     }
 
-    public static void fetchGPX(final Context context, String dir, String gpxFile, final NetworkCallback callback) {
+    private static void fetchGPX(final Context context, String dir, String gpxFile, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
         Log.d(TAG, "Fetching: " + gpxFile);
         try {
+            uiUpdate.setProgress(true, "Fetching file: " + gpxFile);
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.GET, GPX_LOAD_URL + "?dir=" + dir + "&name=" + gpxFile,
                             null,
@@ -74,6 +78,8 @@ public class NetworkRequest {
                                     } catch (JsonProcessingException e) {
                                         Log.d(TAG, "Error getting GPX data: " + e.getMessage());
                                         callback.onRequestCompleted(null);
+                                    } finally {
+                                        uiUpdate.setProgress(false, null);
                                     }
                                 }
                             },
@@ -81,6 +87,7 @@ public class NetworkRequest {
                                 @Override
                                 public void onErrorResponse(VolleyError error) {
                                     Log.d(TAG, "Error => " + error.toString());
+                                    uiUpdate.setProgress(false, null);
                                     callback.onError(error);
                                 }
                             }
@@ -105,28 +112,15 @@ public class NetworkRequest {
                                     try {
                                         ObjectMapper mapper = new ObjectMapper();
                                         FileList files = new FileList();
-                                        files.setFiles(Arrays.asList(mapper.readValue(response.toString(), FileDescription[].class)));
+                                        files.setFiles(new LinkedList<FileDescription>(Arrays.asList(mapper.readValue(response.toString(), FileDescription[].class))));
+                                        uiUpdate.setProgress(false, null);
 
-                                        for (FileDescription desc : files.getFiles()) {
-                                            Log.d(TAG, "File: " + desc.getName());
-                                            // Fetch climb if it isn't already in the database
-                                            if (!exists(dir, desc)) {
-                                                fetchGPX(context, dir, desc.getName(), new NetworkCallback() {
-                                                    @Override
-                                                    public void onRequestCompleted(Object callbackData) {
-                                                        Log.d(TAG, "Loaded file: " + desc.getName());
-                                                    }
-
-                                                    @Override
-                                                    public void onError(Exception e) {
-                                                        Log.d(TAG, "Error reading file: " + desc.getName());
-                                                    }
-                                                });
-                                            }
+                                        if (!files.getFiles().isEmpty()) {
+                                            loadFiles(context, uiUpdate, dir, files.getFiles());
                                         }
 
-                                        uiUpdate.setProgress(false, null);
                                         callback.onRequestCompleted(files);
+
                                     } catch (JsonProcessingException e) {
                                         Log.d(TAG, "Error getting dev messages: " + e.getMessage());
                                     }
@@ -148,6 +142,33 @@ public class NetworkRequest {
         }
     }
 
+    private static void loadFiles(Context context, ActivityUpdateInterface uiUpdate, String dir, List<FileDescription> files) {
+        FileDescription desc = files.get(0);
+        Log.d(TAG, "File: " + desc.getName());
+        files.remove(0);
+
+        // Fetch file contents if it isn't already in the database
+        if (true || !exists(dir, desc)) {
+            fetchGPX(context, dir, desc.getName(), uiUpdate, new NetworkCallback() {
+                @Override
+                public void onRequestCompleted(Object callbackData) {
+                    Log.d(TAG, "Loaded file: " + desc.getName());
+                    if (!files.isEmpty()) {
+                        loadFiles(context, uiUpdate, dir, files);
+                    }
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Log.d(TAG, "Error reading file: " + desc.getName());
+                    if (!files.isEmpty()) {
+                        loadFiles(context, uiUpdate, dir, files);
+                    }
+                }
+            });
+        }
+    }
+
     private static void updateDatabase(String dir, GPXRoute route) {
         if ("climbs".equals(dir)) {
             GPXFile f = new GPXFile();
@@ -161,7 +182,6 @@ public class NetworkRequest {
             TrackMetadata m = new TrackMetadata();
             Track t = new Track();
             TrackSegment s = new TrackSegment();
-
             m.setTime(route.getTime());
             s.setPoints(route.getPoints());
             t.setName(route.getName());
@@ -185,6 +205,7 @@ public class NetworkRequest {
                     .create();
             String json = gson.toJson(backupData);
             JSONObject backup = new JSONObject(json);
+            uiUpdate.setProgress(true, "Backing up database");
 
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.POST, BACKUP_URL, backup,

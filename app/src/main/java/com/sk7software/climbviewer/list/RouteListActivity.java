@@ -23,7 +23,7 @@ public class RouteListActivity extends Activity {
         setupActionBar();
 
         // Populate list
-        final ListView lv = (ListView) findViewById(R.id.routeList);
+        final ListView lv = findViewById(R.id.routeList);
         final GPXRoute[] items = Database.getInstance().getRoutes();
 
         ArrayAdapter<GPXRoute> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, items);

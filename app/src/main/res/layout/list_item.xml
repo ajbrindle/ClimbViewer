@@ -13,13 +13,13 @@
         android:text="Description"
         android:textSize="16sp" />
 
-    <TextView
+    <!--TextView
         android:id="@+id/secondLine"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:text="Selected Item"
-        android:textSize="12sp" />
+        android:textSize="12sp" /-->
 
 </LinearLayout>
 

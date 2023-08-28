@@ -100,9 +100,9 @@ public class TrackFile {
             pt.setENFromLL(Database.getProjection(Projection.SYS_UTM_WGS84), zone);
         }
     }
-    private List<GPXRoute> matchToClimbs() {
-        GPXRoute[] allClimbs = Database.getInstance().getClimbs();
-        LocationMonitor monitor = new LocationMonitor();
+
+    public List<GPXRoute> matchToClimbs() {
+        List<GPXRoute> allClimbs = new ArrayList<>(Arrays.asList(Database.getInstance().getClimbs()));
         List<GPXRoute> startedClimbs = new ArrayList<>();
 
         PointF lastPoint = null;
@@ -118,15 +118,18 @@ public class TrackFile {
 
             for (GPXRoute climb : allClimbs) {
                 PointF start = new PointF((float)climb.getPoints().get(0).getEasting(), (float)climb.getPoints().get(0).getNorthing());
-                if (monitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+                if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
                     PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                    if (monitor.isRightDirection(second, lastPoint, currentPoint)) {
+                    if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         startedClimbs.add(Database.getInstance().getClimb(climb.getId()));
+                        continue;
                     }
                 }
             }
 
+            // Remove any climbs already found from allClimbs
+            allClimbs.removeIf(c -> startedClimbs.contains(c));
             lastPoint = currentPoint;
         }
 
@@ -147,12 +150,14 @@ public class TrackFile {
             for (GPXRoute climb : startedClimbs) {
                 int lastIdx = climb.getPoints().size()-1;
                 PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
-                if (monitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
+                if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
                     Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
                     completedClimbs.add(climb);
+                    continue;
                 }
             }
 
+            startedClimbs.removeIf(c -> completedClimbs.contains(c));
             lastPoint = currentPoint;
         }
 

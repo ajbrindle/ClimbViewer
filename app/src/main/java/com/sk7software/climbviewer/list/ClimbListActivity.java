@@ -23,7 +23,7 @@ public class ClimbListActivity extends Activity {
         setupActionBar();
 
         // Populate list
-        final ListView lv = (ListView) findViewById(R.id.climbList);
+        final ListView lv = findViewById(R.id.climbList);
         final GPXRoute[] items = Database.getInstance().getClimbs();
 
         ArrayAdapter<GPXRoute> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, items);
