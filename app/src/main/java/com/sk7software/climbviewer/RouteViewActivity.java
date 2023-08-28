@@ -10,6 +10,7 @@ import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -27,6 +28,9 @@ import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.model.Track;
+import com.sk7software.climbviewer.model.TrackFile;
+import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
@@ -36,12 +40,14 @@ import com.sk7software.util.aspectlogger.DebugTrace;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
     private ClimbView fullRouteView;
     private RelativeLayout offRoutePanel;
     private MapFragment map;
+    private ImageButton btnShowClimbs;
     private int routeId;
     private GPXRoute route;
     private LocationMonitor monitor;
@@ -104,6 +110,24 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 }
                 fullRouteView.invalidate();
                 return true;
+            }
+        });
+
+        btnShowClimbs = (ImageButton)findViewById(R.id.showClimbsBtn);
+        btnShowClimbs.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                List<GPXRoute> climbs = findClimbsOnRoute();
+                String climbIds = climbs.stream()
+                        .map(r -> String.valueOf(r.getId()))
+                        .collect(Collectors.joining(","));
+                fullRouteView.setShowClimbsList(climbIds);
+                fullRouteView.invalidate();
+
+                for (GPXRoute climb : climbs) {
+                    List<RoutePoint> pts = climb.getPoints();
+                    map.plotClimbTrackFromRoutePoints(pts);
+                }
             }
         });
 
@@ -362,6 +386,23 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                          Math.pow(currentGrid.getNorthing() - lastGrid.getNorthing(), 2));
     }
 
+    // TODO: This is duplicate code
+    private List<GPXRoute> findClimbsOnRoute() {
+        TrackFile dummyFile = new TrackFile();
+        Track track = new Track();
+        TrackSegment segment = new TrackSegment();
+        segment.setPoints(route.getPoints());
+        track.setTrackSegment(segment);
+        dummyFile.setRoute(track);
+
+        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
+
+        for (GPXRoute r : climbsOnRoute) {
+            Log.d(TAG, "Climbs on route: " + r.getName());
+        }
+
+        return climbsOnRoute;
+    }
     @Override
     public void setProgress(boolean showProgressDialog, String progressMessage) {}
 }

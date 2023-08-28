@@ -91,6 +91,7 @@
                 android:max="255"
                 android:min="0"
                 android:progress="128"
+                android:layout_weight="1"
                 android:text="Profile Transparency"/>
         </LinearLayout>
         <RelativeLayout
@@ -142,6 +143,17 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             tools:layout="@layout/fragment_map" />
+
+        <ImageButton
+            android:id="@+id/showClimbsBtn"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:layout_margin="2dp"
+            android:layout_alignTop="@id/mapView"
+            android:adjustViewBounds="true"
+            android:backgroundTint="#ffffff"
+            android:scaleType="fitCenter"
+            android:src="@drawable/monitor_climb" />
 
         <RelativeLayout
             android:layout_width="match_parent"

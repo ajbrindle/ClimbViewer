@@ -251,6 +251,20 @@ public class MapFragment extends Fragment {
         localTrack = map.addPolyline(lineOptions);
     }
 
+    public void plotClimbTrackFromRoutePoints(List<RoutePoint> points) {
+        List<LatLng> pointsLL = new ArrayList<>();
+        for (RoutePoint pt : points) {
+            LatLng ll = new LatLng(pt.getLat(), pt.getLon());
+            pointsLL.add(ll);
+        }
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(pointsLL)
+                .width(20)
+                .color(0xFF555555)
+                .zIndex(10);
+        map.addPolyline(lineOptions);
+    }
+
     public void plotClimbTrack(List<LatLng> points) {
         if (!mapReady || track == null || points == null) {
             return;

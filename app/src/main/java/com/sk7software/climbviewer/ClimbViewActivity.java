@@ -178,7 +178,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     }
 
     private void setTimeText(ClimbAttempt attempt, TextView txtTime) {
-        if (attempt != null && attempt.getPoints() != null && attempt.getPoints().size() > 0) {
+        if (attempt != null) {
             int attMins = attempt.getDuration() / 60;
             int attSecs = attempt.getDuration() % 60;
             txtTime.setText(attMins + ":" + String.format("%02d", attSecs) + "s");
