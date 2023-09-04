@@ -93,7 +93,7 @@ public class ScreenController {
             }
         } else {
             // Not on climb so go back to route view, if following one, or home screen
-            if (PositionMonitor.getInstance().isOnRoute()) {
+            if (ClimbController.getInstance().getRoute() != null) {
                 Intent i = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
                 i.putExtra("id", PositionMonitor.getInstance().getRouteId());
                 i.putExtra("startIdx", PositionMonitor.getInstance().getRouteStartIdx());

@@ -80,7 +80,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
 
         // Zoom view is 80% of the width
         Point screenSize = ScreenController.getScreenSize();
-        int zoomPadding = (int)(screenSize.x - (0.8 * (float)screenSize.x)) / 2;
+        int zoomPadding = (int)(screenSize.x - (0.8 * screenSize.x)) / 2;
         zoomClimbView = findViewById(R.id.climbZoom);
         zoomClimbView.setParent(this);
         zoomClimbView.setClimb(route, zoomPadding);

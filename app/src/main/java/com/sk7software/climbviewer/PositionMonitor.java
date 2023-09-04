@@ -14,6 +14,7 @@ import com.sk7software.util.aspectlogger.DebugTrace;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -43,7 +44,7 @@ public class PositionMonitor {
 
     private PositionMonitor() {
         super();
-        prevPoints = new ArrayList<>();
+        prevPoints = new LinkedList<>();
         matchingSectionIdx = -1;
         rejoinSections = new ArrayList<>();
     }

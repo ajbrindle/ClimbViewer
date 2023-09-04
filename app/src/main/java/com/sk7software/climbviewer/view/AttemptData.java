@@ -70,8 +70,9 @@ public class AttemptData {
 
             Log.d(TAG, "Test " + i + ": (" + locPt.x + "," + locPt.y + ") " + lastPointPt.x + "," + lastPointPt.y + "; " + currentPointPt.x + "," + currentPointPt.y);
 
-            // Determine if location is between this one and last one
-            if (LocationMonitor.pointWithinLineSegment(locPt, lastPointPt, currentPointPt)) {
+            // Determine if location is between this one and last one (with extra tolerance as probably
+            // want to stay on track once on it)
+            if (LocationMonitor.pointWithinLineSegmentWithTolerance(locPt, lastPointPt, currentPointPt, 2)) {
                 Log.d(TAG, type + " within line segment: " + (i-1) + " to " + i);
                 found = true;
 

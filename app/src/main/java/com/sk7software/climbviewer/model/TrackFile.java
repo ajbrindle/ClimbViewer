@@ -123,7 +123,6 @@ public class TrackFile {
                     if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         startedClimbs.add(Database.getInstance().getClimb(climb.getId()));
-                        continue;
                     }
                 }
             }

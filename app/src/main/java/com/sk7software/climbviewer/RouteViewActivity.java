@@ -113,7 +113,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
-        btnShowClimbs = (ImageButton)findViewById(R.id.showClimbsBtn);
+        btnShowClimbs = (ImageButton) findViewById(R.id.showClimbsBtn);
         btnShowClimbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -131,6 +131,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
+        if (!ignoreLocationUpdates) {
+            btnShowClimbs.setVisibility(View.GONE);
+        }
         SeekBar transparency = findViewById(R.id.profileTransparency);
         transparency.setProgress(0x88);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

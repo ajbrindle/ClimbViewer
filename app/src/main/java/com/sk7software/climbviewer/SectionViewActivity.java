@@ -143,8 +143,6 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     @DebugTrace
     public void locationChanged(RoutePoint point) {
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB)) {
-            //PositionMonitor.getInstance().locationChanged(point);
-
             if (ClimbController.getInstance().isAttemptInProgress()) {
                 if (!climbView.isInitialised()) {
                     return;

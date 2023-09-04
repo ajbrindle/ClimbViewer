@@ -25,7 +25,7 @@ public class LocationMonitor {
     private boolean listenerRunning;
     private ActivityUpdateInterface parent;
 
-    private static final float MAX_DIST = 12;
+    private static final float MAX_DIST = 15;
     private static final float MAX_DIST_SQ = MAX_DIST * MAX_DIST;
 
     // Time (in seconds) and distance (in metres) between updates to the location manager
@@ -62,7 +62,7 @@ public class LocationMonitor {
             Log.d(TAG, "Starting location monitor");
             lm.requestLocationUpdates(
                     LocationManager.GPS_PROVIDER,
-                    LM_UPDATE_INTERVAL * 1000,
+                    (long)LM_UPDATE_INTERVAL * 1000,
                     LM_UPDATE_DISTANCE,
                     locationListener);
             listenerRunning = true;
@@ -89,7 +89,7 @@ public class LocationMonitor {
      * @param b - last location update (E, N)
      * @return true if point is within line segment (and close enough)
      */
-    public static boolean pointWithinLineSegment(PointF loc, PointF a, PointF b) {
+    public static boolean pointWithinLineSegmentWithTolerance(PointF loc, PointF a, PointF b, int multiplier) {
         // Algorithm from:
         // https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
         PointF xxyy = getXXYY(loc, a, b);
@@ -100,7 +100,11 @@ public class LocationMonitor {
         double dx = loc.x - xxyy.x;
         double dy = loc.y - xxyy.y;
         double distSq = dx * dx + dy * dy;
-        return distSq < MAX_DIST_SQ;
+        return distSq < (MAX_DIST_SQ * multiplier * multiplier);
+    }
+
+    public static boolean pointWithinLineSegment(PointF loc, PointF a, PointF b) {
+        return pointWithinLineSegmentWithTolerance(loc, a, b, 1);
     }
 
     public static PointF getXXYY(PointF start, PointF a, PointF b) {
@@ -115,7 +119,8 @@ public class LocationMonitor {
         if (len_sq != 0) //in case of 0 length line
             param = dot / len_sq;
 
-        double xx, yy;
+        double xx;
+        double yy;
         // param < 0 or param > 1 means point is not in between ends of line segment
         if (param < 0) {
             return null;
@@ -127,8 +132,6 @@ public class LocationMonitor {
             xx = a.x + param * C;
             yy = a.y + param * D;
             PointF xxyy = new PointF((float)xx, (float)yy);
-            double dx = start.x - xxyy.x;
-            double dy = start.y - xxyy.y;
             return new PointF((float)xx, (float)yy);
         }
     }
@@ -180,7 +183,6 @@ public class LocationMonitor {
                 if (Math.abs(loc.getLatitude()) > 0.001 && Math.abs(loc.getLongitude()) > 0.001) {
                     RoutePoint point = new RoutePoint();
                     try {
-                        boolean mapChanged = false;
                         Log.d(TAG, "Location changed: " + loc.getLatitude() +
                                 "," + loc.getLongitude());
 
