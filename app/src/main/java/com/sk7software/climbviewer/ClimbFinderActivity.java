@@ -65,7 +65,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         zoomPanel.setVisibility(View.GONE);
 
         // Find climbs on the route
-        List<GPXRoute> climbsOnRoute = findClimbsOnRoute();
+        List<GPXRoute> climbsOnRoute = TrackFile.findClimbsOnTrackFromPoints(route);
         String climbIds = climbsOnRoute.stream()
                 .map(r -> String.valueOf(r.getId()))
                 .collect(Collectors.joining(","));
@@ -279,23 +279,6 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
 
         climbFile.setRoute(climbPoints);
         Database.getInstance().addClimb(climbFile);
-    }
-
-    private List<GPXRoute> findClimbsOnRoute() {
-        TrackFile dummyFile = new TrackFile();
-        Track track = new Track();
-        TrackSegment segment = new TrackSegment();
-        segment.setPoints(route.getPoints());
-        track.setTrackSegment(segment);
-        dummyFile.setRoute(track);
-
-        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
-
-        for (GPXRoute r : climbsOnRoute) {
-            Log.d(TAG, "Climbs on route: " + r.getName());
-        }
-
-        return climbsOnRoute;
     }
 
     @Override

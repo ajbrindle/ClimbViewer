@@ -18,6 +18,7 @@ public class Preferences {
     public static final String PREFERENCES_SMOOTH_DIST = "PREF_SMOOTH_DIST";
     public static final String PREFERENCES_SCREEN_DELAY_S = "PREF_SCREEN_DELAY_S";
     public static final String PREFERENCES_AUTO_MONITOR_CLIMBS = "PREF_AUTO_MONITOR_CLIBMS";
+    public static final String PREFERENCES_CLIMB_ULTRA_TOLERANCE = "PREF_ULTRA_TOLERANCE";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

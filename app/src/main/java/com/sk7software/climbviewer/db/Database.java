@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.ApplicationContextProvider;
+import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.geo.Ellipsoid;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
@@ -33,7 +34,7 @@ import java.util.Map;
 
 public class Database extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 6;
+    public static final int DATABASE_VERSION = 7;
     public static final String DATABASE_NAME = "com.sk7software.climbviewer.db";
     private static final String TAG = Database.class.getSimpleName();
 
@@ -132,6 +133,28 @@ public class Database extends SQLiteOpenHelper {
             int smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 50);
             sqlStr = "UPDATE CLIMB SET SMOOTH_DIST = " + smoothDist;
             db.execSQL(sqlStr);
+            isUpgrading = false;
+            currentDb = null;
+        }
+
+        if (oldv <=6 && newv >= 7) {
+            isUpgrading = true;
+            currentDb = db;
+            // Add rating
+            String sqlStr = "ALTER TABLE CLIMB " +
+                    "ADD RATING INTEGER;";
+            db.execSQL(sqlStr);
+
+            // Loop round all climbs, calculate and set rating
+            GPXRoute[] allClimbs = Database.getInstance().getClimbs();
+            for (GPXRoute climb : allClimbs) {
+                GPXRoute climbWithInfo = Database.getInstance().getClimb(climb.getId());
+                ClimbController.getInstance().loadClimb(climbWithInfo);
+                long rating = ClimbController.getInstance().getClimb().calcRating();
+                Log.d(TAG, "Setting rating for [" + climbWithInfo.getName() + "] to " + rating);
+                sqlStr = "UPDATE CLIMB SET RATING = " + rating + " WHERE ID = " + climbWithInfo.getId();
+                db.execSQL(sqlStr);
+            }
             isUpgrading = false;
             currentDb = null;
         }
@@ -362,7 +385,7 @@ public class Database extends SQLiteOpenHelper {
                     name + "'," +
                     Projection.SYS_UTM_WGS84 + "," +
                     zone +
-                    ("CLIMB".equals(table1Name) ? "," + smoothDist : "") +
+                    ("CLIMB".equals(table1Name) ? "," + smoothDist + ", 0" : "") +
                     ")";
             db.execSQL(insert);
 
@@ -380,6 +403,14 @@ public class Database extends SQLiteOpenHelper {
                         gridPoint.getElevation() + ")";
                 db.execSQL(insertPoint);
                 i++;
+            }
+
+            if ("climb".equals(type)) {
+                // Retrieve all points
+                GPXRoute tmpClimb = Database.getInstance().getClimb(id);
+                long rating = tmpClimb.calcRating();
+                String updateRating = "UPDATE CLIMB SET rating = " + rating + " WHERE id = " + id;
+                db.execSQL(updateRating);
             }
         } else {
             return false;
@@ -753,6 +784,24 @@ public class Database extends SQLiteOpenHelper {
         return attempt;
     }
 
+    public int getClimbRating(int climbId) {
+        SQLiteDatabase db = getReadableDatabase();
+        String check = "SELECT RATING " +
+                "FROM CLIMB " +
+                "WHERE id = ? ";
+
+        try (Cursor cursor = db.rawQuery(check, new String[]{String.valueOf(climbId)})) {
+            if (cursor != null && cursor.getCount() > 0) {
+                Log.d(TAG, "Attempt exists");
+                cursor.moveToFirst();
+                return cursor.getInt(0);
+            }
+        } catch (SQLException e) {
+            Log.d(TAG, "Error looking up id: " + e.getMessage());
+        }
+
+        return 0;
+    }
 
     public AttemptStats getLastAttempt(int climbId) {
         SQLiteDatabase db = getReadableDatabase();

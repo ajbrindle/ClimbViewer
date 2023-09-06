@@ -176,6 +176,7 @@ public class NetworkRequest {
             m.setName(route.getName());
             f.setMetadata(m);
             f.setRoute(route);
+            f.getRoute().calcRating();
             Database.getInstance().addClimb(f);
         } else if ("attempts".equals(dir)) {
             TrackFile f = new TrackFile();

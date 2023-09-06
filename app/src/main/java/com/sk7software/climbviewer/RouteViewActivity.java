@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
@@ -39,7 +40,9 @@ import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
@@ -50,13 +53,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private ImageButton btnShowClimbs;
     private int routeId;
     private GPXRoute route;
-    private LocationMonitor monitor;
     private float totalDist;
     private float totalElevGain;
     private int prepareForFinish;
     private LatLng lastRoutePoint;
     private boolean justLeftRoute;
     private boolean ignoreLocationUpdates;
+    private Map<Integer, Double> climbDistFromStart = new HashMap<>();
+
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
 
@@ -76,6 +80,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             startIdx = 0;
         } else {
             ignoreLocationUpdates = false;
+            LocationMonitor.getInstance(this);
         }
 
         Log.d(TAG, "Location info: " + ignoreLocationUpdates + " [" + startIdx + "]");
@@ -114,10 +119,23 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
 
         btnShowClimbs = (ImageButton) findViewById(R.id.showClimbsBtn);
+
+        if (!ignoreLocationUpdates) {
+            btnShowClimbs.setVisibility(View.GONE);
+
+            if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB)) {
+                // if monitoring climbs, get distance of start of each climb from the start of the route
+                List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
+                for (GPXRoute c : climbs) {
+                    climbDistFromStart.put(c.getId(), getDistFromStart(c));
+                }
+            }
+        }
+
         btnShowClimbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                List<GPXRoute> climbs = findClimbsOnRoute();
+                List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
                 String climbIds = climbs.stream()
                         .map(r -> String.valueOf(r.getId()))
                         .collect(Collectors.joining(","));
@@ -131,9 +149,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
-        if (!ignoreLocationUpdates) {
-            btnShowClimbs.setVisibility(View.GONE);
-        }
         SeekBar transparency = findViewById(R.id.profileTransparency);
         transparency.setProgress(0x88);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -156,7 +171,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         if (ClimbController.getInstance().isRouteInProgress()) {
             setMapForFollowing();
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
-            monitor = LocationMonitor.getInstance(this);
         } else {
             map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
         }
@@ -166,14 +180,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "RouteViewActivity resume");
-        monitor = LocationMonitor.getInstance(this);
     }
 
     @Override
     protected void onStop() {
-//        if (monitor != null && monitor.isListenerRunning()) {
-//            monitor.stopListener();
-//        }
         super.onStop();
     }
 
@@ -186,6 +196,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     @Override
     @DebugTrace
     public void locationChanged(RoutePoint point) {
+        Log.d(TAG, "Location changed");
         if (ignoreLocationUpdates) return;
 
         if (prepareForFinish >= 0 && --prepareForFinish <= 0) {
@@ -226,6 +237,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         if (ClimbController.getInstance().isRouteInProgress()) {
+            Log.d(TAG, "Climb view initialised: " + fullRouteView.isInitialised());
+
             if (!fullRouteView.isInitialised()) {
                 return;
             }
@@ -233,6 +246,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             fullRouteView.invalidate();
             updateDistAndElevation();
 
+            Log.d(TAG, "Position camera");
             RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getSnappedPosition();
             if (map != null && snappedPos != null) {
                 lastRoutePoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
@@ -285,6 +299,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     nextIntent.putExtra("id", climbId);
                     startActivity(nextIntent);
                 }
+            } else {
+                // Find distance to start of next climb
+
             }
         }
     }
@@ -348,24 +365,46 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     }
 
     private void updateDistAndElevation() {
+        Log.d(TAG, "Update panels");
         if (ClimbController.getInstance().isRouteInProgress()) {
             TextView label1 = findViewById(R.id.panel1Label);
             TextView label2 = findViewById(R.id.panel2Label);
             TextView txtDist = findViewById(R.id.txtPanel1);
             TextView txtElev = findViewById(R.id.txtPanel2);
 
-            label1.setText("TO GO");
-            label2.setText("ELEV LEFT");
-
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();
 
-            DisplayFormatter.setDistanceText(totalDist - distDone, "km", txtDist, false);
-            DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txtElev, false);
+            // Determine if within 3km of any climbs
+            double minDist = Double.MAX_VALUE;
+            int nextClimb = -1;
+            for (Map.Entry<Integer, Double> climbDist : climbDistFromStart.entrySet()) {
+                double distToClimb = climbDist.getValue() - distDone;
+                if (distToClimb > 0 && distToClimb < 3000 && distToClimb < minDist) {
+                    minDist = distToClimb;
+                    nextClimb = climbDist.getKey();
+                }
+            }
+
+            if (nextClimb > 0) {
+                label1.setText("NEXT CLIMB");
+                label2.setText("RATING");
+
+                DisplayFormatter.setDistanceText((float)minDist, "km", txtDist, true);
+                txtElev.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
+            } else {
+                label1.setText("TO GO");
+                label2.setText("ELEV LEFT");
+
+                DisplayFormatter.setDistanceText(totalDist - distDone, "km", txtDist, false);
+                DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txtElev, false);
+            }
 
             // If in last 25m, flag screen to close after 5 more updates
             if (totalDist - distDone <= 25) {
-                prepareForFinish = 5;
+                if (prepareForFinish < 0) {
+                    prepareForFinish = 5;
+                }
 
                 // Clear route preferences (to prevent resuming)
                 Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
@@ -389,23 +428,24 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                          Math.pow(currentGrid.getNorthing() - lastGrid.getNorthing(), 2));
     }
 
-    // TODO: This is duplicate code
-    private List<GPXRoute> findClimbsOnRoute() {
-        TrackFile dummyFile = new TrackFile();
-        Track track = new Track();
-        TrackSegment segment = new TrackSegment();
-        segment.setPoints(route.getPoints());
-        track.setTrackSegment(segment);
-        dummyFile.setRoute(track);
-
-        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
-
-        for (GPXRoute r : climbsOnRoute) {
-            Log.d(TAG, "Climbs on route: " + r.getName());
-        }
-
-        return climbsOnRoute;
-    }
     @Override
     public void setProgress(boolean showProgressDialog, String progressMessage) {}
+
+    private Double getDistFromStart(GPXRoute climb) {
+        RoutePoint climbStart = climb.getPoints().get(0);
+        PointF startPt = new PointF((float)climbStart.getEasting(), (float)climbStart.getNorthing());
+
+        // Find where on route this lands
+        for (int i=0; i<route.getPoints().size()-1; i++) {
+            PointF p1 = new PointF((float)route.getPoints().get(i).getEasting(), (float)route.getPoints().get(i).getNorthing());
+            PointF p2 = new PointF((float)route.getPoints().get(i+1).getEasting(), (float)route.getPoints().get(i+1).getNorthing());
+            if (LocationMonitor.pointWithinLineSegment(startPt, p1, p2)) {
+                // Get distance from p1 to start of climb
+                double delta =  Math.sqrt(Math.pow(startPt.x - p1.x, 2) + Math.pow(startPt.y - p1.y, 2));
+                return route.getPoints().get(i).getDistFromStart() + delta;
+            }
+        }
+
+        return Double.valueOf(-1);
+    }
 }

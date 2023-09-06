@@ -206,12 +206,10 @@ public class PositionMonitor {
         float trackDeltaX = second.x - first.x;
         float trackDeltaY = second.y - first.y;
         double trackBearing = Math.atan2(trackDeltaY, trackDeltaX) * 180 / Math.PI;
-        if (trackBearing < 0) trackBearing += 360;
 
         float rideDeltaX = currentPoint.x - lastPoint.x;
         float rideDeltaY = currentPoint.y - lastPoint.y;
         double rideBearing = Math.atan2(rideDeltaY, rideDeltaX) * 180 / Math.PI;
-        if (rideBearing < 0) rideBearing += 360;
 
         // Direction is OK if ride bearing is in same quadrant as track bearing (45 deg either way)
         double minBearing = trackBearing - 45;

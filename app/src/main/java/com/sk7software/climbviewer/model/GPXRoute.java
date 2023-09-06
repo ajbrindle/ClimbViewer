@@ -34,6 +34,7 @@ public class GPXRoute {
     private int zone;
     private String time;
     private int smoothDist;
+    private long rating;
 
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;
@@ -96,6 +97,38 @@ public class GPXRoute {
         return id * name.hashCode();
     }
 
+
+    public long calcRating() {
+        // Work out distances and elevations if it hasn't already been done
+        if (getPoints().get(getPoints().size()-1).getDistFromStart() < 0.1) {
+            setPointsDist();
+        }
+
+        double maxElevation = Double.MIN_VALUE;
+        double minElevation = Double.MAX_VALUE;
+
+        for (RoutePoint p : this.getPoints()) {
+            if (p.getElevation() < minElevation) {
+                minElevation = p.getElevation();
+            }
+            if (p.getElevation() > maxElevation) {
+                maxElevation = p.getElevation();
+            }
+        }
+
+        double elevationChange = maxElevation - minElevation;
+        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
+        //Log.d("GPXRoute", "Min: " + minElevation + "; Max: " + maxElevation + "; Dist: " + dist);
+
+        if (dist != 0) {
+            rating = (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
+                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
+        } else {
+            rating = 0;
+        }
+        return rating;
+    }
+
     public void calcSmoothedPoints() {
         float distFromLast = 0;
         boolean first = true;
@@ -114,6 +147,7 @@ public class GPXRoute {
             if (first) {
                 first = false;
                 pt.setSmoothedElevation(pt.getElevation());
+                smoothedPoints.add(pt);
             } else {
                 distFromLast += (float)calcDelta(pt, getPoints().get(i-1).getEasting(), getPoints().get(i-1).getNorthing());
 
@@ -122,6 +156,7 @@ public class GPXRoute {
 
                 // Work out elevation difference with last smooted point
                 double elevDiff = pt.getElevation() - getPoints().get(lastIndex).getElevation();
+                smoothedPoints.add(pt);
 
                 // Interpolate along the length and set the interim elevations
                 for (int j=lastIndex+1; j<=i; j++) {
@@ -135,31 +170,27 @@ public class GPXRoute {
         }
     }
 
-    public long calcRating() {
-        double maxElevation = Double.MIN_VALUE;
-        double minElevation = Double.MAX_VALUE;
+    public void setPointsDist() {
+        float dist = 0;
+        float elev = 0;
 
-        for (RoutePoint p : this.getPoints()) {
-            if (p.getElevation() < minElevation) {
-                minElevation = p.getElevation();
-            }
-            if (p.getElevation() > maxElevation) {
-                maxElevation = p.getElevation();
-            }
+        getPoints().get(0).setDistFromStart(0);
+        getPoints().get(0).setElevFromStart(0);
+
+        for (int i=1; i<getPoints().size(); i++) {
+            dist += Math.sqrt(Math.pow(getPoints().get(i).getEasting() - getPoints().get(i - 1).getEasting(), 2.0) +
+                    Math.pow(getPoints().get(i).getNorthing() - getPoints().get(i - 1).getNorthing(), 2.0));
+            getPoints().get(i).setDistFromStart(dist);
         }
 
-        double elevationChange = maxElevation - minElevation;
-        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
-        //Log.d("GPXRoute", "Min: " + minElevation + "; Max: " + maxElevation + "; Dist: " + dist);
-
-        if (dist != 0) {
-            return (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
-                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
-        } else {
-            return 0;
+        // Calculate elevations
+        for (int i=1; i<getPoints().size(); i++) {
+            if (getPoints().get(i).getElevation() > getPoints().get(i-1).getElevation()) {
+                elev += getPoints().get(i).getElevation() - getPoints().get(i-1).getElevation();
+            }
+            getPoints().get(i).setElevFromStart(elev);
         }
     }
-
     private double calcDelta(RoutePoint pt, double e, double n) {
         return Math.sqrt(Math.pow(e - pt.getEasting(), 2.0) + Math.pow(n - pt.getNorthing(), 2.0));
     }

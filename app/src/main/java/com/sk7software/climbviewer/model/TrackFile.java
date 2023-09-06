@@ -216,4 +216,24 @@ public class TrackFile {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
         return LocalDateTime.parse(timeStr, formatter);
     }
+
+
+    // Creates a dummy file so that climbs on a specified route can be found
+    // using the same method as climbs are found in a route file
+    public static List<GPXRoute> findClimbsOnTrackFromPoints(GPXRoute route) {
+        TrackFile dummyFile = new TrackFile();
+        Track track = new Track();
+        TrackSegment segment = new TrackSegment();
+        segment.setPoints(route.getPoints());
+        track.setTrackSegment(segment);
+        dummyFile.setRoute(track);
+
+        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
+
+        for (GPXRoute r : climbsOnRoute) {
+            Log.d(TAG, "Climbs on route: " + r.getName());
+        }
+
+        return climbsOnRoute;
+    }
 }

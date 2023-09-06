@@ -157,47 +157,56 @@ public class ClimbController {
         PointF currentPoint = new PointF((float)point.getEasting(), (float)point.getNorthing());
 
         if (attemptInProgress) {
-            Log.d(TAG, "Calculating attempt");
-            LocalDateTime now = LocalDateTime.now();
-            float distDone = updateAttempt(point, now);
-
-            // Update PB info if this is being tracked
-            if (attempts.containsKey(PointType.PB)) {
-                updatePB(point, now);
-            }
-
-            if (distDone >= 0) {
-                // Check if the climb has finished
-                offClimbCount = 0;
-            } else {
-                // Update "off climb" counter
-                if (++offClimbCount > 20) {
-                    // Deviated off climb, so reset
-                    lastClimbId = -99; // Prevents summary panel on screen
-                    reset(PointType.ATTEMPT);
-                }
-            }
-            checkIfFinished(currentPoint, point);
+            updateClimbAttempt(point, currentPoint);
         }
         if (routeInProgress) {
-            // Work out distances and times at this location
-            Log.d(TAG, "Calculating route distance");
-            AttemptData routeData = attempts.get(PointType.ROUTE);
-            float distDone = routeData.calcDist(point, route);
-            routeData.setBearing(calcBearing(route, routeData));
-
-            if (distDone >= 0) {
-                routeIdx = routeData.getMinIndex();
-                offRouteCount = 0;
-            } else {
-                if (++offRouteCount > 3) {
-                    // Deviated off route, so go back into monitoring mode
-                    routeInProgress = false;
-                    Log.d(TAG, "Dropped off route");
-                }
-            }
+            updateRouteAttempt(point);
         }
         setPrevPoint(currentPoint);
+    }
+
+    private void updateClimbAttempt(RoutePoint point, PointF currentPoint) {
+        Log.d(TAG, "Calculating attempt");
+        LocalDateTime now = LocalDateTime.now();
+        float distDone = updateAttempt(point, now);
+
+        // Update PB info if this is being tracked
+        if (attempts.containsKey(PointType.PB)) {
+            updatePB(point, now);
+        }
+
+        if (distDone >= 0) {
+            // Reset off-climb counter
+            offClimbCount = 0;
+        } else {
+            int minOffCount = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_ULTRA_TOLERANCE) ? 1000 : 15;
+            // Update "off climb" counter
+            if (++offClimbCount > minOffCount) {
+                // Deviated off climb, so reset
+                lastClimbId = -99; // Prevents summary panel on screen
+                reset(PointType.ATTEMPT);
+            }
+        }
+        checkIfFinished(currentPoint, distDone);
+    }
+
+    private void updateRouteAttempt(RoutePoint point) {
+        // Work out distances and times at this location
+        Log.d(TAG, "Calculating route distance");
+        AttemptData routeData = attempts.get(PointType.ROUTE);
+        float distDone = routeData.calcDist(point, route);
+        routeData.setBearing(calcBearing(route, routeData));
+
+        if (distDone >= 0) {
+            routeIdx = routeData.getMinIndex();
+            offRouteCount = 0;
+        } else {
+            if (++offRouteCount > 3) {
+                // Deviated off route, so go back into monitoring mode
+                routeInProgress = false;
+                Log.d(TAG, "Dropped off route");
+            }
+        }
     }
 
     public void rejoinRoute(int idx) {
@@ -228,11 +237,17 @@ public class ClimbController {
     }
 
     @DebugTrace
-    private void checkIfFinished(PointF currentPoint, RoutePoint point) {
+    private void checkIfFinished(PointF currentPoint, float distDone) {
         AttemptData attemptData = attempts.get(PointType.ATTEMPT);
         ClimbAttempt attempt = attemptData.getAttempt();
 
         int endIndex = climb.getPoints().size() - 1;
+
+        // Don't check if finished until within 100m of the end
+        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100) {
+            return;
+        }
+
         PointF end = new PointF((float) climb.getPoints().get(endIndex).getEasting(), (float) climb.getPoints().get(endIndex).getNorthing());
 
         if (hasPassedPoint(end, currentPoint)) {
@@ -253,7 +268,7 @@ public class ClimbController {
         }
     }
     private float calcBearing(GPXRoute track, AttemptData attemptData) {
-        int index = attemptData.getMinIndex(); //minIndex.get(type);
+        int index = attemptData.getMinIndex();
         RoutePoint p1 = track.getPoints().get(index);
         RoutePoint p2 = track.getPoints().get(index+1);
         float bearing = (float)Math.atan2(p2.getEasting() - p1.getEasting(), p2.getNorthing() - p1.getNorthing());
@@ -367,41 +382,19 @@ public class ClimbController {
     public void loadClimb(GPXRoute climb) {
         this.climb = climb;
         this.lastClimbId = climb.getId();
-        setPointsDist(this.climb);
+        this.climb.setPointsDist();
         this.climb.calcSmoothedPoints();
     }
 
     public void loadRoute(GPXRoute route) {
         this.route = route;
         this.lastRouteId = route.getId();
-        setPointsDist(this.route);
+        this.route.setPointsDist();
     }
 
     public void clearRoute() {
         this.route = null;
         this.lastRouteId = -1;
-    }
-
-    private void setPointsDist(GPXRoute gpxRoute) {
-        float dist = 0;
-        float elev = 0;
-
-        gpxRoute.getPoints().get(0).setDistFromStart(0);
-        gpxRoute.getPoints().get(0).setElevFromStart(0);
-
-        for (int i=1; i<gpxRoute.getPoints().size(); i++) {
-            dist += Math.sqrt(Math.pow(gpxRoute.getPoints().get(i).getEasting() - gpxRoute.getPoints().get(i - 1).getEasting(), 2.0) +
-                    Math.pow(gpxRoute.getPoints().get(i).getNorthing() - gpxRoute.getPoints().get(i - 1).getNorthing(), 2.0));
-            gpxRoute.getPoints().get(i).setDistFromStart(dist);
-        }
-
-        // Calculate elevations
-        for (int i=1; i<gpxRoute.getPoints().size(); i++) {
-            if (gpxRoute.getPoints().get(i).getElevation() > gpxRoute.getPoints().get(i-1).getElevation()) {
-                elev += gpxRoute.getPoints().get(i).getElevation() - gpxRoute.getPoints().get(i-1).getElevation();
-            }
-            gpxRoute.getPoints().get(i).setElevFromStart(elev);
-        }
     }
 
     public List<PlotPoint> getClimbPoints(GPXRoute profile, int startIdx, double targetDist, boolean smooth) {
@@ -459,7 +452,7 @@ public class ClimbController {
         AttemptStats stats = Database.getInstance().getLastAttempt(lastClimbId);
         if (stats != null) {
             GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
-            setPointsDist(lastClimb);
+            lastClimb.setPointsDist();
             int numClimbPoints = lastClimb.getPoints().size();
             stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints - 1).getDistFromStart());
         }
