@@ -2,7 +2,6 @@ package com.sk7software.climbviewer;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Bundle;
@@ -12,7 +11,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -20,8 +18,6 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapsInitializer;
-import com.google.android.gms.maps.OnMapsSdkInitializedCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
@@ -29,17 +25,13 @@ import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
-import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
-import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +40,7 @@ import java.util.stream.Collectors;
 public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
     private ClimbView fullRouteView;
+    private ClimbView nextClimbView;
     private RelativeLayout offRoutePanel;
     private MapFragment map;
     private ImageButton btnShowClimbs;
@@ -60,6 +53,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private boolean justLeftRoute;
     private boolean ignoreLocationUpdates;
     private Map<Integer, Double> climbDistFromStart = new HashMap<>();
+    private boolean loadNextClimbWarning = false;
 
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
@@ -95,9 +89,11 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         justLeftRoute = true;
 
         fullRouteView = findViewById(R.id.fullRouteView);
+        nextClimbView = findViewById(R.id.nextClimbView);
+        nextClimbView.setVisibility(View.GONE);
         fullRouteView.setClimb(route, 20);
         fullRouteView.setTransparency(0x88);
-        setClimbViewHeight();
+        setClimbViewHeight(fullRouteView);
         fullRouteView.invalidate();
 
         fullRouteView.setOnTouchListener(new View.OnTouchListener() {
@@ -317,7 +313,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         map.setCentre(ClimbController.getInstance().getLastPointLL());
     }
 
-    private void setClimbViewHeight() {
+    private void setClimbViewHeight(ClimbView climbView) {
         WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
         Point size = new Point();
@@ -330,7 +326,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         Log.d(TAG, "Setting route view height: " + (size.y - s)/3 + "/" + size.y + " (" + s + ")");
-        fullRouteView.setHeight((size.y - s)/3, false);
+        climbView.setHeight((size.y - s)/3, false);
     }
 
     private void calcDistAndElevation() {
@@ -380,9 +376,23 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             int nextClimb = -1;
             for (Map.Entry<Integer, Double> climbDist : climbDistFromStart.entrySet()) {
                 double distToClimb = climbDist.getValue() - distDone;
-                if (distToClimb > 0 && distToClimb < 3000 && distToClimb < minDist) {
+                int warnDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_CLIMB_WARNING, 1000);
+                if (distToClimb > 0 && distToClimb < warnDist && distToClimb < minDist) {
                     minDist = distToClimb;
                     nextClimb = climbDist.getKey();
+                    if (!loadNextClimbWarning) {
+                        Log.d(TAG, "Load next climb view");
+                        loadNextClimbWarning = true;
+                        GPXRoute gc = Database.getInstance().getClimb(nextClimb);
+                        gc.setPointsDist();
+                        gc.calcSmoothedPoints();
+                        fullRouteView.setVisibility(View.GONE);
+                        nextClimbView.setVisibility(View.VISIBLE);
+                        nextClimbView.setClimb(gc, 20);
+                        nextClimbView.setTransparency(0x88);
+                        setClimbViewHeight(nextClimbView);
+                        nextClimbView.invalidate();
+                    }
                 }
             }
 
@@ -395,6 +405,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             } else {
                 label1.setText("TO GO");
                 label2.setText("ELEV LEFT");
+                loadNextClimbWarning = false;
+                fullRouteView.setVisibility(View.VISIBLE);
+                nextClimbView.setVisibility(View.GONE);
 
                 DisplayFormatter.setDistanceText(totalDist - distDone, "km", txtDist, false);
                 DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txtElev, false);

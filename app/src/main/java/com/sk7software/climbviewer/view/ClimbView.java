@@ -40,6 +40,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class ClimbView extends View {
 
     // Profile to plot
@@ -74,6 +77,7 @@ public class ClimbView extends View {
     private boolean heightSet;
     private boolean initialised;
     private String showClimbsList;
+    private List<ClimbCoords> climbCoords;
 
     // Plots that are represented on this view (e.g. ATTEMPT, PB)
     private Set<ClimbController.PointType> plots;
@@ -115,6 +119,7 @@ public class ClimbView extends View {
     public void setClimb(GPXRoute profile, int padding) {
         // Set profile
         this.profile = profile;
+        this.climbCoords = null;
 
         // Set view left and right
         Point screen = ScreenController.getScreenSize();
@@ -254,6 +259,7 @@ public class ClimbView extends View {
 
     public void setShowClimbsList(String ids) {
         this.showClimbsList = ids;
+        this.climbCoords = null;
     }
 
     public void setTrackDistance(double distance) {
@@ -380,29 +386,38 @@ public class ClimbView extends View {
         if (!Strings.isEmptyOrWhitespace(showClimbsList)) {
             // Show climbs on route
             List<String> ids = Arrays.asList(showClimbsList.split(","));
-            for (String id : ids) {
-                // Get route
-                int climbId = Integer.parseInt(id);
-                GPXRoute rt = Database.getInstance().getClimb(climbId);
-                List<Integer> indexes = findRouteIndexes(rt);
+            if (climbCoords == null) {
+                climbCoords = new ArrayList<>();
+                for (String id : ids) {
+                    // Get route
+                    int climbId = Integer.parseInt(id);
+                    GPXRoute rt = Database.getInstance().getClimb(climbId);
+                    List<Integer> indexes = findRouteIndexes(rt);
 
-                float xStart = -1;
-                float xEnd = -1;
+                    float xStart = -1;
+                    float xEnd = -1;
 
-                for (int i=0; i<points.size(); i++) {
-                    PlotPoint p = points.get(i);
-                    if (xStart < 0 && p.getProfileIndex() >= indexes.get(0)) {
-                        xStart = p.getX();
+                    for (int i = 0; i < points.size(); i++) {
+                        PlotPoint p = points.get(i);
+                        if (xStart < 0 && p.getProfileIndex() >= indexes.get(0)) {
+                            xStart = p.getX();
+                        }
+                        if (xEnd < 0 && p.getProfileIndex() >= indexes.get(1)) {
+                            xEnd = p.getX();
+                        }
                     }
-                    if (xEnd < 0 && p.getProfileIndex() >= indexes.get(1)) {
-                        xEnd = p.getX();
+
+                    Log.d(TAG, "Climb range: " + xStart + "," + xEnd);
+
+                    if (xStart >= 0 && xEnd >= 0) {
+                        markClimb(canvas, (int) xStart, (int) xEnd, 0);
+                        ClimbCoords coords = new ClimbCoords((int) xStart, (int) xEnd, climbId);
+                        climbCoords.add(coords);
                     }
                 }
-
-                Log.d(TAG, "Climb range: " + xStart + "," + xEnd);
-
-                if (xStart >= 0 && xEnd >= 0) {
-                    markClimb(canvas, (int)xStart, (int)xEnd, 0);
+            } else {
+                for (ClimbCoords c : climbCoords) {
+                    markClimb(canvas, c.getX0(), c.getXN(), 0);
                 }
             }
         }
@@ -522,6 +537,16 @@ public class ClimbView extends View {
         canvas.drawText(gradientText, calcTextPos(showGradientAt, textBounds), textBounds.height(), p);
         p.getTextBounds(distanceText, 0, distanceText.length(), textBounds);
         canvas.drawText(distanceText, calcTextPos(showGradientAt, textBounds), height-7, p);
+        if (climbCoords != null) {
+            for (ClimbCoords c : climbCoords) {
+                String climbName = c.nameAtLocation(showGradientAt);
+                if (!"".equals(climbName)) {
+                    p.getTextBounds(climbName, 0, climbName.length(), textBounds);
+                    canvas.drawText(climbName, calcTextPos(showGradientAt, textBounds), (height - textBounds.height())/2, p);
+                    break;
+                }
+            }
+        }
     }
 
     private float interpolateElevation(List<PlotPoint> pts, int index, int x) {
@@ -877,5 +902,28 @@ public class ClimbView extends View {
         indexes.add(startIdx);
         indexes.add(endIdx);
         return indexes;
+    }
+
+    @Getter
+    @Setter
+    public class ClimbCoords {
+        int x0;
+        int xN;
+        int id;
+        String name;
+
+        ClimbCoords(int x0, int xN, int id) {
+            this.x0 = x0;
+            this.xN = xN;
+            this.id = id;
+            GPXRoute climb = Database.getInstance().getClimb(id);
+            this.name = climb.getName();
+        }
+        public String nameAtLocation(int x) {
+            if (x >= x0 && x <= xN) {
+                return name;
+            }
+            return "";
+        }
     }
 }

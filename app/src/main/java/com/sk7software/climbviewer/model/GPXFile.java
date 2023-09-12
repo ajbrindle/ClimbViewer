@@ -11,6 +11,7 @@ import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,7 +37,29 @@ public class GPXFile {
     @Element(name="rte")
     private GPXRoute route;
 
-    public static void addLocalFiles() {
+    public static GPXFile createFromStream(InputStream is) {
+        Serializer serializer = new Persister();
+        try {
+            GPXFile gpx = serializer.read(GPXFile.class, is);
+            return gpx;
+        } catch (Exception e) {
+            Log.d(TAG, "Unable to read climb GPX: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static GPXFile createFromTrackFile(TrackFile trk) {
+        GPXFile gpx = new GPXFile();
+        GPXMetadata m = new GPXMetadata();
+        GPXRoute r = new GPXRoute();
+        m.setName(trk.getRoute().getName());
+        gpx.setMetadata(m);
+        r.setName(trk.getRoute().getName());
+        r.setPoints(trk.getRoute().getTrackSegment().getPoints());
+        gpx.setRoute(r);
+        return gpx;
+    }
+     public static void addLocalFiles() {
         // Get all files in MAP_DIR with .mhr extension
         File directory = new File(FILE_DIR);
         Serializer serializer = new Persister();

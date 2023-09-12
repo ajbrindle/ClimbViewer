@@ -169,7 +169,7 @@ public class NetworkRequest {
         }
     }
 
-    private static void updateDatabase(String dir, GPXRoute route) {
+    public static void updateDatabase(String dir, GPXRoute route) {
         if ("climbs".equals(dir)) {
             GPXFile f = new GPXFile();
             GPXMetadata m = new GPXMetadata();

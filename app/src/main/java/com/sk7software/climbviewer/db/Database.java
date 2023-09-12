@@ -850,7 +850,7 @@ public class Database extends SQLiteOpenHelper {
         }
     }
 
-    private int getAttemptId(int climbId, long timestamp) {
+    public boolean attemptExists(int climbId, long timestamp) {
         SQLiteDatabase db = getReadableDatabase();
         String check = "SELECT ATTEMPT_ID " +
                 "FROM CLIMB_ATTEMPT " +
@@ -860,11 +860,18 @@ public class Database extends SQLiteOpenHelper {
         try (Cursor cursor = db.rawQuery(check, new String[]{String.valueOf(climbId), String.valueOf(timestamp)})) {
             if (cursor != null && cursor.getCount() > 0) {
                 Log.d(TAG, "Attempt exists");
-                return -1;
+                return true;
             }
         } catch (SQLException e) {
             Log.d(TAG, "Error looking up id: " + e.getMessage());
         }
+        return false;
+    }
+
+    private int getAttemptId(int climbId, long timestamp) {
+        SQLiteDatabase db = getReadableDatabase();
+
+        if (attemptExists(climbId, timestamp)) return -1;
 
         String query = "SELECT MAX(ATTEMPT_ID) " +
                 "FROM CLIMB_ATTEMPT " +

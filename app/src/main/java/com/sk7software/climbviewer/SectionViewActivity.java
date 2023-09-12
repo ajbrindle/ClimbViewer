@@ -17,7 +17,6 @@ import android.widget.TextView;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -29,7 +28,6 @@ import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.Date;
-import java.util.Map;
 
 public class SectionViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
     // Segment
@@ -54,6 +52,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     private TextView lblPanel4;
     private LinearLayout panel3;
     private LinearLayout panel4;
+    private int panelCounter;
 
     // State
     private long loadTime;
@@ -102,6 +101,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             climbView.addPlot(ClimbController.PointType.ATTEMPT);
             monitor = LocationMonitor.getInstance(this);
         }
+        panelCounter = 0;
     }
 
     @Override
@@ -212,20 +212,27 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
         switch (plotType) {
             case FULL_CLIMB:
+                panelCounter++;
                 panel3.setVisibility(View.VISIBLE);
                 panel4.setVisibility(View.VISIBLE);
                 lblPanel1.setText("GRADIENT");
                 lblPanel2.setText("REMAINING");
                 lblPanel3.setText("NEXT");
-                lblPanel4.setText("DIST LEFT");
+
+                if (panelCounter % 10 < 5) {
+                    lblPanel4.setText("DIST LEFT");
+                    DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints - 1).getDistFromStart() -
+                            ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getDist(), "km", txtPanel4, true);
+                } else {
+                    lblPanel4.setText("ELEV LEFT");
+                    DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getElevFromStart() -
+                            ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getElevDone(), "m", txtPanel4, true);
+                }
                 txtPanel1.setTextColor(Color.GRAY);
                 txtPanel2.setTextColor(Color.GRAY);
                 DisplayFormatter.setGradientText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getCurrentGradient(), txtPanel1);
                 DisplayFormatter.setGradientText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getNextGradient(), txtPanel3);
                 DisplayFormatter.setDistanceText(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getSegmentToGo(), "m", txtPanel2, true);
-
-                DisplayFormatter.setDistanceText(ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart() -
-                        ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT).getDist(), "km", txtPanel4, true);
                 break;
             case PURSUIT:
                 panel3.setVisibility(View.GONE);

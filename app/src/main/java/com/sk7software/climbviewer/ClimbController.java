@@ -243,12 +243,15 @@ public class ClimbController {
 
         int endIndex = climb.getPoints().size() - 1;
 
-        // Don't check if finished until within 100m of the end
-        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100) {
+        Log.d(TAG, "Check finished: " + distDone);
+
+        // Don't check if finished until within 100m of the end (or has potentially passed the end)
+        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100 && !(distDone < 0)) {
             return;
         }
 
         PointF end = new PointF((float) climb.getPoints().get(endIndex).getEasting(), (float) climb.getPoints().get(endIndex).getNorthing());
+        Log.d(TAG, "Check finished: " + currentPoint.x + "," + currentPoint.y + "; " + end.x + "," + end.y);
 
         if (hasPassedPoint(end, currentPoint)) {
             // Left last segment so climb has finished

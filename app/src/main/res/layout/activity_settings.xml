@@ -39,6 +39,22 @@
         android:min="10"
         android:progress="15" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/txtClimbWarn"
+        android:layout_marginTop="15dp"
+        android:text="Warn About Upcoming Climbs: 1000m"/>
+
+    <SeekBar
+        android:id="@+id/seekClimbWarn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:max="5000"
+        android:min="0"
+        android:progress="1000" />
+
     <Switch
         android:id="@+id/swiAutoMonitor"
         android:layout_width="match_parent"

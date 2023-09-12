@@ -10,6 +10,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TrackMetadata {
-    @Element
+    @Element(required = false)
     private String time;
 }

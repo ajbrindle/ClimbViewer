@@ -76,45 +76,52 @@ public class PositionMonitor {
 
         // Check if we are on the selected route, or any climb
         if (monitoring.contains(MonitorType.CLIMB)) {
-            Log.d(TAG, "Checking for climbs - total " + climbs.size());
-            // Check if any of the listed climbs have started
-            for (GPXRoute climb : climbs) {
-                Log.d(TAG, "Checking climb: " + climb.getName());
-                PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
-                if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon())) {
-                    int firstIdx = hasPassedCloseToPoint(start, currentPoint);
-                    if (firstIdx >= 0) {
-                        PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                        if (checkDirection(start, second, currentPoint, firstIdx)) {
-                            Log.d(TAG, "STARTED CLIMB " + climb.getName());
-                            onClimbId = climb.getId();
-                            prevPoints.clear();
-                            break;
-                        }
+            monitorClimbs(point, currentPoint);
+        }
+        if (monitoring.contains(MonitorType.ROUTE)) {
+            monitorRoute(point);
+        }
+        addToPrevPoints(currentPoint);
+    }
+
+    private void monitorClimbs(RoutePoint point, PointF currentPoint) {
+        Log.d(TAG, "Checking for climbs - total " + climbs.size());
+        // Check if any of the listed climbs have started
+        for (GPXRoute climb : climbs) {
+            Log.d(TAG, "Checking climb: " + climb.getName());
+            PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
+            if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon())) {
+                int firstIdx = hasPassedCloseToPoint(start, currentPoint);
+                if (firstIdx >= 0) {
+                    PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
+                    if (checkDirection(start, second, currentPoint, firstIdx)) {
+                        Log.d(TAG, "STARTED CLIMB " + climb.getName());
+                        onClimbId = climb.getId();
+                        prevPoints.clear();
+                        break;
                     }
                 }
             }
         }
-        if (monitoring.contains(MonitorType.ROUTE)) {
-            Log.d(TAG, "Checking for route");
-            // Check if any point on selected route is between current point and one of the previous ones
-            GPXRoute route = ClimbController.getInstance().getRoute();
+    }
 
-            if (route == null) {
-                route = Database.getInstance().getRoute(routeId);
-            }
+    private void monitorRoute(RoutePoint point) {
+        Log.d(TAG, "Checking for route");
+        // Check if any point on selected route is between current point and one of the previous ones
+        GPXRoute route = ClimbController.getInstance().getRoute();
 
-            if (checkOnRoute(route, point, 4)) {
-                if (!tryingToResume) {
-                    routeStartIdx = matchingSectionIdx;
-
-                    // Store in preferences
-                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_ID, routeId);
-                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_START_IDX, routeStartIdx);
-                }
-            }
+        if (route == null) {
+            route = Database.getInstance().getRoute(routeId);
         }
-        addToPrevPoints(currentPoint);
+
+        if (checkOnRoute(route, point, 4) && !tryingToResume) {
+            // Record where the route was initially started (and don't update if it is resumed)
+            routeStartIdx = matchingSectionIdx;
+
+            // Store in preferences
+            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_ID, routeId);
+            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_START_IDX, routeStartIdx);
+        }
     }
 
     private void addToPrevPoints(PointF currentPoint) {
@@ -126,16 +133,19 @@ public class PositionMonitor {
 
     @DebugTrace
     public boolean checkOnRoute(GPXRoute route, RoutePoint point, int directionCount) {
-        PointF currentPoint = new PointF((float) point.getEasting(), (float) point.getNorthing());
+        PointF pointToCheck = new PointF((float) point.getEasting(), (float) point.getNorthing());
 
+        // Rejoin sections is populated when a candidate point for joining the route has been found
+        // It is required because a point could be on multiple sections of the route and all of them
+        // need to be checked (can't abort searching after the first one)
         if (rejoinSections != null) {
             rejoinSections
                     .removeIf(r -> r.getIndex() == SECTION_INVALID || r.hasExpired());
-            Log.d(TAG, "REJOIN SECTIONS: " + rejoinSections.stream().map(r -> r.getIndex()).collect(Collectors.toList()));
+//            Log.d(TAG, "REJOIN SECTIONS: " + rejoinSections.stream().map(r -> r.getIndex()).collect(Collectors.toList()));
         }
 
         if (!rejoinSections.isEmpty()) {
-            addToPrevPoints(currentPoint);
+            addToPrevPoints(pointToCheck);
 
             for (Rejoin rejoinSection : rejoinSections) {
                 int startIndex = rejoinSection.getIndex();
@@ -148,7 +158,7 @@ public class PositionMonitor {
                 }
 
                 // Return if the direction has been confirmed, otherwise search again
-                if (checkDirection(currentPoint, route, startIndex, endIndex, rejoinSection, directionCount)) {
+                if (checkDirection(pointToCheck, route, startIndex, endIndex, rejoinSection, directionCount)) {
                     Log.d(TAG, "ON ROUTE " + route.getName() + " (" + matchingSectionIdx + ")");
                     rejoinSections.stream().forEach(r -> r.setIndex(SECTION_INVALID)); // Reset for clearing
                     onRoute = true;
@@ -166,14 +176,15 @@ public class PositionMonitor {
         rejoinSections.clear();
 
         Log.d(TAG, "Checking points");
-        // Look for all sections of the route that the current point is close to
+        // Look for all sections of the route that the current point is close to and add them to the
+        // list of indexes that could be where the current point is on the route
         for (int i = 1; i < route.getPoints().size()-1; i++) {
             PointF pt1 = new PointF((float) route.getPoints().get(i-1).getEasting(), (float) route.getPoints().get(i-1).getNorthing());
             PointF pt2 = new PointF((float) route.getPoints().get(i).getEasting(), (float) route.getPoints().get(i).getNorthing());
-            if (LocationMonitor.pointWithinLineSegment(currentPoint, pt1, pt2)) {
+            if (LocationMonitor.pointWithinLineSegment(pointToCheck, pt1, pt2)) {
                 // Found a potential matching section but not on route until direction has been checked
                 Log.d(TAG, "ON ROUTE SECTION " + route.getName() + " (index " + (i-1) + " to " + i +
-                        ": " + currentPoint.x + "," + currentPoint.y + ")");
+                        ": " + pointToCheck.x + "," + pointToCheck.y + ")");
                 matchingSectionIdx = i-1;
 
                 // Initialise settings to check direction
@@ -224,17 +235,24 @@ public class PositionMonitor {
         return rideBearing >= minBearing && rideBearing < maxBearing;
     }
 
+    // This looks complicated but does work
+    // It is aiming to check that the rider is progressing along the route in the right direction
+    // At each point, the rider must either be further along the current matching segment of the route
+    // or they have moved into one further along. When a target number of correct direction measures have
+    // been found, the method returns true and confirms that the route is being followed. If there is
+    // an incorrect direction measure, then the count is decremented and, when it hits a certain negative
+    // score, the section is discarded because the rider appears to be going in the opposite direction.
+    // This direction check is specific to routes, where they could be joined at any point.
     @DebugTrace
     private boolean checkDirection(PointF currentPoint, GPXRoute track, int startIndex, int searchToIndex, Rejoin rejoinSection, int directionCount) {
+        // Search from the route point where the match was identified to a set number of points ahead of there
         for (int i = startIndex+1; i < searchToIndex; i++) {
-            RoutePoint pt = track.getPoints().get(i);
-
-            PointF lastPointPt = new PointF((float) track.getPoints().get(i - 1).getEasting(), (float) track.getPoints().get(i - 1).getNorthing());
+            PointF lastPointPt = new PointF((float) track.getPoints().get(i-1).getEasting(), (float) track.getPoints().get(i - 1).getNorthing());
             PointF currentPointPt = new PointF((float) track.getPoints().get(i).getEasting(), (float) track.getPoints().get(i).getNorthing());
 
             // Determine if location is between this one and last one
             if (LocationMonitor.pointWithinLineSegment(currentPoint, lastPointPt, currentPointPt)) {
-                Log.d(TAG, "Found within line segment: " + (i - 1) + " to " + i);
+                Log.d(TAG, "Found within line segment: " + (i-1) + " to " + i);
 
                 if (i-1 > rejoinSection.getIndex()) {
                     // Moved into a more distant segment, so distance must have increased
