@@ -3,12 +3,15 @@ package com.sk7software.climbviewer;
 import android.content.Context;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -40,6 +43,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     private int climbId;
     private GPXRoute climb;
     private boolean infoShown;
+    private EditText txtClimbName;
 
     private static final String TAG = ClimbViewActivity.class.getSimpleName();
 
@@ -54,6 +58,10 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         climbId = getIntent().getIntExtra("id", 0);
         climb = Database.getInstance().getClimb(climbId);
         ClimbController.getInstance().loadClimb(climb);
+
+        txtClimbName = (EditText) findViewById(R.id.txtClimbName);
+        txtClimbName.setText(climb.getName());
+        txtClimbName.setEnabled(false);
 
         elevationView = findViewById(R.id.elevationView);
         elevationView.setParent(this);
@@ -100,6 +108,32 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) { }
+        });
+
+        ImageButton btnEdit = (ImageButton)findViewById(R.id.btnEdit);
+        ImageButton btnOK = (ImageButton)findViewById(R.id.btnOK);
+
+        btnEdit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                btnEdit.setVisibility(View.GONE);
+                btnOK.setVisibility(View.VISIBLE);
+                txtClimbName.setEnabled(true);
+                txtClimbName.selectAll();
+            }
+        });
+
+        btnOK.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String newName = txtClimbName.getText().toString();
+                if (!"".equals(newName)) {
+                    Database.getInstance().updateClimbName(climb.getId(), newName);
+                    btnOK.setVisibility(View.GONE);
+                    btnEdit.setVisibility(View.VISIBLE);
+                    txtClimbName.setEnabled(false);
+                }
+            }
         });
 
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);

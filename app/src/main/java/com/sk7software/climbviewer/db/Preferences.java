@@ -20,6 +20,7 @@ public class Preferences {
     public static final String PREFERENCES_AUTO_MONITOR_CLIMBS = "PREF_AUTO_MONITOR_CLIBMS";
     public static final String PREFERENCES_CLIMB_ULTRA_TOLERANCE = "PREF_ULTRA_TOLERANCE";
     public static final String PREFERENCES_CLIMB_WARNING = "PREF_CLIMB_WARN";
+    public static final String PREFERENCES_CLIMB_SORT_RATING = "PREF_CLIMB_SORT";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

@@ -35,6 +35,7 @@ public class GPXRoute {
     private String time;
     private int smoothDist;
     private long rating;
+    private int startIdx;
 
     @ElementList(entry="rtept", inline = true)
     private List<RoutePoint> points;
@@ -104,6 +105,31 @@ public class GPXRoute {
             setPointsDist();
         }
 
+        double maxElevation = this.getMaxElevation();
+        double elevationChange = this.getElevationChange();
+        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
+
+        if (dist != 0) {
+            rating = (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
+                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
+        } else {
+            rating = 0;
+        }
+        return rating;
+    }
+
+    private double getMaxElevation() {
+        double maxElevation = Double.MIN_VALUE;
+
+        for (RoutePoint p : this.getPoints()) {
+            if (p.getElevation() > maxElevation) {
+                maxElevation = p.getElevation();
+            }
+        }
+        return maxElevation;
+    }
+
+    public double getElevationChange() {
         double maxElevation = Double.MIN_VALUE;
         double minElevation = Double.MAX_VALUE;
 
@@ -115,20 +141,8 @@ public class GPXRoute {
                 maxElevation = p.getElevation();
             }
         }
-
-        double elevationChange = maxElevation - minElevation;
-        double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
-        //Log.d("GPXRoute", "Min: " + minElevation + "; Max: " + maxElevation + "; Dist: " + dist);
-
-        if (dist != 0) {
-            rating = (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
-                    (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
-        } else {
-            rating = 0;
-        }
-        return rating;
+        return maxElevation - minElevation;
     }
-
     public void calcSmoothedPoints() {
         float distFromLast = 0;
         boolean first = true;

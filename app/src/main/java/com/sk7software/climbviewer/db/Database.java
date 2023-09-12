@@ -554,7 +554,9 @@ public class Database extends SQLiteOpenHelper {
                 "ON a.id = c.id " +
                 "WHERE b.point_no = 1 " +
                 "AND c.point_no = 2 " +
-                "ORDER BY a.name, b.point_no, c.point_no";
+                "ORDER BY " +
+                (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, false) ? "a.rating DESC" : "a.name") +
+                ", b.point_no, c.point_no";
         List<GPXRoute> climbs = new ArrayList<>();
 
         try (Cursor cursor = db.rawQuery(query, null)){
@@ -915,6 +917,22 @@ public class Database extends SQLiteOpenHelper {
         String query = "UPDATE CLIMB " +
                 "SET smooth_dist = " + smoothDist +
                 " WHERE id = " + climbId;
+        db.execSQL(query);
+    }
+
+    public void updateClimbName(int climbId, String newName) {
+        SQLiteDatabase db = getReadableDatabase();
+        String query = "UPDATE CLIMB " +
+                "SET name = '" + newName + "'" +
+                " WHERE id = " + climbId;
+        db.execSQL(query);
+    }
+
+    public void updateRouteName(int routeId, String newName) {
+        SQLiteDatabase db = getReadableDatabase();
+        String query = "UPDATE ROUTE " +
+                "SET name = '" + newName + "'" +
+                " WHERE id = " + routeId;
         db.execSQL(query);
     }
 

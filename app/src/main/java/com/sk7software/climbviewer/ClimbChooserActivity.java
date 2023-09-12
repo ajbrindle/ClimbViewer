@@ -142,7 +142,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         climbListView.setAdapter(climbListAdapter);
 
         showClimbListButton.setOnClickListener(view -> {
-            //selectedClimb = position;
             Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbListActivity.class);
             startActivityForResult(i,1);
         });

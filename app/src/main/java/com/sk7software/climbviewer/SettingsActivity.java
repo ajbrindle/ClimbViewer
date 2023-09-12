@@ -30,12 +30,14 @@ public class SettingsActivity extends AppCompatActivity {
         boolean auto = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
         boolean ultra = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_ULTRA_TOLERANCE, false);
         int warn = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_CLIMB_WARNING, 1000);
+        boolean sortRating = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, false);
 
         SeekBar smoothDist = (SeekBar)findViewById(R.id.seekSmoothDistance);
         SeekBar delayS = (SeekBar)findViewById(R.id.seekScreenDelay);
         SeekBar climbWarn = (SeekBar)findViewById(R.id.seekClimbWarn);
         Switch autoMonitor = (Switch)findViewById(R.id.swiAutoMonitor);
         Switch ultraTolerance = (Switch)findViewById(R.id.swiClimbTolerance);
+        Switch climbSort = (Switch)findViewById(R.id.swiClimbSort);
 
         TextView smoothLabel = (TextView)findViewById(R.id.txtSmoothDistance);
         TextView delayLabel = (TextView)findViewById(R.id.txtScreenDelay);
@@ -103,6 +105,13 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
+        climbSort.setChecked(sortRating);
+        climbSort.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, isChecked);
+            }
+        });
     }
 
     @Override

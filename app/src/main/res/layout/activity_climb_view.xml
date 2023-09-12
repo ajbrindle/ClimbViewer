@@ -5,6 +5,43 @@
     android:orientation="vertical"
     android:keepScreenOn="true">
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dp"
+        android:layout_marginBottom="3dp"
+        android:layout_marginRight="5dp">
+        <EditText
+            android:id="@+id/txtClimbName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/oswald_bold"
+            android:maxLines="1"
+            android:textSize="18sp"
+            android:autoSizeMaxTextSize="18sp"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeStepGranularity="2sp"
+            android:autoSizeTextType="uniform"
+            android:layout_alignParentLeft="true"
+            android:text="Climb Name"/>
+        <ImageButton
+            android:id="@+id/btnEdit"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:scaleType="fitCenter"
+            android:layout_alignParentRight="true"
+            android:backgroundTint="#ffffff"
+            android:src="@drawable/edit_pencil"/>
+        <ImageButton
+            android:id="@+id/btnOK"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:scaleType="fitCenter"
+            android:layout_alignParentRight="true"
+            android:backgroundTint="#ffffff"
+            android:src="@drawable/tick_ok"
+            android:visibility="gone"/>
+    </RelativeLayout>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

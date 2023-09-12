@@ -10,6 +10,7 @@ import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -54,7 +55,11 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private boolean ignoreLocationUpdates;
     private Map<Integer, Double> climbDistFromStart = new HashMap<>();
     private boolean loadNextClimbWarning = false;
-
+    private EditText txtRouteName;
+    private int nextClimbId;
+    private float nextClimbLength;
+    private float nextClimbHeight;
+    private int nextClimbCounter;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
 
@@ -70,6 +75,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         int startIdx = getIntent().getIntExtra("startIdx", 0);
 
         if (startIdx < 0) {
+            RelativeLayout namePanel = (RelativeLayout)findViewById(R.id.panelRouteName);
+            namePanel.setVisibility(View.VISIBLE);
             ignoreLocationUpdates = true;
             startIdx = 0;
         } else {
@@ -82,6 +89,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         // Get route and adjust start point
         route = Database.getInstance().getRoute(routeId);
         route.adjustRoute(startIdx);
+        txtRouteName = (EditText) findViewById(R.id.txtRouteName);
+        txtRouteName.setText(route.getName());
+        txtRouteName.setEnabled(false);
+
         ClimbController.getInstance().loadRoute(route);
 
         calcDistAndElevation();
@@ -161,6 +172,32 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
         offRoutePanel = findViewById(R.id.panelOffRoute);
         offRoutePanel.setVisibility(View.GONE);
+
+        ImageButton btnEdit = (ImageButton)findViewById(R.id.btnEdit);
+        ImageButton btnOK = (ImageButton)findViewById(R.id.btnOK);
+
+        btnEdit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                btnEdit.setVisibility(View.GONE);
+                btnOK.setVisibility(View.VISIBLE);
+                txtRouteName.setEnabled(true);
+                txtRouteName.selectAll();
+            }
+        });
+
+        btnOK.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String newName = txtRouteName.getText().toString();
+                if (!"".equals(newName)) {
+                    Database.getInstance().updateRouteName(route.getId(), newName);
+                    btnOK.setVisibility(View.GONE);
+                    btnEdit.setVisibility(View.VISIBLE);
+                    txtRouteName.setEnabled(false);
+                }
+            }
+        });
 
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
 
@@ -295,9 +332,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     nextIntent.putExtra("id", climbId);
                     startActivity(nextIntent);
                 }
-            } else {
-                // Find distance to start of next climb
-
             }
         }
     }
@@ -371,7 +405,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();
 
-            // Determine if within 3km of any climbs
+            // Determine if within threshold distance of any climbs
             double minDist = Double.MAX_VALUE;
             int nextClimb = -1;
             for (Map.Entry<Integer, Double> climbDist : climbDistFromStart.entrySet()) {
@@ -380,28 +414,43 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 if (distToClimb > 0 && distToClimb < warnDist && distToClimb < minDist) {
                     minDist = distToClimb;
                     nextClimb = climbDist.getKey();
-                    if (!loadNextClimbWarning) {
-                        Log.d(TAG, "Load next climb view");
-                        loadNextClimbWarning = true;
-                        GPXRoute gc = Database.getInstance().getClimb(nextClimb);
-                        gc.setPointsDist();
-                        gc.calcSmoothedPoints();
-                        fullRouteView.setVisibility(View.GONE);
-                        nextClimbView.setVisibility(View.VISIBLE);
-                        nextClimbView.setClimb(gc, 20);
-                        nextClimbView.setTransparency(0x88);
-                        setClimbViewHeight(nextClimbView);
-                        nextClimbView.invalidate();
-                    }
+                }
+            }
+            if (nextClimb > 0 && nextClimb != nextClimbId) {
+                nextClimbId = nextClimb;
+                if (!loadNextClimbWarning) {
+                    Log.d(TAG, "Load next climb view");
+                    loadNextClimbWarning = true;
+                    GPXRoute gc = Database.getInstance().getClimb(nextClimb);
+                    gc.setPointsDist();
+                    gc.calcSmoothedPoints();
+                    nextClimbLength = gc.getPoints().get(gc.getPoints().size()-1).getDistFromStart();
+                    nextClimbHeight = (float)gc.getElevationChange();
+                    fullRouteView.setVisibility(View.GONE);
+                    nextClimbView.setVisibility(View.VISIBLE);
+                    nextClimbView.setClimb(gc, 20);
+                    nextClimbView.setTransparency(0x88);
+                    setClimbViewHeight(nextClimbView);
+                    nextClimbView.invalidate();
                 }
             }
 
             if (nextClimb > 0) {
                 label1.setText("NEXT CLIMB");
-                label2.setText("RATING");
-
                 DisplayFormatter.setDistanceText((float)minDist, "km", txtDist, true);
-                txtElev.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
+
+                nextClimbCounter++;
+
+                if (nextClimbCounter % 15 < 5) {
+                    label2.setText("RATING");
+                    txtElev.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
+                } else if (nextClimbCounter % 15 < 10) {
+                    label2.setText("DIST");
+                    DisplayFormatter.setDistanceText(nextClimbLength, "km", txtElev, true);
+                } else {
+                    label2.setText("HEIGHT");
+                    DisplayFormatter.setDistanceText(nextClimbHeight, "m", txtElev, true);
+                }
             } else {
                 label1.setText("TO GO");
                 label2.setText("ELEV LEFT");

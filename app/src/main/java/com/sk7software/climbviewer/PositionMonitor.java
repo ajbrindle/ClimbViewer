@@ -6,6 +6,7 @@ import android.util.Log;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
+import com.sk7software.climbviewer.model.DirectionChecker;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.AttemptData;
@@ -14,10 +15,8 @@ import com.sk7software.util.aspectlogger.DebugTrace;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -28,6 +27,7 @@ public class PositionMonitor {
     private static PositionMonitor INSTANCE = null;
     private static final String TAG = PositionMonitor.class.getSimpleName();
     private static final int SECTION_INVALID = -99;
+    private static final int BEARING_RANGE = 60;
 
     private List<PointF> prevPoints;
     private Set<MonitorType> monitoring;
@@ -44,7 +44,7 @@ public class PositionMonitor {
 
     private PositionMonitor() {
         super();
-        prevPoints = new LinkedList<>();
+        prevPoints = new ArrayList<>();
         matchingSectionIdx = -1;
         rejoinSections = new ArrayList<>();
     }
@@ -114,13 +114,15 @@ public class PositionMonitor {
             route = Database.getInstance().getRoute(routeId);
         }
 
-        if (checkOnRoute(route, point, 4) && !tryingToResume) {
-            // Record where the route was initially started (and don't update if it is resumed)
-            routeStartIdx = matchingSectionIdx;
+        if (checkOnRoute(route, point, 4)) {
+            if (!tryingToResume) {
+                // Record where the route was initially started (and don't update if it is resumed)
+                routeStartIdx = matchingSectionIdx;
 
-            // Store in preferences
-            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_ID, routeId);
-            Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_START_IDX, routeStartIdx);
+                // Store in preferences
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_ID, routeId);
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_ROUTE_START_IDX, routeStartIdx);
+            }
         }
     }
 
@@ -141,7 +143,6 @@ public class PositionMonitor {
         if (rejoinSections != null) {
             rejoinSections
                     .removeIf(r -> r.getIndex() == SECTION_INVALID || r.hasExpired());
-//            Log.d(TAG, "REJOIN SECTIONS: " + rejoinSections.stream().map(r -> r.getIndex()).collect(Collectors.toList()));
         }
 
         if (!rejoinSections.isEmpty()) {
@@ -175,7 +176,6 @@ public class PositionMonitor {
         matchingSectionIdx = -1;
         rejoinSections.clear();
 
-        Log.d(TAG, "Checking points");
         // Look for all sections of the route that the current point is close to and add them to the
         // list of indexes that could be where the current point is on the route
         for (int i = 1; i < route.getPoints().size()-1; i++) {
@@ -222,9 +222,9 @@ public class PositionMonitor {
         float rideDeltaY = currentPoint.y - lastPoint.y;
         double rideBearing = Math.atan2(rideDeltaY, rideDeltaX) * 180 / Math.PI;
 
-        // Direction is OK if ride bearing is in same quadrant as track bearing (45 deg either way)
-        double minBearing = trackBearing - 45;
-        double maxBearing = trackBearing + 45;
+        // Direction is OK if ride bearing is in same sector as track bearing
+        double minBearing = trackBearing - BEARING_RANGE;
+        double maxBearing = trackBearing + BEARING_RANGE;
 
         if (minBearing < 0) {
             minBearing += 360;
@@ -306,6 +306,11 @@ public class PositionMonitor {
         }
         monitoring.add(type);
      }
+
+    public boolean isRightDirection(PointF currentPoint, GPXRoute track, DirectionChecker checker) {
+        checker.check(currentPoint, track.getPoints());
+        return checker.isDirectionOK();
+    }
 
      public void stopMonitor(MonitorType type) {
         monitoring.remove(type);

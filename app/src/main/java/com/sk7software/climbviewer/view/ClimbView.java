@@ -29,6 +29,7 @@ import com.sk7software.climbviewer.LocationMonitor;
 import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.model.DirectionChecker;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.util.aspectlogger.DebugTrace;
@@ -367,7 +368,6 @@ public class ClimbView extends View {
         canvas.drawBitmap(profileBitmap, 0, 0, p);
         plotGradientLine(points, canvas);
         plotPositions(canvas);
-        setInfo(points);
 
         if (findingClimb) {
             markClimb(canvas, x0, xN, 0);
@@ -389,10 +389,14 @@ public class ClimbView extends View {
             if (climbCoords == null) {
                 climbCoords = new ArrayList<>();
                 for (String id : ids) {
-                    // Get route
+                    // Get climb
                     int climbId = Integer.parseInt(id);
                     GPXRoute rt = Database.getInstance().getClimb(climbId);
                     List<Integer> indexes = findRouteIndexes(rt);
+
+                    if (indexes == null) {
+                        continue;
+                    }
 
                     float xStart = -1;
                     float xEnd = -1;
@@ -433,10 +437,6 @@ public class ClimbView extends View {
             PlotPoint pt = calcPlotXY(points, ClimbController.getInstance().getAttempts().get(p).getDist());
             drawTracker(canvas, pt, p.getColor());
         }
-    }
-
-    public void setInfo(List<PlotPoint> ponits) {
-
     }
 
     private void markClimb(Canvas canvas, int xStart, int xEnd, int y0) {
@@ -850,7 +850,7 @@ public class ClimbView extends View {
         int startIdx = -1;
         int endIdx = -1;
 
-        // Find all climbs whose start point is on the route
+        // Search through the route looking for the start of the climb
         for (int i=0; i<profile.getPoints().size(); i++) {
             RoutePoint pt = profile.getPoints().get(i);
 
@@ -864,19 +864,25 @@ public class ClimbView extends View {
             PointF start = new PointF((float)climb.getPoints().get(0).getEasting(), (float)climb.getPoints().get(0).getNorthing());
             if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
                 PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
-                    Log.d(TAG, "STARTED CLIMB " + climb.getName());
+                DirectionChecker checker = new DirectionChecker();
+                checker.setStartIndex(i);
+                checker.calcSegmentDist(start, lastPoint, currentPoint);
+                if (checker.check(second, profile.getPoints())) {
+                    Log.d(TAG, "FOUND CLIMB START " + climb.getName());
                     startIdx = i;
                     break;
                 }
             }
 
-            // Remove any climbs already found from allClimbs
             lastPoint = currentPoint;
         }
 
         lastPoint = null;
-        // From the started climbs, find the ones that finish
+        if (startIdx < 0) {
+            return null;
+        }
+
+        // If the start was found, look for the end
         for (int i=startIdx; i<profile.getPoints().size(); i++) {
             RoutePoint pt = profile.getPoints().get(i);
 
@@ -890,12 +896,16 @@ public class ClimbView extends View {
             int lastIdx = climb.getPoints().size()-1;
             PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
             if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
-                Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
+                Log.d(TAG, "FOUND CLIMB END " + climb.getName());
                 endIdx = i;
                 break;
             }
 
             lastPoint = currentPoint;
+        }
+
+        if (endIdx < 0) {
+            return null;
         }
 
         List<Integer> indexes = new ArrayList<>();
