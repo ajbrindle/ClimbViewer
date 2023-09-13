@@ -131,7 +131,6 @@ public class LocationMonitor {
         else {
             xx = a.x + param * C;
             yy = a.y + param * D;
-            PointF xxyy = new PointF((float)xx, (float)yy);
             return new PointF((float)xx, (float)yy);
         }
     }

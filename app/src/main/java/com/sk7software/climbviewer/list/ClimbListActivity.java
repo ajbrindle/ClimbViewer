@@ -15,6 +15,8 @@ import com.sk7software.climbviewer.model.GPXRoute;
 
 public class ClimbListActivity extends Activity {
 
+    public static final int CLIMB_LIST_OK = 101;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,7 +36,7 @@ public class ClimbListActivity extends Activity {
                 i.putExtra("climb", items[position].getName());
                 i.putExtra("id", items[position].getId());
                 i.putExtra("pos", String.valueOf(position));
-                setResult(Activity.RESULT_OK, i);
+                setResult(CLIMB_LIST_OK, i);
                 finish();
             }
         });

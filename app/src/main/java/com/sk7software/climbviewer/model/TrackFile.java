@@ -138,7 +138,7 @@ public class TrackFile {
 
             for (GPXRoute climb : allClimbs) {
                 if (startFound(climb, lastPoint, currentPoint, routePointIndex)) {
-                    Log.d(TAG, "STARTED CLIMB " + climb.getName());
+                    Log.d(TAG, "FOUND CLIMB START " + climb.getName());
                     GPXRoute startedClimb = Database.getInstance().getClimb(climb.getId());
                     startedClimb.setStartIdx(routePointIndex);
                     startedClimbs.add(startedClimb);
@@ -175,7 +175,7 @@ public class TrackFile {
                 int lastIdx = climb.getPoints().size()-1;
                 PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
                 if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
-                    Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
+                    Log.d(TAG, "FOUND CLIMB END " + climb.getName());
                     completedClimbs.add(climb);
                 }
             }
@@ -237,8 +237,9 @@ public class TrackFile {
     private boolean startFound(GPXRoute climb, PointF lastPoint, PointF currentPoint, int index) {
         PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
         if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
+            Log.d(TAG, "Found point in segment: " + index);
             PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-            DirectionChecker checker = new DirectionChecker();
+            DirectionChecker checker = new DirectionChecker(start, second);
             checker.setStartIndex(index);
             checker.calcSegmentDist(start, lastPoint, currentPoint);
             if (checker.check(second, getRoute().getTrackSegment().getPoints())) {

@@ -9,17 +9,28 @@ import com.sk7software.climbviewer.view.AttemptData;
 import java.util.List;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 public class DirectionChecker {
+    private static final int SEARCH_TO_DEFAULT = 20;
     private boolean directionOK;
     private float segmentDist;
     private int startIndex;
+    private int searchTo;
 
     private static final String TAG = DirectionChecker.class.getSimpleName();
-    private static final int SEARCH_TO = 10;
+
+    public DirectionChecker() {
+        this.searchTo = SEARCH_TO_DEFAULT;
+    }
+    public DirectionChecker(PointF first, PointF second) {
+        // Get distance between points and adjust look-ahead number if necessary
+        this.searchTo = (int)Math.sqrt((Math.pow(first.x - second.x, 2.0) + Math.pow(first.y - second.y, 2.0)));
+        Log.d(TAG, "Search to: " + searchTo);
+    }
 
     public boolean check(PointF currentPoint, List<RoutePoint> track) {
         int searchToIndex = limitIndex(track);
@@ -31,7 +42,7 @@ public class DirectionChecker {
 
             // Determine if location is between this one and last one
             if (LocationMonitor.pointWithinLineSegment(currentPoint, lastPointPt, currentPointPt)) {
-                Log.d(TAG, "Found within line segment: " + (i - 1) + " to " + i);
+                Log.d(TAG, "Found next point within line segment: " + (i - 1) + " to " + i);
 
                 if (i - 1 > startIndex) {
                     // Moved into a more distant segment, so distance must have increased
@@ -73,10 +84,10 @@ public class DirectionChecker {
     }
 
     int limitIndex(List<RoutePoint> track) {
-        if (startIndex + SEARCH_TO >= track.size()) {
+        if (startIndex + searchTo >= track.size()) {
             return track.size()-1;
         } else {
-            return startIndex + SEARCH_TO;
+            return startIndex + searchTo;
         }
     }
 }

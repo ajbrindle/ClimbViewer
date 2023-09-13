@@ -2,6 +2,7 @@ package com.sk7software.climbviewer;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
@@ -80,13 +81,15 @@ public class GPXLoadActivity extends AppCompatActivity {
         });
 
         btnLoad.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("ResourceType") // Allows checking of nothing selected
             @Override
             public void onClick(View view) {
+                if (grpType.getCheckedRadioButtonId() < 0) return;
+
                 setProgress(true, "Loading file...");
                 executorService.execute(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d(TAG, "Loading file");
                         if (loadFile()) {
                             runOnUiThread(new Runnable() {
                                 @Override
@@ -143,9 +146,9 @@ public class GPXLoadActivity extends AppCompatActivity {
         });
 
         Intent gpxIntent = getIntent();
-        String action = gpxIntent.getAction();
         String type = gpxIntent.getType();
-        gpxUri = (Uri) gpxIntent.getData();
+        Log.d(TAG, "TYPE: " + type);
+        gpxUri = gpxIntent.getData();
     }
 
     private boolean loadFile() {

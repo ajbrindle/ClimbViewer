@@ -246,7 +246,7 @@ public class ClimbController {
         Log.d(TAG, "Check finished: " + distDone);
 
         // Don't check if finished until within 100m of the end (or has potentially passed the end)
-        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100 && !(distDone < 0)) {
+        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100 && distDone >= 0) {
             return;
         }
 

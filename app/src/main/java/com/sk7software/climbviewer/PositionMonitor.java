@@ -6,7 +6,6 @@ import android.util.Log;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
-import com.sk7software.climbviewer.model.DirectionChecker;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.AttemptData;
@@ -306,11 +305,6 @@ public class PositionMonitor {
         }
         monitoring.add(type);
      }
-
-    public boolean isRightDirection(PointF currentPoint, GPXRoute track, DirectionChecker checker) {
-        checker.check(currentPoint, track.getPoints());
-        return checker.isDirectionOK();
-    }
 
      public void stopMonitor(MonitorType type) {
         monitoring.remove(type);

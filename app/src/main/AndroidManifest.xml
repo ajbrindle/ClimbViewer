@@ -22,7 +22,7 @@
         <activity
             android:name=".GPXLoadActivity"
             android:exported="true">
-            <intent-filter android:label="import">
+            <intent-filter android:label="Climb Viewer">
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.GET_CONTENT" />

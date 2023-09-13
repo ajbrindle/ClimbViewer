@@ -6,10 +6,8 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteStatement;
 import android.util.Log;
 
-import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.geo.Ellipsoid;
@@ -39,11 +37,10 @@ public class Database extends SQLiteOpenHelper {
     private static final String TAG = Database.class.getSimpleName();
 
     private static Database dbInstance;
-    private final int maxId = 1;
     private boolean isUpgrading = false;
     private SQLiteDatabase currentDb = null;
 
-    private static final List<String> CLIMB_COLUMNS = Arrays.asList("ID", "NAME", "PROJECTION_ID", "ZONE", "SMOOTH_DIST");
+    private static final List<String> CLIMB_COLUMNS = Arrays.asList("ID", "NAME", "PROJECTION_ID", "ZONE", "SMOOTH_DIST", "RATING");
     private static final List<String> CLIMB_POINT_COLUMNS = Arrays.asList ("ID", "POINT_NO", "LAT", "LON", "EASTING", "NORTHING", "ELEVATION");
     private static final List<String> CLIMB_ATTEMPT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "TIMESTAMP", "DURATION");
     private static final List<String> CLIMB_ATTEMPT_POINT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "POINT_NO", "TIMESTAMP", "LAT", "LON", "EASTING", "NORTHING");
@@ -58,13 +55,11 @@ public class Database extends SQLiteOpenHelper {
 
     private Database(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        Log.d(TAG,"DB constructor");
     }
 
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        Log.d(TAG, "DB onCreate()");
         initialise(db);
     }
 
@@ -186,7 +181,7 @@ public class Database extends SQLiteOpenHelper {
         String insertStart = "INSERT INTO ELLIPSOID VALUES(";
         String insertEnd = ");";
 
-        List<String> ellip = new ArrayList<String>();
+        List<String> ellip = new ArrayList<>();
         ellip.add(id++ + ",'Clarke 1866', 6378206.4, 6356583.8");
         ellip.add(id++ + ",'Clarke 1880', 6378249.145, 6356514.86955");    // 2
         ellip.add(id++ + ",'Bessel 1841', 6377397.155, 6356078.96284");    // 3
@@ -218,7 +213,7 @@ public class Database extends SQLiteOpenHelper {
         ellip.add(id++ + ",'SGS 85', 6378136.0, 6356751.301569");    // 29
         ellip.add(id++ + ",'WGS 60', 6378165.0, 6356783.286959");    // 30
         ellip.add(id++ + ",'South American 1969',6378160.0, 6356774.719");    // 31
-        ellip.add(id++ + ",'ATS77',	6378135.0, 6356750.304922");    // 32
+        ellip.add(id++ + ",'ATS77',6378135.0,6356750.304922");    // 32
 
         for (String s : ellip) {
             String insertEllipsoid = insertStart + s + insertEnd;
@@ -243,7 +238,7 @@ public class Database extends SQLiteOpenHelper {
         insertStart = "INSERT INTO PROJECTION VALUES(";
         insertEnd = ");";
 
-        List<String> proj = new ArrayList<String>();
+        List<String> proj = new ArrayList<>();
         proj.add(id++ + ", 'UK National Grid', 400000.0, -100000.0, " + (49.0 * Math.PI / 180.0) + ", " + (-2.0 * Math.PI / 180.0) + ", 0.9996013, 10, " + Projection.SYS_TYPE_TM);
         proj.add(id++ + ", 'UTM (WGS 1984)', 500000.0, 0.0, 0.0, 0.0, 0.9996, 13, " + Projection.SYS_TYPE_UTM);
         proj.add(id++ + ", 'UTM (Intl 1924)', 500000.0, 0.0, 0.0, 0.0, 0.9996, 6, " + Projection.SYS_TYPE_UTM);
@@ -983,32 +978,36 @@ public class Database extends SQLiteOpenHelper {
                         }
                     }
 
-                    // Get all lat/long points for climb attempts
-                    Map<Integer, ClimbAttempt> climbAttempts = getAllAttemptPoints(id);
-
-                    // Loop through all attempts and points
-                    if (climbAttempts != null && !climbAttempts.isEmpty()) {
-                        for (Map.Entry<Integer, ClimbAttempt> attempt : climbAttempts.entrySet()) {
-                            int attemptId = attempt.getKey();
-                            int pointNo = 1;
-
-                            for (AttemptPoint pt : attempt.getValue().getPoints()) {
-                                RoutePoint newPt = GeoConvert.convertLLToGrid(proj, pt.getPoint(), zone);
-
-                                // Update grid points
-                                Log.d(TAG, "Attempt: " + attemptId + ", Point: " + pointNo + " - E: " + newPt.getEasting() + ", N: " + newPt.getNorthing());
-                                query = "UPDATE CLIMB_ATTEMPT_POINT " +
-                                        "SET easting = " + formatter.format(newPt.getEasting()) + "," +
-                                        "northing = " + formatter.format(newPt.getNorthing()) +
-                                        " WHERE id = " + id +
-                                        " AND attempt_id = " + attemptId +
-                                        " AND point_no = " + pointNo + ";";
-                                db.execSQL(query);
-                                pointNo++;
-                            }
-                        }
-                    }
+                    fixAttempts(db, id, proj, id, formatter);
                     cursor.moveToNext();
+                }
+            }
+        }
+    }
+
+    private void fixAttempts(SQLiteDatabase db, int id, Projection proj, int zone, DecimalFormat formatter) {
+        // Get all lat/long points for climb attempts
+        Map<Integer, ClimbAttempt> climbAttempts = getAllAttemptPoints(id);
+
+        // Loop through all attempts and points
+        if (climbAttempts != null && !climbAttempts.isEmpty()) {
+            for (Map.Entry<Integer, ClimbAttempt> attempt : climbAttempts.entrySet()) {
+                int attemptId = attempt.getKey();
+                int pointNo = 1;
+
+                for (AttemptPoint pt : attempt.getValue().getPoints()) {
+                    RoutePoint newPt = GeoConvert.convertLLToGrid(proj, pt.getPoint(), zone);
+
+                    // Update grid points
+                    Log.d(TAG, "Attempt: " + attemptId + ", Point: " + pointNo + " - E: " + newPt.getEasting() + ", N: " + newPt.getNorthing());
+                    String query = "UPDATE CLIMB_ATTEMPT_POINT " +
+                            "SET easting = " + formatter.format(newPt.getEasting()) + "," +
+                            "northing = " + formatter.format(newPt.getNorthing()) +
+                            " WHERE id = " + id +
+                            " AND attempt_id = " + attemptId +
+                            " AND point_no = " + pointNo + ";";
+                    db.execSQL(query);
+                    pointNo++;
                 }
             }
         }

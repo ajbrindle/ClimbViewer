@@ -1,6 +1,7 @@
 package com.sk7software.climbviewer;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
@@ -21,6 +22,10 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -30,7 +35,6 @@ import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.list.RouteListActivity;
-import com.sk7software.util.aspectlogger.DebugTrace;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -38,6 +42,7 @@ import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.network.NetworkRequest;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,7 +59,6 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private String currentClimb;
     private List<GPXRoute> allClimbs;
     private LocationMonitor monitor;
-    private boolean routeCheckDone;
 
     private final ArrayList<HashMap<String,String>> routeList = new ArrayList<>();
     private ListView routeListView;
@@ -126,6 +130,15 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         deleteRouteButton = findViewById(R.id.deleteRoute);
         monitorButton = findViewById(R.id.monitorClimbBtn);
 
+        ActivityResultLauncher<Intent> listResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                new ActivityResultCallback<ActivityResult>() {
+                    @Override
+                    public void onActivityResult(ActivityResult result) {
+                        handleListResult(result);
+                    }
+                });
+
         HashMap<String,String> climbMap = new HashMap<>();
         if (currentClimb != null && currentClimb.length() > 0) {
             climbMap.put("value", currentClimb);
@@ -143,7 +156,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         showClimbListButton.setOnClickListener(view -> {
             Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbListActivity.class);
-            startActivityForResult(i,1);
+            listResultLauncher.launch(i);
         });
 
         showClimbButton.setOnClickListener(v -> {
@@ -176,7 +189,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         routeListView.setAdapter(routeListAdapter);
         showRouteListButton.setOnClickListener(view -> {
             Intent i = new Intent(ApplicationContextProvider.getContext(), RouteListActivity.class);
-            startActivityForResult(i,1);
+            listResultLauncher.launch(i);
         });
 
         followRouteButton.setOnClickListener(new View.OnClickListener() {
@@ -291,42 +304,38 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         super.onStop();
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    private void handleListResult(ActivityResult result) {
         // Check which request we're responding to
-        if (requestCode == 1) {
-            // Make sure the request was successful
-            if (resultCode == RESULT_OK) {
-                // Get extra data
-                if (data.hasExtra("climb")) {
-                    currentClimb = data.getStringExtra("climb");
-                    currentClimbId = data.getIntExtra("id", 0);
-                    HashMap<String, String> h = new HashMap<String, String>();
-                    h = climbList.get(0);//this.selectedClimb);
-                    h.put("value", currentClimb);
-                    climbListAdapter.notifyDataSetChanged();
-                    enableClimbButtons(true);
-                    Log.d(TAG, "Current climb: " + currentClimb + ":" + currentClimbId);
-                } else if (data.hasExtra("route")) {
-                    currentRoute = data.getStringExtra("route");
-                    currentRouteId = data.getIntExtra("id", 0);
-                    HashMap<String, String> h = new HashMap<String, String>();
-                    h = routeList.get(0);//this.selectedRoute);
-                    h.put("value", currentRoute);
-                    routeListAdapter.notifyDataSetChanged();
-                    enableRouteButtons(true);
-                    ClimbController.getInstance();
-                    Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
+        int resultCode = result.getResultCode();
+        Intent data = result.getData();
 
-                    // Clear preferences (will be set when route starts)
-                    Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
-                    Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
-                    followRouteButton.setImageResource(R.drawable.follow_route);
-                    followRouteButton.setTag(BTN_FOLLOW);
-                }
-            }
+            // Make sure the request was successful
+        if (resultCode == ClimbListActivity.CLIMB_LIST_OK && data.hasExtra("climb")) {
+            currentClimb = data.getStringExtra("climb");
+            currentClimbId = data.getIntExtra("id", 0);
+            HashMap<String, String> h = new HashMap<String, String>();
+            h = climbList.get(0);
+            h.put("value", currentClimb);
+            climbListAdapter.notifyDataSetChanged();
+            enableClimbButtons(true);
+            Log.d(TAG, "Current climb: " + currentClimb + ":" + currentClimbId);
+        } else if (resultCode == RouteListActivity.ROUTE_LIST_OK && data.hasExtra("route")) {
+            currentRoute = data.getStringExtra("route");
+            currentRouteId = data.getIntExtra("id", 0);
+            HashMap<String, String> h = new HashMap<String, String>();
+            h = routeList.get(0);
+            h.put("value", currentRoute);
+            routeListAdapter.notifyDataSetChanged();
+            enableRouteButtons(true);
+            ClimbController.getInstance();
+            Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
+
+            // Clear preferences (will be set when route starts)
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
+            followRouteButton.setImageResource(R.drawable.follow_route);
+            followRouteButton.setTag(BTN_FOLLOW);
         }
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -523,7 +532,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             }
             return true;
         } else {
-            stopMonitoring(type, button);
+            stopMonitoring(type);
         }
         return false;
     }
@@ -538,7 +547,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         climbsLabel.setText("Climbs");
     }
 
-    private void stopMonitoring(PositionMonitor.MonitorType type, ImageButton button) {
+    private void stopMonitoring(PositionMonitor.MonitorType type) {
         PositionMonitor.getInstance().stopMonitor(type);
 
         if (PositionMonitor.getInstance().getMonitoring().isEmpty()) {

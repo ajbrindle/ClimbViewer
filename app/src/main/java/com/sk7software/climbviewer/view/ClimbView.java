@@ -865,7 +865,7 @@ public class ClimbView extends View {
             if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
                 PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
                 DirectionChecker checker = new DirectionChecker();
-                checker.setStartIndex(i);
+                checker.setStartIndex(i-1);
                 checker.calcSegmentDist(start, lastPoint, currentPoint);
                 if (checker.check(second, profile.getPoints())) {
                     Log.d(TAG, "FOUND CLIMB START " + climb.getName());
