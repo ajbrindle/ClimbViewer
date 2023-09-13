@@ -1,7 +1,6 @@
 package com.sk7software.climbviewer;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
@@ -41,6 +40,7 @@ import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackSegment;
+import com.sk7software.climbviewer.network.FileList;
 import com.sk7software.climbviewer.network.NetworkRequest;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
@@ -477,6 +477,18 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         NetworkRequest.fetchGPXFiles(getApplicationContext(), type, ClimbChooserActivity.this, new NetworkRequest.NetworkCallback() {
             @Override
             public void onRequestCompleted(Object callbackData) {
+                if (callbackData == null) return;
+
+                FileList files = (FileList)callbackData;
+                if (files.getFiles() != null && !files.getFiles().isEmpty()) {
+                    // Load files via GPX loader
+                    Intent i = new Intent(ApplicationContextProvider.getContext(), GPXLoadActivity.class);
+                    Bundle fileBundle = new Bundle();
+                    fileBundle.putParcelable("files", files);
+                    i.putExtra("fileList", fileBundle);
+                    i.putExtra("gpxType", type);
+                    startActivity(i);
+                }
             }
 
             @Override

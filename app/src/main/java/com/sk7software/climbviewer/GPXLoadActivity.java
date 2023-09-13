@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,12 +22,20 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.android.volley.AsyncRequestQueue;
+import com.google.android.gms.common.util.Strings;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
+import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
+import com.sk7software.climbviewer.model.TrackMetadata;
+import com.sk7software.climbviewer.model.TrackSegment;
+import com.sk7software.climbviewer.network.FileDescription;
+import com.sk7software.climbviewer.network.FileList;
 import com.sk7software.climbviewer.network.NetworkRequest;
 
 import java.io.IOException;
@@ -37,7 +46,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class GPXLoadActivity extends AppCompatActivity {
+import lombok.val;
+
+public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
     private Uri gpxUri;
     private GPXFile gpxFile;
@@ -46,8 +57,11 @@ public class GPXLoadActivity extends AppCompatActivity {
     private SeekBar seekTolerance;
     private AlertDialog.Builder progressDialogBuilder;
     private Dialog progressDialog;
-
+    private FileList files;
     private RadioGroup grpType;
+    private LoadType loadType;
+    private GPXType gpxType;
+    private LinearLayout panelFileList;
     private static final String TAG = GPXLoadActivity.class.getSimpleName();
 
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -56,6 +70,9 @@ public class GPXLoadActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gpxload);
+
+        LinearLayout panelChoose = (LinearLayout)findViewById(R.id.panelChoose);
+        panelFileList = (LinearLayout)findViewById(R.id.panelFileList);
 
         Button btnLoad = (Button)findViewById(R.id.btnLoad);
         Button btnLoadSel = (Button)findViewById(R.id.btnCommit);
@@ -69,45 +86,65 @@ public class GPXLoadActivity extends AppCompatActivity {
         progressDialogBuilder = new AlertDialog.Builder(GPXLoadActivity.this);
         progressDialogBuilder.setView(R.layout.progress);
 
-        grpType = (RadioGroup)findViewById(R.id.grpType);
+        // Determine if this has been called from the network load
+        String type = getIntent().getStringExtra("gpxType");
+        if (!Strings.isEmptyOrWhitespace(type)) {
+            // This is a network load
+            loadType = LoadType.NETWORK;
+            setGPXType(type);
+            Bundle fileBundle = getIntent().getBundleExtra("fileList");
+            files = fileBundle.getParcelable("files");
 
-        radAttempt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+            refreshFileList();
+            if ("attempts".equals(gpxType)) {
                 txtTolerance.setVisibility(View.VISIBLE);
                 seekTolerance.setProgress(1);
                 seekTolerance.setVisibility(View.VISIBLE);
             }
-        });
+            panelChoose.setVisibility(View.GONE);
+            panelFileList.setVisibility(View.VISIBLE);
+        } else {
+            // Set up for loading single gpx file
+            loadType = LoadType.LOCAL;
+            Intent gpxIntent = getIntent();
+            String mimeType = gpxIntent.getType();
+            Log.d(TAG, "TYPE: " + mimeType);
+            gpxUri = gpxIntent.getData();
+            grpType = (RadioGroup)findViewById(R.id.grpType);
+
+            radAttempt.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    gpxType = GPXType.ATTEMPT;
+                    txtTolerance.setVisibility(View.VISIBLE);
+                    seekTolerance.setProgress(1);
+                    seekTolerance.setVisibility(View.VISIBLE);
+                }
+            });
+
+            radClimb.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    gpxType = GPXType.CLIMB;
+                }
+            });
+
+            radRoute.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    gpxType = GPXType.ROUTE;
+                }
+            });
+        }
 
         btnLoad.setOnClickListener(new View.OnClickListener() {
-            @SuppressLint("ResourceType") // Allows checking of nothing selected
             @Override
             public void onClick(View view) {
-                if (grpType.getCheckedRadioButtonId() < 0) return;
-
-                setProgress(true, "Loading file...");
-                executorService.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (loadFile()) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    showItems();
-                                    setProgress(false, null);
-                                }
-                            });
-                        } else {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    setProgress(false, null);
-                                }
-                            });
-                        }
-                    }
-                });
+                if (loadType == LoadType.LOCAL) {
+                    loadLocalFile();
+                } else {
+                    loadNetworkFiles();
+                }
             }
         });
 
@@ -115,11 +152,11 @@ public class GPXLoadActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View view) {
-                if (radRoute.isChecked()) {
+                if (gpxType == GPXType.ROUTE) {
                     saveFile("route");
-                } else if (radClimb.isChecked()) {
+                } else if (gpxType == GPXType.CLIMB) {
                     saveFile("climb");
-                } else if (radAttempt.isChecked()) {
+                } else if (gpxType == GPXType.ATTEMPT) {
                     setProgress(true, "Saving attempts...");
                     executorService.execute(new Runnable() {
                         @Override
@@ -129,7 +166,7 @@ public class GPXLoadActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     setProgress(false, null);
-                                    goToMainActivity();
+                                    doNextAction();
                                 }
                             });
                         }
@@ -144,11 +181,89 @@ public class GPXLoadActivity extends AppCompatActivity {
                 goToMainActivity();
             }
         });
+    }
 
-        Intent gpxIntent = getIntent();
-        String type = gpxIntent.getType();
-        Log.d(TAG, "TYPE: " + type);
-        gpxUri = gpxIntent.getData();
+    private void refreshFileList() {
+        boolean first = true;
+        panelFileList.removeAllViews();
+        ScrollView loadView = (ScrollView) findViewById(R.id.allItems);
+        loadView.setVisibility(View.GONE);
+
+        for (FileDescription file : files.getFiles()) {
+            TextView t = new TextView(ApplicationContextProvider.getContext());
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.setMargins(5,3,0,0);
+            t.setText(file.getName());
+            t.setLayoutParams(params);
+            if (first) {
+                first = false;
+                t.setTypeface(null, Typeface.BOLD_ITALIC);
+            }
+            panelFileList.addView(t);
+        }
+
+    }
+    @SuppressLint("ResourceType") // Allows checking of nothing selected
+    private void loadLocalFile() {
+        // Check whether a file type has been selected
+        if (grpType.getCheckedRadioButtonId() < 0) return;
+
+        setProgress(true, "Loading file...");
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (loadFile()) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            showItems(gpxType);
+                            setProgress(false, null);
+                        }
+                    });
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            setProgress(false, null);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void loadNetworkFiles() {
+        if (files == null || files.getFiles().isEmpty()) {
+            goToMainActivity();
+        }
+
+        FileDescription file = files.getFiles().get(0);
+        NetworkRequest.fetchGPX(this.getApplicationContext(), gpxType.getValue(), file.getName(), this, new NetworkRequest.NetworkCallback() {
+            @Override
+            public void onRequestCompleted(Object callbackData) {
+                if (callbackData != null) {
+                    GPXRoute route = (GPXRoute) callbackData;
+                    trkFile = new TrackFile();
+                    TrackMetadata m = new TrackMetadata();
+                    Track t = new Track();
+                    TrackSegment s = new TrackSegment();
+                    m.setTime(route.getTime());
+                    s.setPoints(route.getPoints());
+                    t.setName(route.getName());
+                    t.setTrackSegment(s);
+                    trkFile.setRoute(t);
+                    trkFile.setMetadata(m);
+                    trkFile.setGridPoints();
+                    gpxFile = GPXFile.createFromTrackFile(trkFile);
+                    showItems(gpxType);
+                }
+            }
+
+            @Override
+            public void onError(Exception e) {
+                Log.d(TAG, "Error loading: " + file.getName() + " - " + e.getMessage());
+            }
+        });
     }
 
     private boolean loadFile() {
@@ -168,8 +283,33 @@ public class GPXLoadActivity extends AppCompatActivity {
     }
 
     private void saveFile(String type) {
-        NetworkRequest.updateDatabase(type+"s", gpxFile.getRoute());
-        goToMainActivity();
+        setProgress(true, "Saving: " + gpxFile.getMetadata().getName());
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                updateDatabase(type + "s", gpxFile.getRoute());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        setProgress(false, null);
+                        doNextAction();
+                    }
+                });
+            }
+        });
+    }
+
+    private void doNextAction() {
+        if (loadType == LoadType.LOCAL) {
+            goToMainActivity();
+        } else {
+            files.getFiles().remove(0);
+            if (files.getFiles().isEmpty()) {
+                goToMainActivity();
+            } else {
+                refreshFileList();
+            }
+        }
     }
 
     private void saveClimbAttempts() {
@@ -186,7 +326,7 @@ public class GPXLoadActivity extends AppCompatActivity {
             }
         }
     }
-    private void showItems() {
+    private void showItems(GPXType type) {
         // Reset any checkboxes
         if (chkMatchedClimbs != null && chkMatchedClimbs.length > 0) {
             LinearLayout chkBoxesView = (LinearLayout)findViewById(R.id.chkBoxes);
@@ -196,15 +336,14 @@ public class GPXLoadActivity extends AppCompatActivity {
             chkMatchedClimbs = null;
         }
 
-        int type = grpType.getCheckedRadioButtonId();
         ScrollView loadView = (ScrollView) findViewById(R.id.allItems);
         LinearLayout chkBoxesView = (LinearLayout)findViewById(R.id.chkBoxes);
         CheckBox chkName = (CheckBox) findViewById(R.id.chkItem1);
 
-        if (type == R.id.radClimb || type == R.id.radRoute) {
+        if (type == GPXType.ROUTE || type == GPXType.CLIMB) {
             chkName.setText(gpxFile.getRoute().getName());
             chkName.setChecked(true);
-        } else if (type == R.id.radAttempt) {
+        } else if (type == GPXType.ATTEMPT) {
             chkName.setVisibility(View.GONE);
             int multiplier = seekTolerance.getProgress();
             List<GPXRoute> climbs = trkFile.matchToClimbs(multiplier);
@@ -227,6 +366,7 @@ public class GPXLoadActivity extends AppCompatActivity {
         loadView.setVisibility(View.VISIBLE);
     }
 
+    @Override
     public void setProgress(boolean showProgressDialog, String progressMessage) {
         if (showProgressDialog && progressDialog == null) {
             progressDialog = progressDialogBuilder
@@ -241,8 +381,74 @@ public class GPXLoadActivity extends AppCompatActivity {
         }
     }
 
+    private void setGPXType(String type) {
+        switch (type) {
+            case "attempts":
+                gpxType = GPXType.ATTEMPT;
+                break;
+            case "routes":
+                gpxType = GPXType.ROUTE;
+                break;
+            case "climbs":
+                gpxType = GPXType.CLIMB;
+        }
+    }
+    @Override
+    public void locationChanged(RoutePoint route) {
+        // Do nothing
+    }
     private void goToMainActivity() {
         Intent i = new Intent(this, ClimbChooserActivity.class);
         startActivity(i);
+    }
+
+    private static void updateDatabase(String dir, GPXRoute route) {
+        if ("climbs".equals(dir)) {
+            GPXFile f = new GPXFile();
+            GPXMetadata m = new GPXMetadata();
+            m.setName(route.getName());
+            f.setMetadata(m);
+            f.setRoute(route);
+            f.getRoute().calcRating();
+            Database.getInstance().addClimb(f);
+        } else if ("attempts".equals(dir)) {
+            TrackFile f = new TrackFile();
+            TrackMetadata m = new TrackMetadata();
+            Track t = new Track();
+            TrackSegment s = new TrackSegment();
+            m.setTime(route.getTime());
+            s.setPoints(route.getPoints());
+            t.setName(route.getName());
+            t.setTrackSegment(s);
+            f.setRoute(t);
+            f.setMetadata(m);
+            TrackFile.processTrackFile(f);
+        } else if ("routes".equals(dir)) {
+            GPXFile f = new GPXFile();
+            GPXMetadata m = new GPXMetadata();
+            m.setName(route.getName());
+            f.setMetadata(m);
+            f.setRoute(route);
+            Database.getInstance().addRoute(f);
+        }
+    }
+    public enum LoadType {
+        NETWORK,
+        LOCAL;
+    }
+
+    public enum GPXType {
+        ATTEMPT("attempts"),
+        CLIMB("climbs"),
+        ROUTE("routes");
+
+        private String value;
+        private GPXType(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return this.value;
+        }
     }
 }

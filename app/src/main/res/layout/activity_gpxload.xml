@@ -7,50 +7,62 @@
     android:orientation="vertical"
     tools:context=".GPXLoadActivity">
 
-    <TextView
+    <LinearLayout
+        android:id="@+id/panelChoose"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="What type of data is in the file?"
-        android:layout_marginTop="10dp"
-        android:layout_marginLeft="5dp"/>
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="What type of data is in the file?"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="5dp"/>
 
-    <RadioGroup
-        android:id="@+id/grpType"
-        android:layout_width="wrap_content"
+        <RadioGroup
+            android:id="@+id/grpType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginLeft="5dp"
+            android:layout_marginTop="5dp">
+
+            <RadioButton
+                android:id="@+id/radRoute"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Route" />
+
+            <RadioButton
+                android:id="@+id/radClimb"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Climb" />
+
+            <RadioButton
+                android:id="@+id/radAttempt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attempt" />
+
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtTolerance"
+            android:layout_marginTop="3dp"
+            android:layout_marginLeft="5dp"
+            android:visibility="gone"
+            android:text="Climb recognition sensitivity"/>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/panelFileList"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginLeft="5dp"
-        android:layout_marginTop="5dp">
-
-        <RadioButton
-            android:id="@+id/radRoute"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Route" />
-
-        <RadioButton
-            android:id="@+id/radClimb"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Climb" />
-
-        <RadioButton
-            android:id="@+id/radAttempt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Attempt" />
-
-    </RadioGroup>
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/txtTolerance"
-        android:layout_marginTop="3dp"
-        android:layout_marginLeft="5dp"
-        android:visibility="gone"
-        android:text="Climb recognition sensitivity"/>
-
+        android:visibility="gone">
+    </LinearLayout>
     <SeekBar
         android:id="@+id/seekTolerance"
         android:layout_width="match_parent"

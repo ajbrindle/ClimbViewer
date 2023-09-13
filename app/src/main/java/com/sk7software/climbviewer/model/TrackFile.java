@@ -104,7 +104,7 @@ public class TrackFile {
         }
     }
 
-    private void setGridPoints() {
+    public void setGridPoints() {
         int zone = 0;
 
         if (!getRoute().getTrackSegment().getPoints().isEmpty()) {
