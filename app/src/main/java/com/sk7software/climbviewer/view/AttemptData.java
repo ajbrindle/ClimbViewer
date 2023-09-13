@@ -14,8 +14,6 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
-import java.util.List;
-
 import lombok.Builder;
 import lombok.Data;
 
@@ -50,10 +48,6 @@ public class AttemptData {
         float calculatedDist = lastIndex < track.getPoints().size()-1 ?
                 track.getPoints().get(lastIndex+1).getDistFromStart() :
                 track.getPoints().get(track.getPoints().size()-1).getDistFromStart();
-
-        float calculatedElevation = lastIndex < track.getPoints().size()-1 ?
-                track.getPoints().get(lastIndex+1).getElevFromStart() :
-                track.getPoints().get(track.getPoints().size()-1).getElevFromStart();
 
         // Look for point on track that matches with current location
         // Only look a few points beyond the last one to prevent picking up return points
@@ -151,18 +145,6 @@ public class AttemptData {
     public static double calcDelta(RoutePoint point, RoutePoint referencePoint) {
         return Math.sqrt(Math.pow(referencePoint.getEasting() - point.getEasting(), 2.0) +
                 Math.pow(referencePoint.getNorthing() - point.getNorthing(), 2.0));
-    }
-
-    private static float calcElevDelta(RoutePoint point, List<RoutePoint> trackPoints, int index) {
-        float sectionElevDelta = trackPoints.get(index+1).getElevFromStart() - trackPoints.get(index).getElevFromStart();
-
-        // Determine how far along the section the point is
-        double sectionLen = Math.sqrt(Math.pow(trackPoints.get(index+1).getEasting() - trackPoints.get(index).getEasting(), 2.0) +
-                Math.pow(trackPoints.get(index+1).getNorthing() - trackPoints.get(index).getNorthing(), 2.0));
-        double pathLen = Math.sqrt(Math.pow(trackPoints.get(index).getEasting() - point.getEasting(), 2.0) +
-                Math.pow(trackPoints.get(index).getNorthing() - point.getNorthing(), 2.0));
-        double fraction = pathLen/sectionLen;
-        return (float) (fraction * sectionElevDelta);
     }
 
     public static double calcFraction(RoutePoint point, RoutePoint start, RoutePoint end) {

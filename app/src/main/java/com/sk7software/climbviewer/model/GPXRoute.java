@@ -149,9 +149,9 @@ public class GPXRoute {
         int lastIndex = 0;
         smoothedPoints = new ArrayList<>();
 
-        int smoothDist = getSmoothDist();
-        if (smoothDist == 0) {
-            smoothDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 20);
+        int smthDist = getSmoothDist();
+        if (smthDist == 0) {
+            smthDist = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SMOOTH_DIST, 20);
         }
 
         // Determine cumulative delta to all points
@@ -166,7 +166,7 @@ public class GPXRoute {
                 distFromLast += (float)calcDelta(pt, getPoints().get(i-1).getEasting(), getPoints().get(i-1).getNorthing());
 
                 // Not reached smoothed distance, so move on to next point
-                if (distFromLast < smoothDist && i != getPoints().size() - 1) continue;
+                if (distFromLast < smthDist && i != getPoints().size() - 1) continue;
 
                 // Work out elevation difference with last smooted point
                 double elevDiff = pt.getElevation() - getPoints().get(lastIndex).getElevation();

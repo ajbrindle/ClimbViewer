@@ -7,7 +7,6 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 import lombok.AllArgsConstructor;
@@ -60,8 +59,7 @@ public class RoutePoint {
     private double smoothedElevation;
 
     public void setENFromLL(Projection proj, int zone) {
-        RoutePoint tmpPt = new RoutePoint();
-        tmpPt = GeoConvert.convertLLToGrid(proj, this, zone);
+        RoutePoint tmpPt = GeoConvert.convertLLToGrid(proj, this, zone);
         this.setEasting(tmpPt.getEasting());
         this.setNorthing(tmpPt.getNorthing());
     }

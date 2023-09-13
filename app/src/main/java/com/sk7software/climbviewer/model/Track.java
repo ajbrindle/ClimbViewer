@@ -2,10 +2,7 @@ package com.sk7software.climbviewer.model;
 
 
 import org.simpleframework.xml.Element;
-import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
-
-import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;

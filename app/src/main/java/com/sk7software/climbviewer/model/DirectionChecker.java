@@ -9,7 +9,6 @@ import com.sk7software.climbviewer.view.AttemptData;
 import java.util.List;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter

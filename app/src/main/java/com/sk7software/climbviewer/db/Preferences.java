@@ -29,7 +29,7 @@ public class Preferences {
         prefs = context.getSharedPreferences(APP_PREFERENCES_KEY, Context.MODE_PRIVATE);
     }
 
-    public synchronized static void init(Context context) {
+    public static synchronized void init(Context context) {
         if (instance == null) {
             instance = new Preferences(context);
         }

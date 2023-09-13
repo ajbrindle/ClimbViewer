@@ -40,8 +40,7 @@ public class GPXFile {
     public static GPXFile createFromStream(InputStream is) {
         Serializer serializer = new Persister();
         try {
-            GPXFile gpx = serializer.read(GPXFile.class, is);
-            return gpx;
+            return serializer.read(GPXFile.class, is);
         } catch (Exception e) {
             Log.d(TAG, "Unable to read climb GPX: " + e.getMessage());
         }
