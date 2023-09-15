@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,6 +16,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
@@ -196,7 +198,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             @Override
             public void onClick(View v) {
                 TextView t = (TextView)findViewById(R.id.labelRoutes);
-                if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE, followRouteButton)) {
+                if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE)) {
                     PositionMonitor.getInstance().setRouteId(currentRouteId);
                     PositionMonitor.getInstance().resetRejoin();
                     boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
@@ -234,7 +236,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             @Override
             public void onClick(View v) {
                 TextView t = (TextView)findViewById(R.id.labelClimbs);
-                if (toggleMonitoring(PositionMonitor.MonitorType.CLIMB, monitorButton)) {
+                if (toggleMonitoring(PositionMonitor.MonitorType.CLIMB)) {
                     PositionMonitor.getInstance().setClimbs(allClimbs);
                     t.setBackgroundColor(Color.YELLOW);
                     t.setText("Climbs - MONITORING");
@@ -473,6 +475,12 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        ActivityCompat.finishAffinity(ClimbChooserActivity.this);
+    }
+
     private void doLoad(String type) {
         NetworkRequest.fetchGPXFiles(getApplicationContext(), type, ClimbChooserActivity.this, new NetworkRequest.NetworkCallback() {
             @Override
@@ -534,7 +542,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         // permissions this app might request.
     }
 
-    private boolean toggleMonitoring(PositionMonitor.MonitorType type, ImageButton button) {
+    private boolean toggleMonitoring(PositionMonitor.MonitorType type) {
         if (!PositionMonitor.getInstance().getMonitoring().contains(type)) {
             PositionMonitor.getInstance().doMonitor(type);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -637,10 +645,12 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private void deleteConfirm(String type, String name, int id) {
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
         builder.setTitle("Confirm");
+        LayoutInflater inflater = getLayoutInflater();
+        ViewGroup messageView = (ViewGroup)inflater.inflate(R.layout.alert_message, null);
 
-        final TextView message = new TextView(this);
+        TextView message = messageView.findViewById(R.id.txtAlertMessage);
         message.setText("Confirm delete of: " + name);
-        builder.setView(message);
+        builder.setView(messageView);
 
         builder.setPositiveButton("OK", (dialog, which) -> {
             if ("route".equals(type)) {

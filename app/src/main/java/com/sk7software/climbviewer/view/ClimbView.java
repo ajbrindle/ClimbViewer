@@ -504,7 +504,8 @@ public class ClimbView extends View {
 
         float gradient = pts.get(index).getGradient();
         double distance = (pts.get(index).getX() - xLeft) / scaleFacX;
-        float elevation = interpolateElevation(pts, index, showGradientAt);
+        float elevation = interpolateElevation(pts, index, showGradientAt, false);
+        float elevY = interpolateElevation(pts, index, showGradientAt, true);
 
         if (findingClimb) {
             // Amend to climb distance, elevation gain and average gradient
@@ -517,10 +518,8 @@ public class ClimbView extends View {
                 gradient = 0;
             }
 
-            climbRating = (int)(distance * gradient);
             climbRating = (int)((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
-                    (distance / 1000)) * 100);// + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
-
+                    (distance / 1000)) * 100);
         }
 
         DecimalFormat df1 = new DecimalFormat();
@@ -533,6 +532,7 @@ public class ClimbView extends View {
         Rect textBounds = new Rect();
         p.getTextBounds(gradientText, 0, gradientText.length(), textBounds);
         canvas.drawLine(showGradientAt, textBounds.height() + 5, showGradientAt, height, p);
+        canvas.drawCircle(showGradientAt, elevY, 10, p);
         p.setColor(Color.BLACK);
         canvas.drawText(gradientText, calcTextPos(showGradientAt, textBounds), textBounds.height(), p);
         p.getTextBounds(distanceText, 0, distanceText.length(), textBounds);
@@ -549,9 +549,14 @@ public class ClimbView extends View {
         }
     }
 
-    private float interpolateElevation(List<PlotPoint> pts, int index, int x) {
+    private float interpolateElevation(List<PlotPoint> pts, int index, int x, boolean coord) {
         float elevation1 = pts.get(index).getElevation();
         float elevation2;
+
+        if (coord) {
+            // Change to y coord, rather than actual elevation
+            elevation1 = pts.get(index).getY();
+        }
 
         if (index < pts.size()-1) {
             elevation2 = pts.get(index+1).getElevation();
@@ -559,11 +564,17 @@ public class ClimbView extends View {
             return elevation1;
         }
 
+        if (coord) {
+            // Change to y coord, rather than actual elevation
+            elevation2 = pts.get(index+1).getY();
+        }
+
         float xDiff = pts.get(index+1).getX() - pts.get(index).getX();
         float xAlong = x - pts.get(index).getX();
 
         return elevation1 + ((elevation2-elevation1) * (xAlong/xDiff));
     }
+
     private int calcTextPos(int x, Rect textBounds) {
         int pos = x - (textBounds.width()/2);
         if (pos < 0) {

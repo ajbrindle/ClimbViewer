@@ -9,7 +9,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.1'
+        classpath 'com.android.tools.build:gradle:8.0.2'
         classpath "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.0"
         classpath 'org.aspectj:aspectjtools:1.9.4'
     }
@@ -23,6 +23,8 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 32
+
+    namespace 'com.sk7software.climbviewer'
 
     sourceSets {
         main {
