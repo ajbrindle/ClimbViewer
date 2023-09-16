@@ -22,6 +22,7 @@ import androidx.appcompat.content.res.AppCompatResources;
 import com.google.android.gms.common.util.Strings;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.maps.android.SphericalUtil;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.DrawableUpdateInterface;
@@ -843,12 +844,36 @@ public class ClimbView extends View {
      * @return
      */
     public LatLng getLatLongAtX(int x) {
-        int index = getNearestIndex(points, x);
+        int index;
+        if (x < 0) {
+            index = 0;
+        } else {
+            index = getNearestIndex(points, x);
+        }
 
         if (index < 0) {
             return null;
         }
         return points.get(index).getLocation();
+    }
+
+    public double getBearingAtX(int x) {
+        int index;
+        if (x < 0) {
+            index = 0;
+        } else {
+            index = getNearestIndex(points, x);
+        }
+
+        if (index < 0) {
+            return Float.MIN_VALUE;
+        } else if (index == points.size()-1) {
+            index--;
+        }
+
+        LatLng p1 = points.get(index).getLocation();
+        LatLng p2 = points.get(index+1).getLocation();
+        return SphericalUtil.computeHeading(p1, p2);
     }
 
     public void setTransparency(int transparency) {

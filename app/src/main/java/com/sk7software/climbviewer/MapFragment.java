@@ -364,13 +364,7 @@ public class MapFragment extends Fragment {
         }
     }
 
-    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB) {
-        if (!mapReady || !trackRider || plotType == PlotType.NORMAL) return;
-
-        ClimbController.PointType ptType = (ClimbController.getInstance().isAttemptInProgress() ?
-                ClimbController.PointType.ATTEMPT : ClimbController.PointType.ROUTE);
-
-        float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
 
         if (zoomToPB && ptType == ClimbController.PointType.ATTEMPT) {
             float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
@@ -394,7 +388,32 @@ public class MapFragment extends Fragment {
                 .tilt(tilt)
                 .bearing(bearing)
                 .build();
-        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
+        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, new GoogleMap.CancelableCallback() {
+            @Override
+            public void onCancel() {
+                if (activity != null) {
+                    activity.acceptMoveEvents();
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                if (activity != null) {
+                    activity.acceptMoveEvents();
+                }
+            }
+        });
+    }
+
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB) {
+        if (!mapReady || !trackRider || plotType == PlotType.NORMAL) return;
+
+        ClimbController.PointType ptType = (ClimbController.getInstance().isAttemptInProgress() ?
+                ClimbController.PointType.ATTEMPT : ClimbController.PointType.ROUTE);
+
+        float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
+
+        moveCamera(point, isMirror, zoomToPB, ptType, bearing, null);
     }
 
     public void addMarker(LatLng ll, ClimbController.PointType type, int colour, PositionMarker.Size size) {
