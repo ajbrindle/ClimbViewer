@@ -55,7 +55,6 @@ public class DirectionChecker {
                     routePt.setEasting(nearestPt.x);
                     routePt.setNorthing(nearestPt.y);
                     float calculatedDist = (float) AttemptData.calcDelta(routePt, track.get(i - 1));
-                    calculatedDist += track.get(i - 1).getDistFromStart();
 
                     if (calculatedDist > segmentDist) {
                         segmentDist = calculatedDist;

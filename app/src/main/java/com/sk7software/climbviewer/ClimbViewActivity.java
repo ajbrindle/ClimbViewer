@@ -83,14 +83,18 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     elevationView.setShowGradientAt((int)motionEvent.getX());
                     LatLng ll = elevationView.getLatLongAtX((int)motionEvent.getX());
                     if (ll != null) {
-                        if (map3dView && acceptMoveEvent) {
+                        if (map3dView) {
+                            if (acceptMoveEvent) {
+                                map.showPosition(ll);
+                                RoutePoint mapPt = new RoutePoint();
+                                mapPt.setLat(ll.latitude);
+                                mapPt.setLon(ll.longitude);
+                                float bearing = (float) elevationView.getBearingAtX((int) motionEvent.getX());
+                                acceptMoveEvent = false;
+                                map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+                            }
+                        } else {
                             map.showPosition(ll);
-                            RoutePoint mapPt = new RoutePoint();
-                            mapPt.setLat(ll.latitude);
-                            mapPt.setLon(ll.longitude);
-                            float bearing = (float) elevationView.getBearingAtX((int) motionEvent.getX());
-                            acceptMoveEvent = false;
-                            map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
                         }
                     }
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {

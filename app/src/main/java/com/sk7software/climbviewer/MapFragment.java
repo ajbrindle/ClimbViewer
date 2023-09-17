@@ -1,40 +1,29 @@
 package com.sk7software.climbviewer;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Property;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
-import com.google.android.gms.maps.model.CustomCap;
-import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -71,6 +60,7 @@ public class MapFragment extends Fragment {
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
     private Polyline climbTrack = null;
     private Polyline localTrack = null;
+    private List<Polyline> localTracks = new ArrayList<>();
 
     private static final String TAG = MapFragment.class.getSimpleName();
     private static final int MARKER_ANIMATION_MS = 1000;
@@ -190,36 +180,41 @@ public class MapFragment extends Fragment {
             // Plot gradient shaded line for climb
             int zIdx = track.getPoints().size() + 1;
             for (int i = 1; i < track.getPoints().size(); i++) {
-                PolylineOptions lineOptions = new PolylineOptions();
-                List<LatLng> line = new ArrayList<>();
-                line.add(new LatLng(track.getPoints().get(i - 1).getLat(), track.getPoints().get(i - 1).getLon()));
-                line.add(new LatLng(track.getPoints().get(i).getLat(), track.getPoints().get(i).getLon()));
-                if (i < track.getPoints().size() - 2) {
-                    //line.add(new LatLng(track.getPoints().get(i + 1).getLat(), track.getPoints().get(i + 1).getLon()));
-                }
-                double elevDiff = track.getPoints().get(i).getSmoothedElevation() - track.getPoints().get(i - 1).getSmoothedElevation();
-                double distBetween = track.getPoints().get(i).getDistFromStart() - track.getPoints().get(i - 1).getDistFromStart();
-                double gradient = elevDiff * 100 / distBetween;
-
-                lineOptions.width(180)
-                           .color(Palette.getColour(gradient))
-                           .startCap(new RoundCap())
-                           .endCap(new RoundCap())
-                           .addAll(line)
-                           .zIndex(zIdx--);
-                map.addPolyline(lineOptions);
+                plotElevationLine(track.getPoints(), i, zIdx--, 180, true);
             }
         } else {
             // Plot basic line for route
             PolylineOptions lineOptions = new PolylineOptions();
             lineOptions.addAll(points)
                        .width(20)
+                       .zIndex(2)
                        .color(0xBBFF0000);
             map.addPolyline(lineOptions);
         }
         updateView(boundsBuilder.build());
     }
 
+    private Polyline plotElevationLine(List<RoutePoint> pts, int i, int zIdx, int width, boolean smoothed) {
+        PolylineOptions lineOptions = new PolylineOptions();
+        List<LatLng> line = new ArrayList<>();
+        line.add(new LatLng(pts.get(i - 1).getLat(), pts.get(i - 1).getLon()));
+        line.add(new LatLng(pts.get(i).getLat(), pts.get(i).getLon()));
+
+        double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
+        if (!smoothed) {
+            elevDiff = pts.get(i).getElevation() - pts.get(i-1).getElevation();
+        }
+        double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
+        double gradient = elevDiff * 100 / distBetween;
+
+        lineOptions.width(width)
+                .color(Palette.getColour(gradient))
+                .startCap(new RoundCap())
+                .endCap(new RoundCap())
+                .addAll(line)
+                .zIndex(zIdx);
+        return map.addPolyline(lineOptions);
+    }
     public void plotLocalSection(int minIdx, int maxIdx) {
         if (!mapReady || track == null) {
             return;
@@ -234,21 +229,18 @@ public class MapFragment extends Fragment {
             maxIdx = track.getPoints().size();
         }
 
-        for (int i=minIdx; i<maxIdx; i++) {
-            RoutePoint pt = track.getPoints().get(i);
-            LatLng point = new LatLng(pt.getLat(), pt.getLon());
-            points.add(point);
-        }
-
         if (localTrack != null) {
             localTrack.remove();
         }
 
-        PolylineOptions lineOptions = new PolylineOptions();
-        lineOptions.addAll(points)
-                .width(60)
-                .color(0xAA880088);
-        localTrack = map.addPolyline(lineOptions);
+        if (localTracks != null && !localTracks.isEmpty()) {
+            localTracks.forEach(t -> t.remove());
+            localTracks.clear();
+        }
+
+        for (int i=minIdx+1; i<=maxIdx; i++) {
+            localTracks.add(plotElevationLine(track.getPoints(), i, 0, 60, false));
+        }
     }
 
     public void plotClimbTrackFromRoutePoints(List<RoutePoint> points) {
@@ -323,6 +315,7 @@ public class MapFragment extends Fragment {
         PolylineOptions lineOptions = new PolylineOptions();
         lineOptions.addAll(points)
                 .width(20)
+                .zIndex(2)
                 .color(0xBBFF0000);
         map.addPolyline(lineOptions);
 
