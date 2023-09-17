@@ -42,6 +42,7 @@ import java.util.Date;
 public class ClimbViewActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
     private ClimbView elevationView;
+    private int elevationViewX;
     private MapFragment map;
     private int climbId;
     private GPXRoute climb;
@@ -80,6 +81,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_DOWN || motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                    elevationViewX = (int)motionEvent.getX();
                     elevationView.setShowGradientAt((int)motionEvent.getX());
                     LatLng ll = elevationView.getLatLongAtX((int)motionEvent.getX());
                     if (ll != null) {
@@ -160,6 +162,23 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
         Button btn3d = findViewById(R.id.btn3d);
         LinearLayout panelInfo = findViewById(R.id.panelClimbInfo);
+        SeekBar zoomLevel = findViewById(R.id.zoomLevel);
+
+        zoomLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                map.setZoom(seekBar.getProgress());
+                map.updateMap();
+                map.plotTrack();
+                moveMapCamera(elevationViewX);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
 
         btn3d.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -169,22 +188,18 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     acceptMoveEvent = false;
                     btn3d.setText("2D");
                     panelInfo.setVisibility(View.GONE);
+                    zoomLevel.setVisibility(View.VISIBLE);
                     map.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, false);
                     map.setTilt(67.5f);
-                    map.setZoom(25);
+                    map.setZoom(zoomLevel.getProgress());
                     map.updateMap();
                     map.plotTrack();
-
-                    LatLng ll = elevationView.getLatLongAtX(-1);
-                    RoutePoint mapPt = new RoutePoint();
-                    mapPt.setLat(ll.latitude);
-                    mapPt.setLon(ll.longitude);
-                    float bearing = (float)elevationView.getBearingAtX(-1);
-                    map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+                    moveMapCamera(-1);
                 } else {
                     map3dView = false;
                     btn3d.setText("3D");
                     panelInfo.setVisibility(View.VISIBLE);
+                    zoomLevel.setVisibility(View.GONE);
                     map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);
                     map.updateMap();
                     map.plotTrack();
@@ -210,6 +225,15 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
     public void acceptMoveEvents() {
         acceptMoveEvent = true;
+    }
+
+    private void moveMapCamera(int x) {
+        LatLng ll = elevationView.getLatLongAtX(x);
+        RoutePoint mapPt = new RoutePoint();
+        mapPt.setLat(ll.latitude);
+        mapPt.setLon(ll.longitude);
+        float bearing = (float)elevationView.getBearingAtX(x);
+        map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
     }
 
     private void displayClimbInfo() {
