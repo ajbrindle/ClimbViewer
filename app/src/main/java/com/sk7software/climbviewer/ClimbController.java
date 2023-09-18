@@ -475,7 +475,7 @@ public class ClimbController {
 
     private boolean hasPassedPoint(PointF pointOnSection, PointF currentPoint) {
         for (PointF pt : prevPoints) {
-            if (LocationMonitor.pointWithinLineSegmentWithTolerance(pointOnSection, pt, currentPoint, 2)) {
+            if (LocationMonitor.pointWithinLineSegment(pointOnSection, pt, currentPoint)) {
                 return true;
             }
         }

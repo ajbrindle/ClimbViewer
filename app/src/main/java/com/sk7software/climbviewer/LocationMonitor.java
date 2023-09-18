@@ -16,6 +16,7 @@ import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 
 public class LocationMonitor {
@@ -90,9 +91,13 @@ public class LocationMonitor {
      * @return true if point is within line segment (and close enough)
      */
     public static boolean pointWithinLineSegmentWithTolerance(PointF loc, PointF a, PointF b, int multiplier) {
+        // If point is within the MAX_DIST of the start, then can override it being outside the perpendicular check
+        double distAsq = Math.pow(a.x - loc.x, 2) + Math.pow(a.y - loc.y, 2);
+        boolean override = distAsq < (MAX_DIST_SQ * multiplier * multiplier);
+
         // Algorithm from:
         // https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
-        PointF xxyy = getXXYY(loc, a, b);
+        PointF xxyy = getXXYYWithOverride(loc, a, b, override);
         if (xxyy == null) {
             return false;
         }
@@ -107,7 +112,13 @@ public class LocationMonitor {
         return pointWithinLineSegmentWithTolerance(loc, a, b, 1);
     }
 
-    public static PointF getXXYY(PointF start, PointF a, PointF b) {
+    public static PointF getXXYY (PointF start, PointF a, PointF b) {
+        double distAsq = Math.pow(a.x - start.x, 2) + Math.pow(a.y - start.y, 2);
+        boolean override = distAsq < MAX_DIST_SQ;
+
+        return getXXYYWithOverride(start, a, b, override);
+    }
+    private static PointF getXXYYWithOverride(PointF start, PointF a, PointF b, boolean override) {
         double A = start.x - a.x;
         double B = start.y - a.y;
         double C = b.x - a.x;
@@ -116,13 +127,14 @@ public class LocationMonitor {
         double dot = A * C + B * D;
         double len_sq = C * C + D * D;
         double param = -1;
-        if (len_sq != 0) //in case of 0 length line
+        if (len_sq != 0) { //in case of 0 length line
             param = dot / len_sq;
+        }
 
         double xx;
         double yy;
         // param < 0 or param > 1 means point is not in between ends of line segment
-        if (param < 0) {
+        if (param <= 0 && !override) {
             return null;
         }
         else if (param > 1) {

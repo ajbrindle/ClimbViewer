@@ -1,6 +1,7 @@
 package com.sk7software.climbviewer;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.media.Image;
@@ -32,12 +33,14 @@ import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
+import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.TrackView;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 
 public class ClimbViewActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
@@ -49,6 +52,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     private boolean infoShown;
     private EditText txtClimbName;
     private boolean map3dView;
+    private int lastMotionX;
     private boolean acceptMoveEvent;
 
     private static final String TAG = ClimbViewActivity.class.getSimpleName();
@@ -87,12 +91,14 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     if (ll != null) {
                         if (map3dView) {
                             if (acceptMoveEvent) {
-                                map.showPosition(ll);
+                                List<LatLng> animationPoints = elevationView.getAllLatLngsBetween(lastMotionX, (int)motionEvent.getX());
+                                map.addMarker(animationPoints, ClimbController.PointType.ROUTE, Color.YELLOW, PositionMarker.Size.MEDIUM);
                                 RoutePoint mapPt = new RoutePoint();
                                 mapPt.setLat(ll.latitude);
                                 mapPt.setLon(ll.longitude);
                                 float bearing = (float) elevationView.getBearingAtX((int) motionEvent.getX());
                                 acceptMoveEvent = false;
+                                lastMotionX = (int)motionEvent.getX();
                                 map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
                             }
                         } else {
@@ -229,11 +235,13 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
     private void moveMapCamera(int x) {
         LatLng ll = elevationView.getLatLongAtX(x);
-        RoutePoint mapPt = new RoutePoint();
-        mapPt.setLat(ll.latitude);
-        mapPt.setLon(ll.longitude);
-        float bearing = (float)elevationView.getBearingAtX(x);
-        map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+        if (ll != null) {
+            RoutePoint mapPt = new RoutePoint();
+            mapPt.setLat(ll.latitude);
+            mapPt.setLon(ll.longitude);
+            float bearing = (float) elevationView.getBearingAtX(x);
+            map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+        }
     }
 
     private void displayClimbInfo() {

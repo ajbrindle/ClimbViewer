@@ -80,7 +80,6 @@ public class PositionMonitor {
         if (monitoring.contains(MonitorType.ROUTE)) {
             monitorRoute(point);
         }
-        addToPrevPoints(currentPoint);
     }
 
     private void monitorClimbs(RoutePoint point, PointF currentPoint) {
@@ -97,11 +96,12 @@ public class PositionMonitor {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         onClimbId = climb.getId();
                         prevPoints.clear();
-                        break;
+                        return;
                     }
                 }
             }
         }
+        addToPrevPoints(currentPoint);
     }
 
     private void monitorRoute(RoutePoint point) {

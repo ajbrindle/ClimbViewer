@@ -857,6 +857,19 @@ public class ClimbView extends View {
         return points.get(index).getLocation();
     }
 
+    public List<LatLng> getAllLatLngsBetween(int x1, int x2) {
+        int increment = (x1 < x2 ? 1 : -1);
+
+        List<LatLng> lls = new ArrayList<>();
+        for (int x = x1; x != x2; x += increment) {
+            LatLng ll = getLatLongAtX(x);
+            if (ll != null) {
+                lls.add(ll);
+            }
+        }
+
+        return lls;
+    }
     public double getBearingAtX(int x) {
         int index;
         if (x < 0) {
@@ -903,7 +916,7 @@ public class ClimbView extends View {
                 DirectionChecker checker = new DirectionChecker();
                 checker.setStartIndex(i-1);
                 checker.calcSegmentDist(start, lastPoint, currentPoint);
-                if (checker.check(second, profile.getPoints())) {
+                if (checker.check(second, profile.getPoints(), 1)) {
                     Log.d(TAG, "FOUND CLIMB START " + climb.getName());
                     startIdx = i;
                     break;

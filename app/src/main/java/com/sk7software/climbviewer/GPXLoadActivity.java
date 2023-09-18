@@ -287,7 +287,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         executorService.execute(new Runnable() {
             @Override
             public void run() {
-                updateDatabase(type + "s", gpxFile.getRoute());
+                updateDatabase(type + "s", gpxFile.getRoute(), seekTolerance.getProgress());
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -317,7 +317,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
             for (int i=0; i<chkMatchedClimbs.length; i++) {
                 if (chkMatchedClimbs[i].isChecked()) {
                     GPXRoute climb = (GPXRoute)chkMatchedClimbs[i].getTag();
-                    ClimbAttempt attempt = trkFile.extractAttempt(climb);
+                    ClimbAttempt attempt = trkFile.extractAttempt(climb, seekTolerance.getProgress());
                     if (!Database.getInstance().attemptExists(climb.getId(), attempt.getDatetime().atZone(ZoneId.systemDefault()).toEpochSecond())) {
                         Log.d(TAG, "Adding attempt for climb: " + climb.getName());
                         Database.getInstance().addAttempt(attempt, climb.getId());
@@ -402,7 +402,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         startActivity(i);
     }
 
-    private static void updateDatabase(String dir, GPXRoute route) {
+    private static void updateDatabase(String dir, GPXRoute route, int multiplier) {
         if ("climbs".equals(dir)) {
             GPXFile f = new GPXFile();
             GPXMetadata m = new GPXMetadata();
@@ -422,7 +422,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
             t.setTrackSegment(s);
             f.setRoute(t);
             f.setMetadata(m);
-            TrackFile.processTrackFile(f);
+            TrackFile.processTrackFile(f, multiplier);
         } else if ("routes".equals(dir)) {
             GPXFile f = new GPXFile();
             GPXMetadata m = new GPXMetadata();

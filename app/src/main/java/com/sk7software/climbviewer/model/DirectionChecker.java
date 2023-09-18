@@ -31,16 +31,23 @@ public class DirectionChecker {
         Log.d(TAG, "Search to: " + searchTo);
     }
 
-    public boolean check(PointF currentPoint, List<RoutePoint> track) {
+    public boolean check(PointF checkPoint, List<RoutePoint> track, int multiplier) {
         int searchToIndex = limitIndex(track);
         directionOK = false;
 
         for (int i = startIndex + 1; i < searchToIndex; i++) {
+            PointF lastButOnePointPt = null;
+
+            if (i-2 >= startIndex) {
+                lastButOnePointPt = new PointF((float)track.get(i-2).getEasting(), (float)track.get(i-2).getNorthing());
+            }
             PointF lastPointPt = new PointF((float) track.get(i - 1).getEasting(), (float) track.get(i - 1).getNorthing());
             PointF currentPointPt = new PointF((float) track.get(i).getEasting(), (float) track.get(i).getNorthing());
 
-            // Determine if location is between this one and last one
-            if (LocationMonitor.pointWithinLineSegment(currentPoint, lastPointPt, currentPointPt)) {
+            // Determine if location is between this one and last one. Also consider last but one point
+            // to cover changes in direction for points that are very close to a vertex
+            if (LocationMonitor.pointWithinLineSegmentWithTolerance(checkPoint, lastPointPt, currentPointPt, multiplier)) {// ||
+ //                   (lastButOnePointPt != null && LocationMonitor.pointWithinLineSegment(checkPoint, lastButOnePointPt, currentPointPt))) {
                 Log.d(TAG, "Found next point within line segment: " + (i - 1) + " to " + i);
 
                 if (i - 1 > startIndex) {
@@ -50,7 +57,7 @@ public class DirectionChecker {
                     directionOK = true;
                 } else {
                     // Find the point on the track
-                    PointF nearestPt = LocationMonitor.getXXYY(currentPoint, lastPointPt, currentPointPt);
+                    PointF nearestPt = LocationMonitor.getXXYY(checkPoint, lastPointPt, currentPointPt);
                     RoutePoint routePt = new RoutePoint();
                     routePt.setEasting(nearestPt.x);
                     routePt.setNorthing(nearestPt.y);
@@ -60,6 +67,10 @@ public class DirectionChecker {
                         segmentDist = calculatedDist;
                         directionOK = true;
                     }
+                }
+
+                if (directionOK) {
+                    break;
                 }
             }
         }

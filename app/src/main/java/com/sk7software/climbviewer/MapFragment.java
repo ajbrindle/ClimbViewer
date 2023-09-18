@@ -3,6 +3,7 @@ package com.sk7software.climbviewer;
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
 import android.graphics.Color;
+import android.graphics.Path;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -50,13 +51,11 @@ public class MapFragment extends Fragment {
     private Map<ClimbController.PointType, Map<PositionMarker.Size, Marker>> marker;
     private boolean mapReady = false;
     private boolean trackRider = false;
-    private boolean mirror = false;
     private PlotType plotType;
     private int zoom = 20;
     private float tilt = 67.5f;
     private LatLng centre;
-    private Circle locationMarker = null;
-    private float posMarkerRadius = -1;
+    private Marker locationMarkerIcon = null;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
     private Polyline climbTrack = null;
     private Polyline localTrack = null;
@@ -99,7 +98,6 @@ public class MapFragment extends Fragment {
                     map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
                         @Override
                         public void onCameraMove() {
-                            posMarkerRadius = -1;
                         }
                     });
                 }
@@ -110,7 +108,6 @@ public class MapFragment extends Fragment {
     public void setMapType(int type, PlotType plotType, boolean mirror) {
         this.mapType = type;
         this.plotType = plotType;
-        this.mirror = mirror;
     }
 
     public void updateMap() {
@@ -215,18 +212,33 @@ public class MapFragment extends Fragment {
                 .zIndex(zIdx);
         return map.addPolyline(lineOptions);
     }
+
+    private Polyline plotRouteBoundary(List<RoutePoint> pts, int i, int zIdx, int width) {
+        PolylineOptions lineOptions = new PolylineOptions();
+        List<LatLng> line = new ArrayList<>();
+        line.add(new LatLng(pts.get(i - 1).getLat(), pts.get(i - 1).getLon()));
+        line.add(new LatLng(pts.get(i).getLat(), pts.get(i).getLon()));
+
+        lineOptions.width(width)
+                .color(Color.BLACK)
+                .startCap(new RoundCap())
+                .endCap(new RoundCap())
+                .addAll(line)
+                .zIndex(zIdx);
+        return map.addPolyline(lineOptions);
+    }
+
     public void plotLocalSection(int minIdx, int maxIdx) {
         if (!mapReady || track == null) {
             return;
         }
 
-        List<LatLng> points = new ArrayList<>();
         if (minIdx < 0) {
             minIdx = 0;
         }
 
-        if (maxIdx > track.getPoints().size()) {
-            maxIdx = track.getPoints().size();
+        if (maxIdx >= track.getPoints().size()) {
+            maxIdx = track.getPoints().size()-1;
         }
 
         if (localTrack != null) {
@@ -236,9 +248,12 @@ public class MapFragment extends Fragment {
         if (localTracks != null && !localTracks.isEmpty()) {
             localTracks.forEach(t -> t.remove());
             localTracks.clear();
+        } else {
+            localTracks = new ArrayList<>();
         }
 
         for (int i=minIdx+1; i<=maxIdx; i++) {
+            localTracks.add(plotRouteBoundary(track.getPoints(), i, -1, 66));
             localTracks.add(plotElevationLine(track.getPoints(), i, 0, 60, false));
         }
     }
@@ -410,7 +425,13 @@ public class MapFragment extends Fragment {
     }
 
     public void addMarker(LatLng ll, ClimbController.PointType type, int colour, PositionMarker.Size size) {
-        if (!mapReady) {
+        List<LatLng> lls = new ArrayList<>();
+        lls.add(ll);
+        addMarker(lls, type, colour, size);
+    }
+
+    public void addMarker(List<LatLng> lls, ClimbController.PointType type, int colour, PositionMarker.Size size) {
+        if (!mapReady || lls.isEmpty()) {
             return;
         }
 
@@ -423,10 +444,10 @@ public class MapFragment extends Fragment {
         }
 
         if (m != null) {
-            animateMarker(m, ll, new LatLngInterpolator.LinearFixed());
+            animateMarker(m, lls, new LatLngInterpolator.Linear());
         } else {
             sizeMarkers.put(size, map.addMarker(new MarkerOptions()
-                    .position(ll)
+                    .position(lls.get(0))
                     .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(size, colour)))));
             marker.put(type, sizeMarkers);
         }
@@ -449,42 +470,28 @@ public class MapFragment extends Fragment {
             return;
         }
 
-        if (locationMarker != null) {
-            locationMarker.remove();
-        }
-
         if (ll == null) {
             return;
         }
 
+        if (locationMarkerIcon != null) {
+            locationMarkerIcon.remove();
+        }
+
         // Plot location
-        CircleOptions circleOptions = new CircleOptions();
-        circleOptions.center(ll);
-        circleOptions.radius(calcRadius());
-        circleOptions.strokeColor(Color.BLACK);
-        circleOptions.fillColor(Color.BLUE);
-        circleOptions.strokeWidth(3);
-        circleOptions.zIndex(100);
-        locationMarker = map.addCircle(circleOptions);
+        locationMarkerIcon = map.addMarker(new MarkerOptions()
+                .position(ll)
+                .zIndex(101)
+                .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(PositionMarker.Size.SMALL, Color.YELLOW))));
     }
 
-    private float calcRadius() {
-        if (posMarkerRadius > 0) return posMarkerRadius;
+    private static void animateMarker(Marker marker, List<LatLng> positions, final LatLngInterpolator latLngInterpolator) {
+        if (positions.isEmpty()) {
+            return;
+        }
 
-        // get 2 of the visible diagonal corners of the map (could also use farRight and nearLeft)
-        LatLng topLeft = map.getProjection().getVisibleRegion().farLeft;
-        LatLng bottomRight = map.getProjection().getVisibleRegion().nearRight;
-
-        // use the Location class to calculate the distance between the 2 diagonal map points
-        float[] results = new float[4];
-        Location.distanceBetween(topLeft.latitude,topLeft.longitude,bottomRight.latitude,bottomRight.longitude,results);
-        posMarkerRadius = results[0]/100;
-        return posMarkerRadius;
-    }
-
-
-
-    private static void animateMarker(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+        LatLng[] lls = new LatLng[positions.size()];
+        lls = positions.toArray(lls);
         TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
             @Override
             public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
@@ -492,8 +499,9 @@ public class MapFragment extends Fragment {
             }
         };
         Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
-        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, finalPosition);
+        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, lls);
         animator.setDuration(MARKER_ANIMATION_MS);
         animator.start();
     }
- }
+
+}

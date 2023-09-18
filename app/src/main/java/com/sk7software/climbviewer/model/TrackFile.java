@@ -84,7 +84,7 @@ public class TrackFile {
         }
     }
 
-    public static void processTrackFile(TrackFile track) {
+    public static void processTrackFile(TrackFile track, int multiplier) {
         if (track != null) {
             // Convert points to grid
             track.setGridPoints();
@@ -94,7 +94,7 @@ public class TrackFile {
 
             // Add attempt
             for (GPXRoute climb : matchedClimbs) {
-                ClimbAttempt attempt = track.extractAttempt(climb);
+                ClimbAttempt attempt = track.extractAttempt(climb, multiplier);
                 Log.d(TAG, "Extracted attempt: " + attempt.getDatetime());
                 Log.d(TAG, "Duration: " + attempt.getDuration());
                 Log.d(TAG, "Number of points: " + attempt.getPoints().size());
@@ -137,7 +137,7 @@ public class TrackFile {
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
 
             for (GPXRoute climb : allClimbs) {
-                if (startFound(climb, lastPoint, currentPoint, routePointIndex)) {
+                if (startFound(climb, lastPoint, currentPoint, routePointIndex, multiplier)) {
                     Log.d(TAG, "FOUND CLIMB START " + climb.getName());
                     GPXRoute startedClimb = Database.getInstance().getClimb(climb.getId());
                     startedClimb.setStartIdx(routePointIndex);
@@ -174,8 +174,8 @@ public class TrackFile {
 
                 int lastIdx = climb.getPoints().size()-1;
                 PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
-                if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
-                    Log.d(TAG, "FOUND CLIMB END " + climb.getName());
+                if (LocationMonitor.pointWithinLineSegmentWithTolerance(end, lastPoint, currentPoint, multiplier)) {
+                    Log.d(TAG, "FOUND CLIMB END " + climb.getName() + " (" + routePointIndex + ")");
                     completedClimbs.add(climb);
                 }
             }
@@ -188,7 +188,7 @@ public class TrackFile {
         return completedClimbs;
     }
 
-    public ClimbAttempt extractAttempt(GPXRoute climb) {
+    public ClimbAttempt extractAttempt(GPXRoute climb, int multiplier) {
         ClimbAttempt attempt = new ClimbAttempt();
         attempt.setDatetime(convertToDate(metadata.getTime()));
 
@@ -211,7 +211,7 @@ public class TrackFile {
                 attempt.addPoint(pt, pointTime);
                 PointF end = new PointF((float)climb.getPoints().get(climb.getPoints().size()-1).getEasting(),
                         (float)climb.getPoints().get(climb.getPoints().size()-1).getNorthing());
-                if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
+                if (LocationMonitor.pointWithinLineSegmentWithTolerance(end, lastPoint, currentPoint, multiplier)) {
                     LocalDateTime endTime = convertToDate(pt.getTime());
                     long diff = endTime.atZone(ZoneId.systemDefault()).toEpochSecond() -
                                 startTime.atZone(ZoneId.systemDefault()).toEpochSecond();
@@ -221,7 +221,7 @@ public class TrackFile {
                     break;
                 }
             } else {
-                if (startFound(climb, lastPoint, currentPoint, segmentPointIndex)) {
+                if (startFound(climb, lastPoint, currentPoint, segmentPointIndex, multiplier)) {
                     Log.d(TAG, "STARTED ATTEMPT " + climb.getName() + "; " + pt.getLat() + "," + pt.getLon());
                     startTime = convertToDate(pt.getTime());
                     attempt.addPoint(pt, startTime);
@@ -234,15 +234,15 @@ public class TrackFile {
         return attempt;
     }
 
-    private boolean startFound(GPXRoute climb, PointF lastPoint, PointF currentPoint, int index) {
+    private boolean startFound(GPXRoute climb, PointF lastPoint, PointF currentPoint, int index, int multiplier) {
         PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
-        if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
-            Log.d(TAG, "Found point in segment: " + index);
+        if (LocationMonitor.pointWithinLineSegmentWithTolerance(start, lastPoint, currentPoint, multiplier)) {
+            Log.d(TAG, "Found point in segment: " + index + " for climb " + climb.getName());
             PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
             DirectionChecker checker = new DirectionChecker(start, second);
             checker.setStartIndex(index);
             checker.calcSegmentDist(start, lastPoint, currentPoint);
-            if (checker.check(second, getRoute().getTrackSegment().getPoints())) {
+            if (checker.check(second, getRoute().getTrackSegment().getPoints(), multiplier)) {
                 return true;
             }
         }

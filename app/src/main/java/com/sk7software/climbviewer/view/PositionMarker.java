@@ -18,6 +18,7 @@ import java.util.Map;
 public class PositionMarker {
 
     public enum Size {
+        TINY(0.3f),
         SMALL(0.5f),
         MEDIUM(1.0f),
         LARGE(1.5f);
