@@ -8,10 +8,12 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class AttemptStats {
+    String name;
     int id;
     float distanceM;
     int duration;
     int pb;
     int pos;
     int total;
+    boolean thisAttemptIsPb;
 }

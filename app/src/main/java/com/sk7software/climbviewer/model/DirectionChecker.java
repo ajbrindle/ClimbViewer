@@ -28,26 +28,28 @@ public class DirectionChecker {
     public DirectionChecker(PointF first, PointF second) {
         // Get distance between points and adjust look-ahead number if necessary
         this.searchTo = (int)Math.sqrt((Math.pow(first.x - second.x, 2.0) + Math.pow(first.y - second.y, 2.0)));
+        if (this.searchTo < SEARCH_TO_DEFAULT) {
+            this.searchTo = SEARCH_TO_DEFAULT;
+        }
         Log.d(TAG, "Search to: " + searchTo);
     }
 
+    public DirectionChecker(int startIndex, PointF first, PointF second, PointF start) {
+        this.searchTo = SEARCH_TO_DEFAULT;
+        this.startIndex = startIndex;
+        this.calcSegmentDist(start, first, second);
+    }
     public boolean check(PointF checkPoint, List<RoutePoint> track, int multiplier) {
         int searchToIndex = limitIndex(track);
         directionOK = false;
 
         for (int i = startIndex + 1; i < searchToIndex; i++) {
-            PointF lastButOnePointPt = null;
-
-            if (i-2 >= startIndex) {
-                lastButOnePointPt = new PointF((float)track.get(i-2).getEasting(), (float)track.get(i-2).getNorthing());
-            }
             PointF lastPointPt = new PointF((float) track.get(i - 1).getEasting(), (float) track.get(i - 1).getNorthing());
             PointF currentPointPt = new PointF((float) track.get(i).getEasting(), (float) track.get(i).getNorthing());
 
             // Determine if location is between this one and last one. Also consider last but one point
             // to cover changes in direction for points that are very close to a vertex
-            if (LocationMonitor.pointWithinLineSegmentWithTolerance(checkPoint, lastPointPt, currentPointPt, multiplier)) {// ||
- //                   (lastButOnePointPt != null && LocationMonitor.pointWithinLineSegment(checkPoint, lastButOnePointPt, currentPointPt))) {
+            if (LocationMonitor.pointWithinLineSegmentWithTolerance(checkPoint, lastPointPt, currentPointPt, multiplier)) {
                 Log.d(TAG, "Found next point within line segment: " + (i - 1) + " to " + i);
 
                 if (i - 1 > startIndex) {

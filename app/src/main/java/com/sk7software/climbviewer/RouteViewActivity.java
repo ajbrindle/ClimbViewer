@@ -24,6 +24,7 @@ import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
+import com.sk7software.climbviewer.model.DirectionChecker;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.TrackFile;
@@ -502,9 +503,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             PointF p1 = new PointF((float)route.getPoints().get(i).getEasting(), (float)route.getPoints().get(i).getNorthing());
             PointF p2 = new PointF((float)route.getPoints().get(i+1).getEasting(), (float)route.getPoints().get(i+1).getNorthing());
             if (LocationMonitor.pointWithinLineSegment(startPt, p1, p2)) {
-                // Get distance from p1 to start of climb
-                double delta =  Math.sqrt(Math.pow(startPt.x - p1.x, 2) + Math.pow(startPt.y - p1.y, 2));
-                return route.getPoints().get(i).getDistFromStart() + delta;
+                PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
+                DirectionChecker checker = new DirectionChecker(i, p1, p2, startPt);
+                if (checker.check(second, route.getPoints(), 1)) {
+                    // Get distance from p1 to start of climb
+                    Log.d(TAG, "FOUND CLIMB START " + climb.getName());
+                    double delta =  Math.sqrt(Math.pow(startPt.x - p1.x, 2) + Math.pow(startPt.y - p1.y, 2));
+                    return route.getPoints().get(i).getDistFromStart() + delta;
+                }
             }
         }
 

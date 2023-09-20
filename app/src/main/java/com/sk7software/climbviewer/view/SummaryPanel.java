@@ -29,15 +29,21 @@ public class SummaryPanel {
             TextView txtLastDist = panel.findViewById(R.id.txtSegmentDist);
             TextView txtLastTime = panel.findViewById(R.id.txtSegmentTime);
             TextView txtPB = panel.findViewById(R.id.txtSegmentPB);
+            TextView txtTitle = panel.findViewById(R.id.txtLastSegment);
             TextView txtNewPB = panel.findViewById(R.id.txtNewPB);
 
+            txtTitle.setText(stats.getName().toUpperCase());
             DisplayFormatter.setDistanceText(stats.getDistanceM(), "km", txtLastDist, true);
             DisplayFormatter.setFullTimeText(stats.getDuration(), txtLastTime);
             DisplayFormatter.setFullTimeText(stats.getPb(), txtPB);
 
             if (stats.getPos() == 1) {
                 txtNewPB.setTextColor(Color.GREEN);
-                txtNewPB.setText("*** NEW PB ***");
+                if (stats.isThisAttemptIsPb()) {
+                    txtNewPB.setText("*** NEW PB ***");
+                } else {
+                    txtNewPB.setText("PB Equalled");
+                }
             } else {
                 txtNewPB.setTextColor(Color.RED);
                 txtNewPB.setText(stats.getPos() + "/" + stats.getTotal() + " Attempts");
@@ -58,9 +64,12 @@ public class SummaryPanel {
                     currentScreen.startActivity(i);
                 }
             }
-        }, 10000);
+        }, 8000);
     }
 
+    public static void setVisible(boolean visible) {
+        SummaryPanel.visible = visible;
+    }
     public static boolean isVisible() {
         return SummaryPanel.visible;
     }

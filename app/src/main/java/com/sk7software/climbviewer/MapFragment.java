@@ -503,5 +503,4 @@ public class MapFragment extends Fragment {
         animator.setDuration(MARKER_ANIMATION_MS);
         animator.start();
     }
-
 }

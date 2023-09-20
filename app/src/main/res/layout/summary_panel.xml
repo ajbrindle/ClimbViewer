@@ -10,10 +10,17 @@
     android:padding="8dp">
 
     <TextView
+        android:id="@+id/txtLastSegment"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/oswald_bold"
         android:text="LAST SEGMENT"
-        android:textSize="28dp"
+        android:textSize="28sp"
+        android:maxLines="1"
+        android:autoSizeMaxTextSize="28sp"
+        android:autoSizeMinTextSize="12sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
         android:textStyle="bold" />
 
     <RelativeLayout

@@ -195,10 +195,7 @@ public class GPXRoute {
             dist += Math.sqrt(Math.pow(getPoints().get(i).getEasting() - getPoints().get(i - 1).getEasting(), 2.0) +
                     Math.pow(getPoints().get(i).getNorthing() - getPoints().get(i - 1).getNorthing(), 2.0));
             getPoints().get(i).setDistFromStart(dist);
-        }
 
-        // Calculate elevations
-        for (int i=1; i<getPoints().size(); i++) {
             if (getPoints().get(i).getElevation() > getPoints().get(i-1).getElevation()) {
                 elev += getPoints().get(i).getElevation() - getPoints().get(i-1).getElevation();
             }

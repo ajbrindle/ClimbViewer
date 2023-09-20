@@ -102,6 +102,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             monitor = LocationMonitor.getInstance(this);
         }
         panelCounter = 0;
+        SummaryPanel.setVisible(false);
     }
 
     @Override
@@ -163,7 +164,6 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                 }
             } else {
                 showCompletionPanel();
-                return;
             }
         }
     }

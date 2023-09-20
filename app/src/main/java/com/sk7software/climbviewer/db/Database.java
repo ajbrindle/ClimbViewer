@@ -804,10 +804,11 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = getReadableDatabase();
         AttemptStats attempt = new AttemptStats();
 
-        String query = "SELECT attempt_id, duration " +
-                "FROM CLIMB_ATTEMPT  " +
-                "WHERE id = ? " +
-                "ORDER BY attempt_id DESC";
+        String query = "SELECT a.name, b.attempt_id, b.duration " +
+                "FROM CLIMB a INNER JOIN CLIMB_ATTEMPT b  " +
+                "ON a.id = b.id " +
+                "WHERE b.id = ? " +
+                "ORDER BY b.attempt_id DESC";
 
         // Set stats for this attempt
         try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
@@ -820,23 +821,33 @@ public class Database extends SQLiteOpenHelper {
                 cursor.moveToFirst();
                 while (!cursor.isAfterLast()) {
                     total++;
-                    int duration = cursor.getInt(1);
+                    int duration = cursor.getInt(2);
                     if (first) {
-                        attempt.setId(cursor.getInt(0));
+                        attempt.setId(cursor.getInt(1));
                         attempt.setDuration(duration);
-                        first = false;
+                        attempt.setName(cursor.getString(0));
                     } else if (duration < attempt.getDuration()) {
+                        // Another attempt was quicker
                         pos++;
+                    } else if (pos == 1 && duration == attempt.getDuration()) {
+                        // Another attempt equalled this one, so it isn't a new PB
+                        attempt.setThisAttemptIsPb(false);
                     }
 
-                    if (duration < pbDuration) {
+                    // PB is from a previous attempt, not this one
+                    if (!first && duration < pbDuration) {
                         attempt.setPb(duration);
                         pbDuration = duration;
                     }
+                    first = false;
                     cursor.moveToNext();
                 }
                 attempt.setPos(pos);
                 attempt.setTotal(total);
+
+                if (pos > 1) {
+                    attempt.setThisAttemptIsPb(false);
+                }
                 return attempt;
             } else {
                 return null;
