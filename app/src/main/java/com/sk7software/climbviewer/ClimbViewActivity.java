@@ -3,8 +3,6 @@ package com.sk7software.climbviewer;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.graphics.PointF;
-import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
@@ -15,18 +13,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.model.AttemptPoint;
 import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -34,12 +29,7 @@ import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
-import com.sk7software.climbviewer.view.TrackView;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 
 public class ClimbViewActivity extends AppCompatActivity implements DrawableUpdateInterface {
@@ -290,10 +280,13 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         setTimeText(last, txtLastAttempt);
 
         // Display number of attempts
-        AttemptStats attempts = Database.getInstance().getLastAttempt(climbId);
+        List<AttemptStats> attempts = Database.getInstance().getClimbAttemptDurations(climbId);
+        AttemptStats stats = new AttemptStats();
+        stats.calcStats(attempts);
+
         TextView txtAttempts = findViewById(R.id.txtAttempts);
         if (attempts != null) {
-            txtAttempts.setText(String.valueOf(attempts.getTotal()));
+            txtAttempts.setText(String.valueOf(stats.getTotal()));
         } else {
             txtAttempts.setText("0");
         }

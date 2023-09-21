@@ -800,9 +800,9 @@ public class Database extends SQLiteOpenHelper {
         return 0;
     }
 
-    public AttemptStats getLastAttempt(int climbId) {
+    public List<AttemptStats> getClimbAttemptDurations(int climbId) {
         SQLiteDatabase db = getReadableDatabase();
-        AttemptStats attempt = new AttemptStats();
+        List<AttemptStats> attempts = new ArrayList<>();
 
         String query = "SELECT a.name, b.attempt_id, b.duration " +
                 "FROM CLIMB a INNER JOIN CLIMB_ATTEMPT b  " +
@@ -813,49 +813,21 @@ public class Database extends SQLiteOpenHelper {
         // Set stats for this attempt
         try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(climbId)})) {
             if (cursor != null && cursor.getCount() > 0) {
-                boolean first = true;
-                int pbDuration = Integer.MAX_VALUE;
-                int pos = 1;
-                int total = 0;
-
                 cursor.moveToFirst();
                 while (!cursor.isAfterLast()) {
-                    total++;
-                    int duration = cursor.getInt(2);
-                    if (first) {
-                        attempt.setId(cursor.getInt(1));
-                        attempt.setDuration(duration);
-                        attempt.setName(cursor.getString(0));
-                    } else if (duration < attempt.getDuration()) {
-                        // Another attempt was quicker
-                        pos++;
-                    } else if (pos == 1 && duration == attempt.getDuration()) {
-                        // Another attempt equalled this one, so it isn't a new PB
-                        attempt.setThisAttemptIsPb(false);
-                    }
-
-                    // PB is from a previous attempt, not this one
-                    if (!first && duration < pbDuration) {
-                        attempt.setPb(duration);
-                        pbDuration = duration;
-                    }
-                    first = false;
+                    AttemptStats attempt = new AttemptStats();
+                    attempt.setId(cursor.getInt(1));
+                    attempt.setName(cursor.getString(0));
+                    attempt.setDuration(cursor.getInt(2));
+                    attempts.add(attempt);
                     cursor.moveToNext();
                 }
-                attempt.setPos(pos);
-                attempt.setTotal(total);
-
-                if (pos > 1) {
-                    attempt.setThisAttemptIsPb(false);
-                }
-                return attempt;
-            } else {
-                return null;
             }
         } catch (SQLException e) {
-            Log.d(TAG, "Error looking up attempts: " + e.getMessage());
-            return null;
+            Log.e(TAG, "Error looking up attempts: " + e.getMessage());
         }
+
+        return attempts;
     }
 
     public boolean attemptExists(int climbId, long timestamp) {

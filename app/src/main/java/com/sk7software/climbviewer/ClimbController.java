@@ -452,13 +452,14 @@ public class ClimbController {
     }
 
     public AttemptStats getLastAttemptStats(int lastClimbId) {
-        AttemptStats stats = Database.getInstance().getLastAttempt(lastClimbId);
-        if (stats != null) {
-            GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
-            lastClimb.setPointsDist();
-            int numClimbPoints = lastClimb.getPoints().size();
-            stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints - 1).getDistFromStart());
-        }
+        AttemptStats stats = new AttemptStats();
+        List<AttemptStats> attempts = Database.getInstance().getClimbAttemptDurations(lastClimbId);
+        stats.calcStats(attempts);
+
+        GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
+        lastClimb.setPointsDist();
+        int numClimbPoints = lastClimb.getPoints().size();
+        stats.setDistanceM(lastClimb.getPoints().get(numClimbPoints - 1).getDistFromStart());
         return stats;
     }
 

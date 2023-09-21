@@ -41,8 +41,11 @@ public class SummaryPanel {
                 txtNewPB.setTextColor(Color.GREEN);
                 if (stats.isThisAttemptIsPb()) {
                     txtNewPB.setText("*** NEW PB ***");
+                } else if (stats.getTotal() > 1) {
+                    txtNewPB.setText("=== PB ===");
                 } else {
-                    txtNewPB.setText("PB Equalled");
+                    // First attempt, so no PB yet
+                    txtPB.setText("-:--s");
                 }
             } else {
                 txtNewPB.setTextColor(Color.RED);
