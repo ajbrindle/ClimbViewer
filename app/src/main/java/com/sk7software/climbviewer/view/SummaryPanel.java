@@ -46,6 +46,7 @@ public class SummaryPanel {
                 } else {
                     // First attempt, so no PB yet
                     txtPB.setText("-:--s");
+                    txtNewPB.setVisibility(View.GONE);
                 }
             } else {
                 txtNewPB.setTextColor(Color.RED);
