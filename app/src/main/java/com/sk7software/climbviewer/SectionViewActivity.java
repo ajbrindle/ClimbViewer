@@ -163,7 +163,14 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                     loadNextScreen(false);
                 }
             } else {
-                showCompletionPanel();
+                // Return to previous screen
+                Intent i = ScreenController.getInstance().getNextIntent(this);
+                if (i == null) {
+                    // Go to home screen
+                    i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+                }
+                i.putExtra("lastClimbId", ClimbController.getInstance().getLastClimbId());
+                startActivity(i);
             }
         }
     }
@@ -266,16 +273,6 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         }
     }
 
-    private void showCompletionPanel() {
-        if (SummaryPanel.isVisible()) {
-            return;
-        }
-
-        RelativeLayout completionPanel = findViewById(R.id.climbCompletePanel);
-        SummaryPanel panel = new SummaryPanel();
-        panel.showSummary(completionPanel, ClimbController.getInstance().getLastClimbId(), this);
-    }
-
     private void loadNextScreen(boolean firstLoad) {
         MapFragment.PlotType currentType = plotType;
         boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null;
@@ -319,4 +316,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
     @Override
     public void setProgress(boolean showProgressDialog, String progressMessage) {}
+
+    @Override
+    public void clearCompletionPanel() {}
 }

@@ -16,8 +16,8 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.SimpleAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -44,6 +44,7 @@ import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.network.FileList;
 import com.sk7software.climbviewer.network.NetworkRequest;
+import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     private String currentClimb;
     private List<GPXRoute> allClimbs;
     private LocationMonitor monitor;
+    RelativeLayout completionPanel;
 
     private final ArrayList<HashMap<String,String>> routeList = new ArrayList<>();
     private ListView routeListView;
@@ -117,6 +119,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         db.getWritableDatabase();
         db.backup();
 
+        int lastClimbId = getIntent().getIntExtra("lastClimbId", 0);
+
         // Create progress dialog for use later
         progressDialogBuilder = new AlertDialog.Builder(ClimbChooserActivity.this);
         progressDialogBuilder.setView(R.layout.progress);
@@ -131,6 +135,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         showRouteButton = findViewById(R.id.viewRouteBtn);
         deleteRouteButton = findViewById(R.id.deleteRoute);
         monitorButton = findViewById(R.id.monitorClimbBtn);
+        completionPanel = findViewById(R.id.climbCompletePanel);
 
         ActivityResultLauncher<Intent> listResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -157,17 +162,17 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         climbListView.setAdapter(climbListAdapter);
 
         showClimbListButton.setOnClickListener(view -> {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbListActivity.class);
+            Intent i = new Intent(ClimbChooserActivity.this, ClimbListActivity.class);
             listResultLauncher.launch(i);
         });
 
         showClimbButton.setOnClickListener(v -> {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbViewActivity.class);
+            Intent i = new Intent(ClimbChooserActivity.this, ClimbViewActivity.class);
             showClimb(currentClimbId, i);
         });
 
         findClimbsButton.setOnClickListener(v -> {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbFinderActivity.class);
+            Intent i = new Intent(ClimbChooserActivity.this, ClimbFinderActivity.class);
             showRoute(i, 0, null);
         });
 
@@ -190,7 +195,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         routeListView.setAdapter(routeListAdapter);
         showRouteListButton.setOnClickListener(view -> {
-            Intent i = new Intent(ApplicationContextProvider.getContext(), RouteListActivity.class);
+            Intent i = new Intent(ClimbChooserActivity.this, RouteListActivity.class);
             listResultLauncher.launch(i);
         });
 
@@ -199,17 +204,10 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             public void onClick(View v) {
                 TextView t = (TextView)findViewById(R.id.labelRoutes);
                 if (toggleMonitoring(PositionMonitor.MonitorType.ROUTE)) {
-                    PositionMonitor.getInstance().setRouteId(currentRouteId);
-                    PositionMonitor.getInstance().resetRejoin();
-                    boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
-                    if (autoMonitorClimbs) {
-                        PositionMonitor.getInstance().doMonitor(PositionMonitor.MonitorType.CLIMB);
-                        PositionMonitor.getInstance().setClimbs(findClimbsOnCurrentRoute());
-                    }
-                    boolean resuming = BTN_RESUME.equals(followRouteButton.getTag());
-                    PositionMonitor.getInstance().setTryingToResume(resuming);
+                    // Check if new route, restarting or resuming
+                    setRouteFollowPreferences();
                     t.setBackgroundColor(Color.YELLOW);
-                    t.setText("Routes - " + (resuming ? "RESUMING" : "FOLLOWING"));
+                    t.setText("Routes - FOLLOWING");
                 } else {
                     t.setBackgroundColor(Color.WHITE);
                     t.setText("Routes");
@@ -220,7 +218,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         showRouteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
+                Intent i = new Intent(ClimbChooserActivity.this, RouteViewActivity.class);
                 showRoute(i, -1, null);
             }
         });
@@ -276,8 +274,15 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                     " (" + r.getPoints().get(1).getEasting() + "," + r.getPoints().get(1).getNorthing() + ") ");
         }
 
+        if (lastClimbId > 0) {
+            // Show summary panel before resuming route
+            completionPanel = findViewById(R.id.climbCompletePanel);
+            SummaryPanel panel = new SummaryPanel();
+            panel.showSummary(completionPanel, lastClimbId, this);
+        }
+
         // See if there is a route that needs resuming
-        checkRouteResume();
+        reselectItems();
 
         Log.d(TAG, "Stop location listener");
         LocationMonitor.stopListener();
@@ -291,6 +296,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         PositionMonitor.getInstance().setOnRoute(false);
         PositionMonitor.getInstance().setOnClimbId(-1);
         PositionMonitor.getInstance().resetRejoin();
+        ClimbController.getInstance().reset(ClimbController.PointType.ROUTE);
+        ClimbController.getInstance().reset(ClimbController.PointType.ATTEMPT);
 
         ViewGroup.LayoutParams routeParams = deleteRouteButton.getLayoutParams();
         ViewGroup.LayoutParams climbParams = deleteClimbButton.getLayoutParams();
@@ -320,6 +327,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             h.put("value", currentClimb);
             climbListAdapter.notifyDataSetChanged();
             enableClimbButtons(true);
+            Preferences.getInstance().addPreference(Preferences.PREFERENCES_LAST_SELECTED_CLIMB, currentClimbId);
             Log.d(TAG, "Current climb: " + currentClimb + ":" + currentClimbId);
         } else if (resultCode == RouteListActivity.ROUTE_LIST_OK && data.hasExtra("route")) {
             currentRoute = data.getStringExtra("route");
@@ -329,12 +337,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             h.put("value", currentRoute);
             routeListAdapter.notifyDataSetChanged();
             enableRouteButtons(true);
-            ClimbController.getInstance();
+            Preferences.getInstance().addPreference(Preferences.PREFERENCES_LAST_SELECTED_ROUTE, currentRouteId);
             Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
-
-            // Clear preferences (will be set when route starts)
-            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
-            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
             followRouteButton.setImageResource(R.drawable.follow_route);
             followRouteButton.setTag(BTN_FOLLOW);
         }
@@ -348,7 +352,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             // Stop monitoring route, as this will now be managed from the route view
             PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.ROUTE);
             PositionMonitor.getInstance().resetRejoin();
-            Intent intent = new Intent(ApplicationContextProvider.getContext(), RouteViewActivity.class);
+            Intent intent = new Intent(ClimbChooserActivity.this, RouteViewActivity.class);
             intent.putExtra("follow", 1);
             ClimbController.getInstance().startRoute();
             showRoute(intent, PositionMonitor.getInstance().getRouteStartIdx(), point);
@@ -403,7 +407,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
     }
 
     private Intent getNextScreen() {
-        return new Intent(ApplicationContextProvider.getContext(), SectionViewActivity.class);
+        return new Intent(ClimbChooserActivity.this, SectionViewActivity.class);
     }
 
     @Override
@@ -467,7 +471,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 });
                 return true;
             case R.id.action_settings:
-                Intent i = new Intent(ApplicationContextProvider.getContext(), SettingsActivity.class);
+                Intent i = new Intent(ClimbChooserActivity.this, SettingsActivity.class);
                 startActivity(i);
                 return true;
             default:
@@ -490,7 +494,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 FileList files = (FileList)callbackData;
                 if (files.getFiles() != null && !files.getFiles().isEmpty()) {
                     // Load files via GPX loader
-                    Intent i = new Intent(ApplicationContextProvider.getContext(), GPXLoadActivity.class);
+                    Intent i = new Intent(ClimbChooserActivity.this, GPXLoadActivity.class);
                     Bundle fileBundle = new Bundle();
                     fileBundle.putParcelable("files", files);
                     i.putExtra("fileList", fileBundle);
@@ -553,6 +557,11 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             return true;
         } else {
             stopMonitoring(type);
+            boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
+            if (autoMonitorClimbs) {
+                // Stop monitoring climbs as well
+                stopMonitoring(PositionMonitor.MonitorType.CLIMB);
+            }
         }
         return false;
     }
@@ -565,6 +574,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         TextView climbsLabel = (TextView) findViewById(R.id.labelClimbs);
         climbsLabel.setBackgroundColor(Color.WHITE);
         climbsLabel.setText("Climbs");
+        LocationMonitor.stopListener();
+        monitor = null;
     }
 
     private void stopMonitoring(PositionMonitor.MonitorType type) {
@@ -612,6 +623,61 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
         return Collections.emptyList();
     }
+
+    private void setRouteFollowPreferences() {
+        int savedRouteId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ROUTE_ID, -1);
+        int startIdx = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX, 0);
+
+        if (savedRouteId != currentRouteId) {
+            // Different route, so must be restarting
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
+            startFollowing(0);
+            return;
+        }
+
+        // Pop-up alert to determine whether restarting or resuming
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("Follow Route");
+        LayoutInflater inflater = getLayoutInflater();
+        ViewGroup messageView = (ViewGroup)inflater.inflate(R.layout.alert_message, null);
+
+        TextView message = messageView.findViewById(R.id.txtAlertMessage);
+        message.setText("You are already following this route. Restart or resume from current position?");
+        builder.setView(messageView);
+
+        builder.setPositiveButton("RESUME", (dialog, which) -> {
+            PositionMonitor.getInstance().setRouteStartIdx(startIdx);
+            PositionMonitor.getInstance().setTryingToResume(true);
+            startFollowing(startIdx);
+        });
+        builder.setNegativeButton("RESTART", (dialog, which) -> {
+            // Clear preferences to allow restart
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_ID);
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
+            PositionMonitor.getInstance().setTryingToResume(false);
+            startFollowing(0);
+        });
+        builder.show();
+    }
+
+    private void startFollowing(int startIdx) {
+        // Load route
+        GPXRoute rt = Database.getInstance().getRoute(currentRouteId);
+        if (startIdx >= 0) {
+            // Adjust if already following
+            rt.adjustRoute(startIdx);
+        }
+        ClimbController.getInstance().loadRoute(rt);
+
+        PositionMonitor.getInstance().setRouteId(currentRouteId);
+        PositionMonitor.getInstance().resetRejoin();
+        boolean autoMonitorClimbs = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_AUTO_MONITOR_CLIMBS, true);
+        if (autoMonitorClimbs) {
+            PositionMonitor.getInstance().doMonitor(PositionMonitor.MonitorType.CLIMB);
+            PositionMonitor.getInstance().setClimbs(findClimbsOnCurrentRoute());
+        }
+    }
     @DebugTrace
     private void setUpSwitch(Switch swi, String pref) {
         boolean prefSet = Preferences.getInstance().getBooleanPreference(pref);
@@ -623,9 +689,9 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         });
     }
 
-    private void checkRouteResume() {
-        int savedRouteId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ROUTE_ID);
-        int startIdx = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX, 0);
+    private void reselectItems() {
+        int savedRouteId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_LAST_SELECTED_ROUTE, 0);
+        int savedClimbId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_LAST_SELECTED_CLIMB, 0);
 
         if (savedRouteId > 0) {
             // There is a route to resume so set route id and select in list
@@ -635,10 +701,18 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
             HashMap<String, String> h = routeList.get(0);
             h.put("value", currentRoute);
             routeListAdapter.notifyDataSetChanged();
-            followRouteButton.setImageResource(R.drawable.resume);
-            followRouteButton.setTag(BTN_RESUME);
             enableRouteButtons(true);
-            PositionMonitor.getInstance().setRouteStartIdx(startIdx);
+        }
+
+        if (savedClimbId > 0) {
+            // There is a route to resume so set route id and select in list
+            GPXRoute savedClimb = Database.getInstance().getClimb(savedClimbId);
+            currentClimb = savedClimb.getName();
+            currentClimbId = savedRouteId;
+            HashMap<String, String> h = climbList.get(0);
+            h.put("value", currentClimb);
+            climbListAdapter.notifyDataSetChanged();
+            enableClimbButtons(true);
         }
     }
 
@@ -661,5 +735,10 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
+    }
+
+    @Override
+    public void clearCompletionPanel() {
+        completionPanel.setVisibility(View.GONE);
     }
 }

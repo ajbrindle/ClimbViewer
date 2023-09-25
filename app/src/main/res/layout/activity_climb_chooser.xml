@@ -228,4 +228,13 @@
         android:paddingLeft="5dp"
         android:text="Pursuit" />
 
+    <RelativeLayout
+        android:id="@+id/climbCompletePanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:layout_alignParentBottom="true"
+        android:visibility="gone">
+        <include layout="@layout/summary_panel" />
+    </RelativeLayout>
 </RelativeLayout>

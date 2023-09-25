@@ -149,10 +149,10 @@ public class PositionMonitor {
 
             for (Rejoin rejoinSection : rejoinSections) {
                 int startIndex = rejoinSection.getIndex();
-                int endIndex = startIndex + 10;
                 if (startIndex < 0) {
                     startIndex = 0;
                 }
+                int endIndex = startIndex + 10;
                 if (endIndex > route.getPoints().size() - 1) {
                     endIndex = route.getPoints().size() - 1;
                 }
@@ -184,7 +184,6 @@ public class PositionMonitor {
                 // Found a potential matching section but not on route until direction has been checked
                 Log.d(TAG, "ON ROUTE SECTION " + route.getName() + " (index " + (i-1) + " to " + i +
                         ": " + pointToCheck.x + "," + pointToCheck.y + ")");
-                matchingSectionIdx = i-1;
 
                 // Initialise settings to check direction
                 Rejoin r = new Rejoin();
@@ -266,9 +265,12 @@ public class PositionMonitor {
                     RoutePoint routePt = new RoutePoint();
                     routePt.setEasting(nearestPt.x);
                     routePt.setNorthing(nearestPt.y);
+
+                    // Find distance from start
                     float calculatedDist = (float) AttemptData.calcDelta(routePt, track.getPoints().get(i-1));
                     calculatedDist += track.getPoints().get(i-1).getDistFromStart();
 
+                    // Check if further from the start than the previous matching point
                     if (calculatedDist > rejoinSection.getDistFromStart()) {
                         rejoinSection.setIndex(i-1);
                         rejoinSection.incrementDirection();
@@ -303,6 +305,7 @@ public class PositionMonitor {
         if (monitoring == null) {
             monitoring = new HashSet<>();
         }
+        Log.d(TAG, "ADDED MONITOR: " + type);
         monitoring.add(type);
      }
 

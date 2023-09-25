@@ -2,6 +2,7 @@ package com.sk7software.climbviewer;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
 import com.sk7software.climbviewer.view.ScreenController;
+import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.HashMap;
@@ -44,6 +46,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private ClimbView fullRouteView;
     private ClimbView nextClimbView;
     private RelativeLayout offRoutePanel;
+    private RelativeLayout routeInfoPanel;
+    private RelativeLayout completionPanel;
     private MapFragment map;
     private ImageButton btnShowClimbs;
     private int routeId;
@@ -61,8 +65,16 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private float nextClimbLength;
     private float nextClimbHeight;
     private int nextClimbCounter;
+    private boolean showingClimbs;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
+
+    private static final float[] NEGATIVE = {
+            -1.0f, 0, 0, 0, 255, // red
+            0, -1.0f, 0, 0, 255, // green
+            0, 0, -1.0f, 0, 255, // blue
+            0, 0, 0, 1.0f, 0  // alpha
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +86,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
         routeId = getIntent().getIntExtra("id", 0);
         int startIdx = getIntent().getIntExtra("startIdx", 0);
+        int lastClimbId = getIntent().getIntExtra("lastClimbId", 0);
 
         if (startIdx < 0) {
             RelativeLayout namePanel = (RelativeLayout)findViewById(R.id.panelRouteName);
@@ -99,7 +112,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         calcDistAndElevation();
         prepareForFinish = -1;
         justLeftRoute = true;
+        showingClimbs = false;
 
+        routeInfoPanel = findViewById(R.id.panelRouteInfo);
         fullRouteView = findViewById(R.id.fullRouteView);
         nextClimbView = findViewById(R.id.nextClimbView);
         nextClimbView.setVisibility(View.GONE);
@@ -143,16 +158,26 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         btnShowClimbs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
-                String climbIds = climbs.stream()
-                        .map(r -> String.valueOf(r.getId()))
-                        .collect(Collectors.joining(","));
-                fullRouteView.setShowClimbsList(climbIds);
-                fullRouteView.invalidate();
+                map.clearClimbTracks();
+                if (!showingClimbs) {
+                    showingClimbs = true;
+                    List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
+                    String climbIds = climbs.stream()
+                            .map(r -> String.valueOf(r.getId()))
+                            .collect(Collectors.joining(","));
+                    fullRouteView.setShowClimbsList(climbIds);
+                    fullRouteView.invalidate();
+                    btnShowClimbs.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
 
-                for (GPXRoute climb : climbs) {
-                    List<RoutePoint> pts = climb.getPoints();
-                    map.plotClimbTrackFromRoutePoints(pts);
+                    for (GPXRoute climb : climbs) {
+                        List<RoutePoint> pts = climb.getPoints();
+                        map.plotClimbTrackFromRoutePoints(pts);
+                    }
+                } else {
+                    showingClimbs = false;
+                    fullRouteView.setShowClimbsList("");
+                    fullRouteView.invalidate();
+                    btnShowClimbs.getDrawable().clearColorFilter();
                 }
             }
         });
@@ -200,6 +225,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
+        if (lastClimbId > 0) {
+            // Show summary panel before resuming route
+            routeInfoPanel.setVisibility(View.GONE);
+            completionPanel = findViewById(R.id.climbCompletePanel);
+            SummaryPanel panel = new SummaryPanel();
+            panel.showSummary(completionPanel, lastClimbId, this);
+        }
+
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
 
         if (ClimbController.getInstance().isRouteInProgress()) {
@@ -218,6 +251,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
     @Override
     protected void onStop() {
+        Log.d(TAG, "RouteViewActivity stopped");
         super.onStop();
     }
 
@@ -493,6 +527,12 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
     @Override
     public void setProgress(boolean showProgressDialog, String progressMessage) {}
+
+    @Override
+    public void clearCompletionPanel() {
+        completionPanel.setVisibility(View.GONE);
+        routeInfoPanel.setVisibility(View.VISIBLE);
+    }
 
     private Double getDistFromStart(GPXRoute climb) {
         RoutePoint climbStart = climb.getPoints().get(0);

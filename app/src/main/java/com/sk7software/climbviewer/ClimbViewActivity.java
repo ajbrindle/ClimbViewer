@@ -304,7 +304,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
     }
 
     private void setClimbViewHeight() {
-        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        WindowManager wm = (WindowManager) ClimbViewActivity.this.getSystemService(Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
@@ -312,9 +312,9 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         LinearLayout panel = findViewById(R.id.panel);
 
         int s=0;
-        int resource = ApplicationContextProvider.getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
+        int resource = ClimbViewActivity.this.getResources().getIdentifier("status_bar_height", "dimen", "android");
         if (resource > 0) {
-            s = ApplicationContextProvider.getContext().getResources().getDimensionPixelSize(resource);
+            s = ClimbViewActivity.this.getResources().getDimensionPixelSize(resource);
         }
 
         // Set height to 1/2 screen

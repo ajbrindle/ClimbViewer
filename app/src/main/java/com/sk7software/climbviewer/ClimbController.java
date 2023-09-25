@@ -86,7 +86,7 @@ public class ClimbController {
         return INSTANCE;
     }
 
-    private void reset(PointType type) {
+    public void reset(PointType type) {
         if (type == PointType.ATTEMPT) {
             attempts.remove(PointType.ATTEMPT);
             attempts.remove(PointType.PB);

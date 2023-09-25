@@ -60,6 +60,7 @@ public class MapFragment extends Fragment {
     private Polyline climbTrack = null;
     private Polyline localTrack = null;
     private List<Polyline> localTracks = new ArrayList<>();
+    private List<Polyline> climbSections = new ArrayList<>();
 
     private static final String TAG = MapFragment.class.getSimpleName();
     private static final int MARKER_ANIMATION_MS = 1000;
@@ -269,7 +270,12 @@ public class MapFragment extends Fragment {
                 .width(20)
                 .color(0xFF555555)
                 .zIndex(10);
-        map.addPolyline(lineOptions);
+        climbSections.add(map.addPolyline(lineOptions));
+    }
+
+    public void clearClimbTracks() {
+        climbSections.forEach(c -> c.remove());
+        climbSections.clear();
     }
 
     public void plotClimbTrack(List<LatLng> points) {

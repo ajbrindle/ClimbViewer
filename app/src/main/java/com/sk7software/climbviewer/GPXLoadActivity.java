@@ -49,7 +49,6 @@ import java.util.concurrent.Executors;
 import lombok.val;
 
 public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdateInterface {
-
     private Uri gpxUri;
     private GPXFile gpxFile;
     private TrackFile trkFile;
@@ -436,6 +435,9 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         NETWORK,
         LOCAL;
     }
+
+    @Override
+    public void clearCompletionPanel() {}
 
     public enum GPXType {
         ATTEMPT("attempts"),

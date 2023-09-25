@@ -8,6 +8,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.R;
@@ -22,7 +25,7 @@ public class SummaryPanel {
         SummaryPanel.visible = false;
     }
 
-    public void showSummary(View panel, int lastClimbId, Activity currentScreen) {
+    public void showSummary(View panel, int lastClimbId, ActivityUpdateInterface currentScreen) {
         AttemptStats stats = ClimbController.getInstance().getLastAttemptStats(lastClimbId);
 
         if (stats != null) {
@@ -38,7 +41,7 @@ public class SummaryPanel {
             DisplayFormatter.setFullTimeText(stats.getPb(), txtPB);
 
             if (stats.getPos() == 1) {
-                txtNewPB.setTextColor(Color.GREEN);
+                txtNewPB.setTextColor(ContextCompat.getColor(ApplicationContextProvider.getContext(), R.color.greenish));
                 if (stats.isThisAttemptIsPb()) {
                     txtNewPB.setText("*** NEW PB ***");
                 } else if (stats.getTotal() > 1) {
@@ -49,7 +52,7 @@ public class SummaryPanel {
                     txtNewPB.setVisibility(View.GONE);
                 }
             } else {
-                txtNewPB.setTextColor(Color.RED);
+                txtNewPB.setTextColor(ContextCompat.getColor(ApplicationContextProvider.getContext(), R.color.reddish));
                 txtNewPB.setText(stats.getPos() + "/" + stats.getTotal() + " Attempts");
             }
 
@@ -59,16 +62,13 @@ public class SummaryPanel {
 
         Handler handler = new Handler();
 
-        Log.d(TAG, "Set task to return to previous screen");
+        Log.d(TAG, "Set task to close completion panel");
         handler.postDelayed(new Runnable() {
             public void run() {
-                Intent i = ScreenController.getInstance().getNextIntent(currentScreen);
-                if (i != null) {
-                    SummaryPanel.visible = false;
-                    currentScreen.startActivity(i);
-                }
+                SummaryPanel.visible = false;
+                currentScreen.clearCompletionPanel();
             }
-        }, 8000);
+        }, 15000);
     }
 
     public static void setVisible(boolean visible) {

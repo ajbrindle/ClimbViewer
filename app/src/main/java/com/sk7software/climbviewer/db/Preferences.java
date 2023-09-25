@@ -21,6 +21,8 @@ public class Preferences {
     public static final String PREFERENCES_CLIMB_ULTRA_TOLERANCE = "PREF_ULTRA_TOLERANCE";
     public static final String PREFERENCES_CLIMB_WARNING = "PREF_CLIMB_WARN";
     public static final String PREFERENCES_CLIMB_SORT_RATING = "PREF_CLIMB_SORT";
+    public static final String PREFERENCES_LAST_SELECTED_ROUTE = "PREF_LAST_ROUTE";
+    public static final String PREFERENCES_LAST_SELECTED_CLIMB = "PREF_LAST_CLIMB";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

@@ -12,6 +12,28 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
+        <!--
+        <item name="android:textViewStyle">@style/RideMeisterTextStyle</item>
+        <item name="android:buttonStyle">@style/RideMeisterButtonStyle</item>
+        <item name="android:switchStyle">@style/RideMeisterSwitchStyle</item>
+        <item name="android:spinnerStyle">@style/RideMeisterSpinStyle</item>
+        -->
+    </style>
+
+    <style name="RideMeisterTextStyle" parent="android:Widget.TextView">
+        <item name="android:fontFamily">@font/oswald_bold</item>
+    </style>
+
+    <style name="RideMeisterSwitchStyle" parent="android:Widget.Material.CompoundButton.Switch">
+        <item name="android:fontFamily">@font/oswald_bold</item>
+    </style>
+
+    <style name="RideMeisterSpinStyle" parent="android:Widget.Spinner">
+        <item name="android:fontFamily">@font/oswald_bold</item>
+    </style>
+
+    <style name="RideMeisterButtonStyle" parent="android:Widget.TextView">
+        <item name="android:fontFamily">@font/oswald_bold</item>
     </style>
 
     <style name="cvButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
@@ -34,6 +56,7 @@
         <item name="android:autoSizeMinTextSize">18sp</item>
         <item name="android:autoSizeStepGranularity">1sp</item>
         <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">bold</item>
     </style>
 
