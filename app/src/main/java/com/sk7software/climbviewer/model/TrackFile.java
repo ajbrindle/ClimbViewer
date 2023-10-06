@@ -117,10 +117,14 @@ public class TrackFile {
     }
 
     public List<GPXRoute> matchToClimbs() {
-        return matchToClimbs(1);
+        return matchToClimbs(1, 0);
     }
 
-    public List<GPXRoute> matchToClimbs(int multiplier) {
+    public List<GPXRoute> matchToClimbsAfterIndex(int index) {
+        return matchToClimbs(1, index);
+    }
+
+    public List<GPXRoute> matchToClimbs(int multiplier, int minIndex) {
         List<GPXRoute> allClimbs = new ArrayList<>(Arrays.asList(Database.getInstance().getClimbs()));
         List<GPXRoute> startedClimbs = new ArrayList<>();
 
@@ -137,7 +141,7 @@ public class TrackFile {
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
 
             for (GPXRoute climb : allClimbs) {
-                if (startFound(climb, lastPoint, currentPoint, routePointIndex, multiplier)) {
+                if (routePointIndex >= minIndex && startFound(climb, lastPoint, currentPoint, routePointIndex, multiplier)) {
                     Log.d(TAG, "FOUND CLIMB START " + climb.getName());
                     GPXRoute startedClimb = Database.getInstance().getClimb(climb.getId());
                     startedClimb.setStartIdx(routePointIndex);

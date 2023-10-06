@@ -9,8 +9,8 @@ import android.view.Display;
 import android.view.WindowManager;
 
 import com.sk7software.climbviewer.ApplicationContextProvider;
-import com.sk7software.climbviewer.ClimbChooserActivity;
 import com.sk7software.climbviewer.ClimbController;
+import com.sk7software.climbviewer.MainActivity;
 import com.sk7software.climbviewer.MapFragment;
 import com.sk7software.climbviewer.PositionMonitor;
 import com.sk7software.climbviewer.RouteViewActivity;
@@ -99,7 +99,7 @@ public class ScreenController {
                 i.putExtra("startIdx", PositionMonitor.getInstance().getRouteStartIdx());
                 return i;
             } else {
-                Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+                Intent i = new Intent(ApplicationContextProvider.getContext(), MainActivity.class);
                 i.putExtra("id", ClimbController.getInstance().getLastClimbId());
                 return i;
             }

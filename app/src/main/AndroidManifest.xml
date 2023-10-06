@@ -25,19 +25,20 @@
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.GET_CONTENT" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:scheme="file" />
                 <data android:scheme="content" />
                 <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\.gpx" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:noHistory="true"
-            android:parentActivityName=".ClimbChooserActivity">
+            android:parentActivityName=".MainActivity">
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
@@ -66,7 +67,7 @@
             android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+                android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
         <activity
             android:name=".RouteViewActivity"
@@ -75,7 +76,7 @@
             android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+                android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
         <activity
             android:name=".ClimbFinderActivity"
@@ -84,10 +85,10 @@
             android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+                android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
         <activity
-            android:name=".ClimbChooserActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -99,22 +100,22 @@
         <activity
             android:name=".list.ClimbListActivity"
             android:label="Climb List"
-            android:parentActivityName=".ClimbChooserActivity"
             android:noHistory="true"
+            android:parentActivityName=".MainActivity"
             android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+                android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
         <activity
             android:name=".list.RouteListActivity"
             android:label="Route List"
-            android:parentActivityName=".ClimbChooserActivity"
             android:noHistory="true"
+            android:parentActivityName=".MainActivity"
             android:screenOrientation="portrait">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.sk7software.climbviewer.ClimbChooserActivity" />
+                android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
     </application>
 

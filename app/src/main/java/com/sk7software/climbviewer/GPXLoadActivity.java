@@ -345,7 +345,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         } else if (type == GPXType.ATTEMPT) {
             chkName.setVisibility(View.GONE);
             int multiplier = seekTolerance.getProgress();
-            List<GPXRoute> climbs = trkFile.matchToClimbs(multiplier);
+            List<GPXRoute> climbs = trkFile.matchToClimbs(multiplier, 0);
             if (climbs != null && !climbs.isEmpty()) {
                 chkMatchedClimbs = new CheckBox[climbs.size()];
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -397,7 +397,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         // Do nothing
     }
     private void goToMainActivity() {
-        Intent i = new Intent(this, ClimbChooserActivity.class);
+        Intent i = new Intent(this, MainActivity.class);
         startActivity(i);
     }
 

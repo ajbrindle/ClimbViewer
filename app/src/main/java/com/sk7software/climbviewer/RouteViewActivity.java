@@ -257,7 +257,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
     @Override
     public void onBackPressed() {
-        Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+        Intent i = new Intent(ApplicationContextProvider.getContext(), MainActivity.class);
         startActivity(i);
     }
 
@@ -359,7 +359,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 int climbId = PositionMonitor.getInstance().getOnClimbId();
                 ClimbController.getInstance().loadClimb(Database.getInstance().getClimb(climbId));
 
-                ClimbController.getInstance().startAttempt();
+                ClimbController.getInstance().startAttempt(0);
                 ClimbController.getInstance().loadPB();
                 Intent nextIntent = getNextScreen();
 

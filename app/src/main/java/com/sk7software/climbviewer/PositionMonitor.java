@@ -35,6 +35,7 @@ public class PositionMonitor {
     private boolean onRoute;
     private boolean tryingToResume;
     private int routeStartIdx;
+    private int currentClimbIdx;
     private int matchingSectionIdx;
     private int onClimbId;
 
@@ -80,6 +81,9 @@ public class PositionMonitor {
         if (monitoring.contains(MonitorType.ROUTE)) {
             monitorRoute(point);
         }
+        if (monitoring.contains(MonitorType.CURRENT_CLIMB)) {
+            monitorCurrentClimb(point, currentPoint);
+        }
     }
 
     private void monitorClimbs(RoutePoint point, PointF currentPoint) {
@@ -95,6 +99,35 @@ public class PositionMonitor {
                     if (checkDirection(start, second, currentPoint, firstIdx)) {
                         Log.d(TAG, "STARTED CLIMB " + climb.getName());
                         onClimbId = climb.getId();
+                        prevPoints.clear();
+                        return;
+                    }
+                }
+            }
+        }
+        addToPrevPoints(currentPoint);
+    }
+
+    private void monitorCurrentClimb(RoutePoint point, PointF currentPoint) {
+        int currentClimbId = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_ON_CLIMB_ID, -1);
+        if (currentClimbId < 0) {
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ON_CLIMB_ID);
+            monitoring.remove(MonitorType.CURRENT_CLIMB);
+        }
+
+        GPXRoute climb = Database.getInstance().getClimb(currentClimbId);
+        Log.d(TAG, "Checking for climb: " + climb.getName());
+
+        for (int i=1; i<climb.getPoints().size(); i++) {
+            PointF start = new PointF((float) climb.getPoints().get(i-1).getEasting(), (float) climb.getPoints().get(i-1).getNorthing());
+            if (climb.getZone() == GeoConvert.calcUTMZone(point.getLat(), point.getLon())) {
+                int firstIdx = hasPassedCloseToPoint(start, currentPoint);
+                if (firstIdx >= 0) {
+                    PointF second = new PointF((float) climb.getPoints().get(i).getEasting(), (float) climb.getPoints().get(i).getNorthing());
+                    if (checkDirection(start, second, currentPoint, firstIdx)) {
+                        Log.d(TAG, "RESUMED CLIMB " + climb.getName());
+                        onClimbId = currentClimbId;
+                        currentClimbIdx = i-1;
                         prevPoints.clear();
                         return;
                     }
@@ -325,7 +358,8 @@ public class PositionMonitor {
     public enum MonitorType {
         NONE,
         ROUTE,
-        CLIMB
+        CLIMB,
+        CURRENT_CLIMB
     }
 
     @Getter

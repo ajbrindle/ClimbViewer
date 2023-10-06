@@ -2,13 +2,20 @@ package com.sk7software.climbviewer;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.ShapeDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -18,8 +25,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.view.AttemptData;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
@@ -52,6 +61,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     private TextView lblPanel4;
     private LinearLayout panel3;
     private LinearLayout panel4;
+    private LinearLayout panel5;
     private int panelCounter;
 
     // State
@@ -67,9 +77,9 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         setContentView(R.layout.activity_section_view);
         getSupportActionBar().hide();
 
+        climbId = getIntent().getIntExtra("id", 0);
         loadTime = new Date().getTime();
 
-        climbId = getIntent().getIntExtra("id", 0);
         Log.d(TAG, "Climb id: " + climbId);
         climb = ClimbController.getInstance().getClimb();
 
@@ -89,6 +99,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         lblPanel4 = findViewById(R.id.lblPanel4);
         panel3 = findViewById(R.id.panel3);
         panel4 = findViewById(R.id.panel4);
+        panel5 = findViewById(R.id.panel5);
 
         // Load first screen type
         plotType = null;
@@ -102,6 +113,24 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             monitor = LocationMonitor.getInstance(this);
         }
         panelCounter = 0;
+
+        panel5.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                AttemptData attemptData = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ATTEMPT);
+
+                if (attemptData != null) {
+                    ClimbAttempt attempt = attemptData.getAttempt();
+                    if (attempt != null && ClimbController.getInstance().isNearEnd()) {
+                        ClimbController.getInstance().finishClimb(attempt);
+                    } else {
+                        ClimbController.getInstance().reset(ClimbController.PointType.ATTEMPT);
+                    }
+                }
+                return true;
+            }
+        });
+
         SummaryPanel.setVisible(false);
     }
 
@@ -136,7 +165,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
     @Override
     public void onBackPressed() {
-        Intent i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+        Intent i = new Intent(ApplicationContextProvider.getContext(), MainActivity.class);
         startActivity(i);
     }
 
@@ -167,7 +196,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                 Intent i = ScreenController.getInstance().getNextIntent(this);
                 if (i == null) {
                     // Go to home screen
-                    i = new Intent(ApplicationContextProvider.getContext(), ClimbChooserActivity.class);
+                    i = new Intent(ApplicationContextProvider.getContext(), MainActivity.class);
                 }
                 i.putExtra("lastClimbId", ClimbController.getInstance().getLastClimbId());
                 startActivity(i);
@@ -221,7 +250,14 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             case FULL_CLIMB:
                 panelCounter++;
                 panel3.setVisibility(View.VISIBLE);
-                panel4.setVisibility(View.VISIBLE);
+
+                if (ClimbController.getInstance().isForceClose()) {
+                    panel4.setVisibility(View.GONE);
+                    panel5.setVisibility(View.VISIBLE);
+                } else {
+                    panel4.setVisibility(View.VISIBLE);
+                    panel5.setVisibility(View.GONE);
+                }
                 lblPanel1.setText("GRADIENT");
                 lblPanel2.setText("REMAINING");
                 lblPanel3.setText("NEXT");

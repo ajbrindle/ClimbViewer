@@ -86,7 +86,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -155,6 +154,43 @@
                         android:textSize="60sp"
                         android:textStyle="bold" />
                 </LinearLayout>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="3dp"
+                    android:layout_weight="50"
+                    android:background="@drawable/button_border"
+                    android:orientation="vertical"
+                    android:id="@+id/panel5"
+                    android:visibility="gone"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:id="@+id/lblPanel5"
+                        style="@style/panelTitleStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="center"
+                        android:textColor="@color/reddish"
+                        android:text="END?" />
+
+                    <TextView
+                        android:id="@+id/txtPanel5"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:autoSizeMaxTextSize="60sp"
+                        android:autoSizeMinTextSize="28sp"
+                        android:autoSizeStepGranularity="2sp"
+                        android:autoSizeTextType="uniform"
+                        android:fontFamily="@font/oswald_bold"
+                        android:maxLines="1"
+                        android:text="X"
+                        android:textAlignment="center"
+                        android:textSize="60sp"
+                        android:textColor="@color/reddish"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
             </LinearLayout>
 
         </LinearLayout>
@@ -200,7 +236,10 @@
                     android:id="@+id/sectionView"
                     android:layout_width="match_parent"
                     android:layout_height="200dp"
+                    android:layout_alignParentBottom="true"
+                    android:layout_alignParentStart="true"
                     android:background="#00ffffff" />
+
             </RelativeLayout>
         </RelativeLayout>
     </LinearLayout>

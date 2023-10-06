@@ -16,6 +16,7 @@ import com.sk7software.climbviewer.view.AttemptData;
 import com.sk7software.climbviewer.view.PlotPoint;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -55,6 +56,8 @@ public class ClimbController {
     private boolean inLastSegment;
     private int offClimbCount;
     private int offRouteCount;
+    private boolean forceClose;
+    private boolean nearEnd;
 
     // PB Attempt
     private float timeDiffToPB;
@@ -94,25 +97,36 @@ public class ClimbController {
             climb = null;
             offClimbCount = 0;
             PositionMonitor.getInstance().setOnClimbId(-1);
+            Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ON_CLIMB_ID);
         } else if (type == PointType.ROUTE) {
             attempts.remove(PointType.ROUTE);
             routeInProgress = false;
         }
     }
 
-    public void startAttempt() {
+    public void startAttempt(int minIndex) {
         AttemptData attempt = AttemptData.builder()
                                 .attempt(new ClimbAttempt())
-                                .minIndex(0)
+                                .minIndex(minIndex)
                                 .type(PointType.ATTEMPT)
                                 .build();
-        attempt.getAttempt().setDatetime(LocalDateTime.now());
+
+        if (minIndex == 0) {
+            attempt.getAttempt().setDatetime(LocalDateTime.now());
+            Preferences.getInstance().addPreference(Preferences.PREFERENCES_CLIMB_START_TIME, System.currentTimeMillis());
+        } else {
+            Log.d(TAG, "Attempt time restored");
+            attempt.getAttempt().setDatetime(LocalDateTime.ofInstant(Instant.ofEpochMilli(Preferences.getInstance().getLongPreference(Preferences.PREFERENCES_CLIMB_START_TIME, 0)), ZoneId.systemDefault()));
+        }
         attempts.put(PointType.ATTEMPT, attempt);
         attemptInProgress = true;
         inLastSegment = false;
+        forceClose = false;
+        nearEnd = false;
         offClimbCount = 0;
         prevPoints.clear();
         lastPoint = null;
+        Preferences.getInstance().addPreference(Preferences.PREFERENCES_ON_CLIMB_ID, climb.getId());
     }
 
     public void startRoute() {
@@ -178,6 +192,8 @@ public class ClimbController {
         if (distDone >= 0) {
             // Reset off-climb counter
             offClimbCount = 0;
+            forceClose = false;
+            setNearEnd(currentPoint, distDone);
         } else {
             int minOffCount = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_ULTRA_TOLERANCE) ? 1000 : 15;
             // Update "off climb" counter
@@ -185,6 +201,9 @@ public class ClimbController {
                 // Deviated off climb, so reset
                 lastClimbId = -99; // Prevents summary panel on screen
                 reset(PointType.ATTEMPT);
+            } else if (offClimbCount > 3) {
+                // Allow force close panel to show
+                forceClose = true;
             }
         }
         checkIfFinished(currentPoint, distDone);
@@ -236,19 +255,26 @@ public class ClimbController {
         distToPB = attempts.get(PointType.ATTEMPT).getDist() - pb.getDist();
     }
 
+    private void setNearEnd(PointF currentPoint, float distDone) {
+        int endIndex = climb.getPoints().size() - 1;
+
+        // Near end if within 100m of the end
+        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone < 100 && distDone > 0) {
+            nearEnd = true;
+        }
+    }
+
     @DebugTrace
     private void checkIfFinished(PointF currentPoint, float distDone) {
+        Log.d(TAG, "Check finished: " + distDone);
+        if (!nearEnd) {
+            return;
+        }
+
         AttemptData attemptData = attempts.get(PointType.ATTEMPT);
         ClimbAttempt attempt = attemptData.getAttempt();
 
         int endIndex = climb.getPoints().size() - 1;
-
-        Log.d(TAG, "Check finished: " + distDone);
-
-        // Don't check if finished until within 100m of the end (or has potentially passed the end)
-        if (climb.getPoints().get(endIndex).getDistFromStart() - distDone > 100 && distDone >= 0) {
-            return;
-        }
 
         PointF end = new PointF((float) climb.getPoints().get(endIndex).getEasting(), (float) climb.getPoints().get(endIndex).getNorthing());
         Log.d(TAG, "Check finished: " + currentPoint.x + "," + currentPoint.y + "; " + end.x + "," + end.y);
@@ -256,20 +282,26 @@ public class ClimbController {
         if (hasPassedPoint(end, currentPoint)) {
             // Left last segment so climb has finished
             Log.d(TAG, "Climb finished");
-            attemptInProgress = false;
-            PositionMonitor.getInstance().setOnClimbId(-1);
-
-            // Calculate duration
-            long startTime = attempt.getPoints().get(0).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
-            long endTime = attempt.getPoints().get(attempt.getPoints().size()-1).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
-            Log.d(TAG, "Duration: " + startTime + " to " + endTime);
-            attempt.setDuration((int)(endTime - startTime));
-
-            // Add to database then reset
-            Database.getInstance().addAttempt(attempt, climb.getId());
-            reset(PointType.ATTEMPT);
+            finishClimb(attempt);
         }
     }
+
+    public void finishClimb(ClimbAttempt attempt) {
+        attemptInProgress = false;
+        PositionMonitor.getInstance().setOnClimbId(-1);
+
+        // Calculate duration
+        long startTime = attempt.getDatetime().atZone(ZoneId.systemDefault()).toEpochSecond();
+//                attempt.getPoints().get(0).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
+        long endTime = attempt.getPoints().get(attempt.getPoints().size()-1).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
+        Log.d(TAG, "Duration: " + startTime + " to " + endTime);
+        attempt.setDuration((int)(endTime - startTime));
+
+        // Add to database then reset
+        Database.getInstance().addAttempt(attempt, climb.getId());
+        reset(PointType.ATTEMPT);
+    }
+
     private float calcBearing(GPXRoute track, AttemptData attemptData) {
         int index = attemptData.getMinIndex();
         RoutePoint p1 = track.getPoints().get(index);

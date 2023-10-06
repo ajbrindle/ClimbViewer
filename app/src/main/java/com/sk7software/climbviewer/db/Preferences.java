@@ -23,6 +23,9 @@ public class Preferences {
     public static final String PREFERENCES_CLIMB_SORT_RATING = "PREF_CLIMB_SORT";
     public static final String PREFERENCES_LAST_SELECTED_ROUTE = "PREF_LAST_ROUTE";
     public static final String PREFERENCES_LAST_SELECTED_CLIMB = "PREF_LAST_CLIMB";
+    public static final String PREFERENCES_SELECTED_TAB = "PREF_TAB_SEL";
+    public static final String PREFERENCES_ON_CLIMB_ID = "PREF_ON_CLIMB_ID";
+    public static final String PREFERENCES_CLIMB_START_TIME = "PREF_START_TIME";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;
@@ -55,6 +58,9 @@ public class Preferences {
     public void addPreference(String name, int value) {
         prefs.edit().putInt(name, value).commit();
     }
+    public void addPreference(String name, long value) {
+        prefs.edit().putLong(name, value).commit();
+    }
 
     public void addPreference(String name, boolean value) {
         prefs.edit().putBoolean(name, value).commit();
@@ -71,7 +77,7 @@ public class Preferences {
     public int getIntPreference(String name, int defVal) {
         return prefs.getInt(name, defVal);
     }
-
+    public long getLongPreference(String name, long defVal) { return prefs.getLong(name, defVal); }
     public void clearAllPreferences() {
         prefs.edit().clear().commit();
     }

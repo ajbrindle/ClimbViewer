@@ -367,7 +367,7 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
         ClimbController.getInstance().loadClimb(Database.getInstance().getClimb(climbId));
 
         if (nextIntent == null) {
-            ClimbController.getInstance().startAttempt();
+            ClimbController.getInstance().startAttempt(0);
             ClimbController.getInstance().loadPB();
             nextIntent = getNextScreen();
         }
@@ -380,7 +380,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
 
     @DebugTrace
     private void showRoute(Intent nextIntent, int startIdx, RoutePoint point) {
-        GPXRoute rt = Database.getInstance().getRoute(currentRouteId);
+        int routeId = currentRouteId;
+        GPXRoute rt = Database.getInstance().getRoute(routeId);
         if (startIdx >= 0) {
             rt.adjustRoute(startIdx);
 
@@ -428,7 +429,9 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 doLoad("attempts");
                 return true;
             case R.id.action_load_routes:
-                doLoad("routes");
+                Intent i = new Intent(ClimbChooserActivity.this, MainActivity.class);
+                startActivity(i);
+//                doLoad("routes");
                 return true;
             case R.id.action_backup_db:
                 Toast.makeText(getApplicationContext(), "Backing up data...", Toast.LENGTH_SHORT).show();
@@ -471,8 +474,8 @@ public class ClimbChooserActivity extends AppCompatActivity implements ActivityU
                 });
                 return true;
             case R.id.action_settings:
-                Intent i = new Intent(ClimbChooserActivity.this, SettingsActivity.class);
-                startActivity(i);
+                Intent it = new Intent(ClimbChooserActivity.this, SettingsActivity.class);
+                startActivity(it);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

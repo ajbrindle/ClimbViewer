@@ -60,4 +60,13 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="Theme.ClimbViewer.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.ClimbViewer.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.ClimbViewer.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
 </resources>

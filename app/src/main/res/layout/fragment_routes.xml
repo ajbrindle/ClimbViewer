@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".RoutesFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:orientation="horizontal"
+        android:id="@+id/layoutTitles">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtRoute"
+            android:textSize="18sp"
+            android:layout_marginBottom="5dp"
+            android:layout_marginTop="5dp"
+            android:padding="4dp"
+            android:layout_weight="1"
+            android:background="#eeeeee"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:minLines="1"
+            android:singleLine="true"
+            android:text="No route selected"/>
+
+        <Button
+            android:id="@+id/btnChange"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:layout_weight="1"
+            app:icon="@drawable/list_items"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="0dp"
+            android:text="" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/routeButtons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/layoutTitles"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:layout_centerHorizontal="true"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/viewRouteBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            app:icon="@drawable/view"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="2dp"
+            android:text="View" />
+        <Button
+            android:id="@+id/findClimbsBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="5dp"
+            app:icon="@drawable/find_climbs"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="2dp"
+            android:text="Find Climbs"/>
+        <Button
+            android:id="@+id/deleteRoute"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#ff0000"
+            app:icon="@drawable/delete"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="0dp"
+            android:text=""/>
+    </LinearLayout>
+    <Button
+        android:id="@+id/followRouteBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/routeButtons"
+        android:layout_centerHorizontal="true"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="10dp"
+        android:textSize="24sp"
+        app:icon="@drawable/follow_route"
+        app:iconSize="32dp"
+        app:iconGravity="textStart"
+        app:iconTint="@color/white"
+        app:iconPadding="2dp"
+        android:text="Follow Route"/>
+    <ListView
+        android:id="@+id/routeListSel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/routeButtons"
+        android:paddingTop="3dp"
+        android:visibility="visible"/>
+
+
+</RelativeLayout>
