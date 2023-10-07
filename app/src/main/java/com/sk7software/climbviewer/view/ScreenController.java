@@ -48,10 +48,12 @@ public class ScreenController {
                 availableScreens.add(MapFragment.PlotType.PURSUIT);
             }
 
-            if (availableScreens.size() == 1 && currentType != null) {
+            if (availableScreens.size() == 1 && currentType != null && currentType == availableScreens.get(0)) {
                 // Just stay on current screen
                 return null;
             } else if (!availableScreens.isEmpty() && currentType == null) {
+                return availableScreens.get(0);
+            } else if (availableScreens.size() == 1 && currentType != availableScreens.get(0)) {
                 return availableScreens.get(0);
             }
 
