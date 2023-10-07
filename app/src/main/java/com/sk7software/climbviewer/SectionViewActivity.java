@@ -311,7 +311,8 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
     private void loadNextScreen(boolean firstLoad, RoutePoint centre) {
         MapFragment.PlotType currentType = plotType;
-        boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null;
+        boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null
+                && !ClimbController.getInstance().isPbFinished();
         plotType = ScreenController.getInstance().getNextPlotType(currentType, inPursuit);
         loadTime = new Date().getTime();
 

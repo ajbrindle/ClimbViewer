@@ -62,6 +62,7 @@ public class ClimbController {
     // PB Attempt
     private float timeDiffToPB;
     private float distToPB;
+    private boolean pbFinished;
 
     public enum PointType {
         ATTEMPT(Color.CYAN),
@@ -93,6 +94,7 @@ public class ClimbController {
         if (type == PointType.ATTEMPT) {
             attempts.remove(PointType.ATTEMPT);
             attempts.remove(PointType.PB);
+            pbFinished = false;
             attemptInProgress = false;
             climb = null;
             offClimbCount = 0;
@@ -112,11 +114,9 @@ public class ClimbController {
                                 .build();
 
         if (minIndex == 0) {
-            Log.d(TAG, "Attempt started");
             attempt.getAttempt().setDatetime(LocalDateTime.now());
             Preferences.getInstance().addPreference(Preferences.PREFERENCES_CLIMB_START_TIME, System.currentTimeMillis());
         } else {
-            Log.d(TAG, "Attempt time restored");
             attempt.getAttempt().setDatetime(LocalDateTime.ofInstant(Instant.ofEpochMilli(Preferences.getInstance().getLongPreference(Preferences.PREFERENCES_CLIMB_START_TIME, 0)), ZoneId.systemDefault()));
         }
         attempts.put(PointType.ATTEMPT, attempt);
@@ -155,6 +155,7 @@ public class ClimbController {
                         .type(PointType.PB)
                         .build();
                 attempts.put(PointType.PB, pb);
+                pbFinished = false;
             }
         }
     }
@@ -321,6 +322,12 @@ public class ClimbController {
 
         // Find point on pb that is no more than this many seconds from the start
         ClimbAttempt pbAttempt = attempts.get(PointType.PB).getAttempt();
+
+        if (secondsSinceStart > pbAttempt.getPoints().get(pbAttempt.getPoints().size()-1).getSecondsFromStart()) {
+            // PB has finished
+            pbFinished = true;
+        }
+
         AttemptPoint pt = pbAttempt.getPoints().stream()
                 .filter(p -> p.getSecondsFromStart() <= secondsSinceStart)
                 .sorted((a,b) -> Long.compare(b.getSecondsFromStart(), a.getSecondsFromStart()))
