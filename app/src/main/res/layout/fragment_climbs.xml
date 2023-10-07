@@ -74,10 +74,10 @@
             android:backgroundTint="#ff0000"
             app:icon="@drawable/delete"
             app:iconSize="20dp"
-            app:iconGravity="start"
+            app:iconGravity="textStart"
             app:iconTint="@color/white"
-            app:iconPadding="2dp"
-            android:text="Delete"/>
+            app:iconPadding="0dp"
+            android:text=""/>
     </LinearLayout>
     <Button
         android:id="@+id/monitorClimbBtn"
@@ -87,10 +87,10 @@
         android:layout_centerHorizontal="true"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
-        android:layout_marginTop="15dp"
+        android:layout_marginTop="10dp"
         android:textSize="24sp"
         app:icon="@drawable/monitor_climb"
-        app:iconSize="32dp"
+        app:iconSize="34dp"
         app:iconGravity="textStart"
         app:iconTint="@color/white"
         app:iconPadding="2dp"

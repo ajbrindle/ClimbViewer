@@ -112,6 +112,7 @@ public class ClimbController {
                                 .build();
 
         if (minIndex == 0) {
+            Log.d(TAG, "Attempt started");
             attempt.getAttempt().setDatetime(LocalDateTime.now());
             Preferences.getInstance().addPreference(Preferences.PREFERENCES_CLIMB_START_TIME, System.currentTimeMillis());
         } else {

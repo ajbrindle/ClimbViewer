@@ -382,9 +382,7 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CURRENT_CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
             PositionMonitor.getInstance().stopMonitor(PositionMonitor.MonitorType.CURRENT_CLIMB);
             showClimb(PositionMonitor.getInstance().getOnClimbId(), true, null);
-        }
-
-        if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
+        } else if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
             showClimb(PositionMonitor.getInstance().getOnClimbId(), false, null);
         }
     }

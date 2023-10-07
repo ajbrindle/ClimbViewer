@@ -137,10 +137,10 @@
             <SeekBar
                 android:id="@+id/profileTransparency"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
                 android:max="255"
                 android:min="0"
-                android:progress="128"
+                android:progress="190"
                 android:layout_weight="1"
                 android:text="Profile Transparency"/>
         </LinearLayout>

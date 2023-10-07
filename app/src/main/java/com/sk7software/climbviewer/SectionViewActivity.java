@@ -106,7 +106,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         mirrorPanel = findViewById(R.id.mirror);
         map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
         mirrorMap = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mirrorMap);
-        loadNextScreen(true);
+        loadNextScreen(true, null);
 
         if (ClimbController.getInstance().isAttemptInProgress()) {
             climbView.addPlot(ClimbController.PointType.ATTEMPT);
@@ -189,7 +189,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                 displayInterval *= 1000;
                 if (now - loadTime > displayInterval) {
                     // Go to next mode
-                    loadNextScreen(false);
+                    loadNextScreen(false, point);
                 }
             } else {
                 // Return to previous screen
@@ -309,7 +309,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         }
     }
 
-    private void loadNextScreen(boolean firstLoad) {
+    private void loadNextScreen(boolean firstLoad, RoutePoint centre) {
         MapFragment.PlotType currentType = plotType;
         boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null;
         plotType = ScreenController.getInstance().getNextPlotType(currentType, inPursuit);
@@ -332,12 +332,19 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB, false);
             map.setZoom(18);
             map.setTilt(45);
+            if (centre != null) {
+                map.setCentre(new LatLng(centre.getLat(), centre.getLon()));
+            }
         } else if (plotType == MapFragment.PlotType.PURSUIT) {
             map.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, false);
             map.setTilt(67.5f);
             mirrorMap.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, true);
             mirrorMap.setCentre(ClimbController.getInstance().getLastPointLL());
             mirrorMap.setTilt(67.5f);
+            if (centre != null) {
+                map.setCentre(new LatLng(centre.getLat(), centre.getLon()));
+                mirrorMap.setCentre(new LatLng(centre.getLat(), centre.getLon()));
+            }
         } else if (plotType == MapFragment.PlotType.NORMAL) {
             mirrorPanel.setVisibility(View.INVISIBLE);
             map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);

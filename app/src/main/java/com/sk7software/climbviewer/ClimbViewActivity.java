@@ -263,7 +263,6 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             double elevationChange = maxElevation - minElevation;
             double averageGradient = elevationChange / ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart();
             long rating = ClimbController.getInstance().getClimb().calcRating();
-                    //(long)(averageGradient * 100 * (ClimbController.getInstance().getClimb().getPoints().get(numClimbPoints-1).getDistFromStart()));
 
             DisplayFormatter.setDistanceText((float)elevationChange,"m", txtElevationChange, true);
             DisplayFormatter.setGradientText((float)averageGradient*100, txtAverageGradient);

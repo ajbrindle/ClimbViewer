@@ -68,7 +68,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private boolean showingClimbs;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
-
+    private static final int DEFAULT_TRANSPARENCY = 190;
     private static final float[] NEGATIVE = {
             -1.0f, 0, 0, 0, 255, // red
             0, -1.0f, 0, 0, 255, // green
@@ -119,7 +119,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         nextClimbView = findViewById(R.id.nextClimbView);
         nextClimbView.setVisibility(View.GONE);
         fullRouteView.setClimb(route, 20);
-        fullRouteView.setTransparency(0x88);
+
+        int transparencyVal = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_TRANSPARENCY, DEFAULT_TRANSPARENCY);
+        fullRouteView.setTransparency(transparencyVal);
         setClimbViewHeight(fullRouteView);
         fullRouteView.invalidate();
 
@@ -183,12 +185,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
 
         SeekBar transparency = findViewById(R.id.profileTransparency);
-        transparency.setProgress(0x88);
+        transparency.setProgress(transparencyVal);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 fullRouteView.setTransparency(i);
                 fullRouteView.invalidate();
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_TRANSPARENCY, i);
             }
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) { }
@@ -464,7 +467,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     fullRouteView.setVisibility(View.GONE);
                     nextClimbView.setVisibility(View.VISIBLE);
                     nextClimbView.setClimb(gc, 20);
-                    nextClimbView.setTransparency(0x88);
+                    int transparencyVal = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_TRANSPARENCY, DEFAULT_TRANSPARENCY);
+                    nextClimbView.setTransparency(transparencyVal);
                     setClimbViewHeight(nextClimbView);
                     nextClimbView.invalidate();
                 }
