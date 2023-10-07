@@ -15,6 +15,8 @@ import com.sk7software.climbviewer.model.GPXRoute;
 
 public class RouteListActivity extends Activity {
 
+    public static final int ROUTE_LIST_OK = 201;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,7 +25,7 @@ public class RouteListActivity extends Activity {
         setupActionBar();
 
         // Populate list
-        final ListView lv = (ListView) findViewById(R.id.routeList);
+        final ListView lv = findViewById(R.id.routeList);
         final GPXRoute[] items = Database.getInstance().getRoutes();
 
         ArrayAdapter<GPXRoute> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, items);
@@ -34,7 +36,7 @@ public class RouteListActivity extends Activity {
                 i.putExtra("route", items[position].getName());
                 i.putExtra("id", items[position].getId());
                 i.putExtra("pos", String.valueOf(position));
-                setResult(Activity.RESULT_OK, i);
+                setResult(ROUTE_LIST_OK, i);
                 finish();
             }
         });
@@ -44,7 +46,7 @@ public class RouteListActivity extends Activity {
      * Set up the {@link android.app.ActionBar}.
      */
     private void setupActionBar() {
-    } //getActionBar().setDisplayHomeAsUpEnabled(true);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

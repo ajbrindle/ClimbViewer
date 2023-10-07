@@ -15,10 +15,12 @@ import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
 import java.io.File;
+import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +51,18 @@ public class TrackFile {
     @Element(name="trk")
     private Track route;
 
+    public static TrackFile createFromStream(InputStream is) {
+        Serializer serializer = new Persister();
+        try {
+            TrackFile track = serializer.read(TrackFile.class, is);
+            track.setGridPoints();
+            return track;
+        } catch (Exception e) {
+            Log.d(TAG, "Unable to read track: " + e.getMessage());
+        }
+        return null;
+    }
+
     public static void addLocalFiles() {
         // Get all files in MAP_DIR with .mhr extension
         File directory = new File(FILE_DIR);
@@ -63,13 +77,14 @@ public class TrackFile {
 
             try {
                 TrackFile track = serializer.read(TrackFile.class, f);
+                track.setGridPoints();
             } catch (Exception e) {
                 Log.d(TAG, "Unable to read track: " + e.getMessage());
             }
         }
     }
 
-    public static void processTrackFile(TrackFile track) {
+    public static void processTrackFile(TrackFile track, int multiplier) {
         if (track != null) {
             // Convert points to grid
             track.setGridPoints();
@@ -79,7 +94,7 @@ public class TrackFile {
 
             // Add attempt
             for (GPXRoute climb : matchedClimbs) {
-                ClimbAttempt attempt = track.extractAttempt(climb);
+                ClimbAttempt attempt = track.extractAttempt(climb, multiplier);
                 Log.d(TAG, "Extracted attempt: " + attempt.getDatetime());
                 Log.d(TAG, "Duration: " + attempt.getDuration());
                 Log.d(TAG, "Number of points: " + attempt.getPoints().size());
@@ -89,7 +104,7 @@ public class TrackFile {
         }
     }
 
-    private void setGridPoints() {
+    public void setGridPoints() {
         int zone = 0;
 
         if (!getRoute().getTrackSegment().getPoints().isEmpty()) {
@@ -100,12 +115,21 @@ public class TrackFile {
             pt.setENFromLL(Database.getProjection(Projection.SYS_UTM_WGS84), zone);
         }
     }
-    private List<GPXRoute> matchToClimbs() {
-        GPXRoute[] allClimbs = Database.getInstance().getClimbs();
-        LocationMonitor monitor = new LocationMonitor();
+
+    public List<GPXRoute> matchToClimbs() {
+        return matchToClimbs(1, 0);
+    }
+
+    public List<GPXRoute> matchToClimbsAfterIndex(int index) {
+        return matchToClimbs(1, index);
+    }
+
+    public List<GPXRoute> matchToClimbs(int multiplier, int minIndex) {
+        List<GPXRoute> allClimbs = new ArrayList<>(Arrays.asList(Database.getInstance().getClimbs()));
         List<GPXRoute> startedClimbs = new ArrayList<>();
 
         PointF lastPoint = null;
+        int routePointIndex = 0;
 
         // Find all climbs whose start point is on the route
         for (RoutePoint pt : getRoute().getTrackSegment().getPoints()) {
@@ -117,21 +141,23 @@ public class TrackFile {
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
 
             for (GPXRoute climb : allClimbs) {
-                PointF start = new PointF((float)climb.getPoints().get(0).getEasting(), (float)climb.getPoints().get(0).getNorthing());
-                if (monitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
-                    PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                    if (monitor.isRightDirection(second, lastPoint, currentPoint)) {
-                        Log.d(TAG, "STARTED CLIMB " + climb.getName());
-                        startedClimbs.add(Database.getInstance().getClimb(climb.getId()));
-                    }
+                if (routePointIndex >= minIndex && startFound(climb, lastPoint, currentPoint, routePointIndex, multiplier)) {
+                    Log.d(TAG, "FOUND CLIMB START " + climb.getName());
+                    GPXRoute startedClimb = Database.getInstance().getClimb(climb.getId());
+                    startedClimb.setStartIdx(routePointIndex);
+                    startedClimbs.add(startedClimb);
                 }
             }
 
+            // Remove any climbs already found from allClimbs
+            allClimbs.removeIf(startedClimbs::contains);
             lastPoint = currentPoint;
+            routePointIndex++;
         }
 
         List<GPXRoute> completedClimbs = new ArrayList<>();
         lastPoint = null;
+        routePointIndex = 0;
 
         Log.d(TAG, "Matched climbs: " + startedClimbs.size());
 
@@ -145,21 +171,28 @@ public class TrackFile {
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
 
             for (GPXRoute climb : startedClimbs) {
+                if (routePointIndex < climb.getStartIdx()) {
+                    // Start point of climb has not yet been reached
+                    continue;
+                }
+
                 int lastIdx = climb.getPoints().size()-1;
                 PointF end = new PointF((float)climb.getPoints().get(lastIdx).getEasting(), (float)climb.getPoints().get(lastIdx).getNorthing());
-                if (monitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
-                    Log.d(TAG, "COMPLETED CLIMB " + climb.getName());
+                if (LocationMonitor.pointWithinLineSegmentWithTolerance(end, lastPoint, currentPoint, multiplier)) {
+                    Log.d(TAG, "FOUND CLIMB END " + climb.getName() + " (" + routePointIndex + ")");
                     completedClimbs.add(climb);
                 }
             }
 
+            startedClimbs.removeIf(completedClimbs::contains);
             lastPoint = currentPoint;
+            routePointIndex++;
         }
 
         return completedClimbs;
     }
 
-    private ClimbAttempt extractAttempt(GPXRoute climb) {
+    public ClimbAttempt extractAttempt(GPXRoute climb, int multiplier) {
         ClimbAttempt attempt = new ClimbAttempt();
         attempt.setDatetime(convertToDate(metadata.getTime()));
 
@@ -167,8 +200,9 @@ public class TrackFile {
         boolean inProgress = false;
 
         PointF lastPoint = null;
+        int segmentPointIndex = 0;
 
-        // Find all climbs whose start point is on the route
+        // Find start point of the climb on the route
         for (RoutePoint pt : getRoute().getTrackSegment().getPoints()) {
             if (lastPoint == null) {
                 lastPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
@@ -177,12 +211,11 @@ public class TrackFile {
 
             PointF currentPoint = new PointF((float)pt.getEasting(), (float)pt.getNorthing());
             if (inProgress) {
-                //Log.d(TAG, pt.getLat() + "," + pt.getLon());
                 LocalDateTime pointTime = convertToDate(pt.getTime());
                 attempt.addPoint(pt, pointTime);
                 PointF end = new PointF((float)climb.getPoints().get(climb.getPoints().size()-1).getEasting(),
                         (float)climb.getPoints().get(climb.getPoints().size()-1).getNorthing());
-                if (LocationMonitor.pointWithinLineSegment(end, lastPoint, currentPoint)) {
+                if (LocationMonitor.pointWithinLineSegmentWithTolerance(end, lastPoint, currentPoint, multiplier)) {
                     LocalDateTime endTime = convertToDate(pt.getTime());
                     long diff = endTime.atZone(ZoneId.systemDefault()).toEpochSecond() -
                                 startTime.atZone(ZoneId.systemDefault()).toEpochSecond();
@@ -192,24 +225,56 @@ public class TrackFile {
                     break;
                 }
             } else {
-                PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
-                if (LocationMonitor.pointWithinLineSegment(start, lastPoint, currentPoint)) {
-                    PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
-                    if (LocationMonitor.isRightDirection(second, lastPoint, currentPoint)) {
-                        Log.d(TAG, "STARTED ATTEMPT " + climb.getName() + "; " + pt.getLat() + "," + pt.getLon());
-                        startTime = convertToDate(pt.getTime());
-                        attempt.addPoint(pt, startTime);
-                        inProgress = true;
-                    }
+                if (startFound(climb, lastPoint, currentPoint, segmentPointIndex, multiplier)) {
+                    Log.d(TAG, "STARTED ATTEMPT " + climb.getName() + "; " + pt.getLat() + "," + pt.getLon());
+                    startTime = convertToDate(pt.getTime());
+                    attempt.addPoint(pt, startTime);
+                    inProgress = true;
                 }
             }
             lastPoint = currentPoint;
+            segmentPointIndex++;
         }
         return attempt;
+    }
+
+    private boolean startFound(GPXRoute climb, PointF lastPoint, PointF currentPoint, int index, int multiplier) {
+        PointF start = new PointF((float) climb.getPoints().get(0).getEasting(), (float) climb.getPoints().get(0).getNorthing());
+        if (LocationMonitor.pointWithinLineSegmentWithTolerance(start, lastPoint, currentPoint, multiplier)) {
+            Log.d(TAG, "Found point in segment: " + index + " for climb " + climb.getName());
+            PointF second = new PointF((float) climb.getPoints().get(1).getEasting(), (float) climb.getPoints().get(1).getNorthing());
+            DirectionChecker checker = new DirectionChecker(start, second);
+            checker.setStartIndex(index);
+            checker.calcSegmentDist(start, lastPoint, currentPoint);
+            if (checker.check(second, getRoute().getTrackSegment().getPoints(), multiplier)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static LocalDateTime convertToDate(String timeStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
         return LocalDateTime.parse(timeStr, formatter);
+    }
+
+
+    // Creates a dummy file so that climbs on a specified route can be found
+    // using the same method as climbs are found in a route file
+    public static List<GPXRoute> findClimbsOnTrackFromPoints(GPXRoute route) {
+        TrackFile dummyFile = new TrackFile();
+        Track track = new Track();
+        TrackSegment segment = new TrackSegment();
+        segment.setPoints(route.getPoints());
+        track.setTrackSegment(segment);
+        dummyFile.setRoute(track);
+
+        List<GPXRoute> climbsOnRoute = dummyFile.matchToClimbs();
+
+        for (GPXRoute r : climbsOnRoute) {
+            Log.d(TAG, "Climbs on route: " + r.getName());
+        }
+
+        return climbsOnRoute;
     }
 }

@@ -31,7 +31,6 @@ public class LocationMonitorTest {
         assertTrue(LocationMonitor.pointWithinLineSegment(new PointF(3, 9), a, b));
         assertFalse(LocationMonitor.pointWithinLineSegment(new PointF(7, 12), a, b));
         assertFalse(LocationMonitor.pointWithinLineSegment(new PointF(1, 4), a, b));
-        assertFalse(LocationMonitor.pointWithinLineSegment(new PointF(1, 4), a, b));
         assertFalse(LocationMonitor.pointWithinLineSegment(new PointF(200, -319.333f), a, b)); // Too far
         assertFalse(LocationMonitor.pointWithinLineSegment(new PointF(20, -19.333f), a, b)); // Too far
 

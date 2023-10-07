@@ -4,122 +4,231 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
     android:orientation="vertical"
-    tools:context=".FullClimbActivity"
-    android:keepScreenOn="true">
-
-    <LinearLayout
+    android:animateLayoutChanges="true"
+    tools:context=".RouteViewActivity">
+    <RelativeLayout
+        android:id="@+id/climbCompletePanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:id="@+id/panel">
+        android:background="@color/white"
+        android:visibility="gone">
+        <include layout="@layout/summary_panel" />
+    </RelativeLayout>
+    <RelativeLayout
+        android:id="@+id/panelRouteName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dp"
+        android:layout_marginBottom="3dp"
+        android:layout_marginRight="5dp"
+        android:visibility="gone">
+        <EditText
+            android:id="@+id/txtRouteName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/oswald_bold"
+            android:maxLines="1"
+            android:textSize="18sp"
+            android:autoSizeMaxTextSize="18sp"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeStepGranularity="2sp"
+            android:autoSizeTextType="uniform"
+            android:layout_alignParentLeft="true"
+            android:text="Route Name"/>
+        <ImageButton
+            android:id="@+id/btnEdit"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:scaleType="fitCenter"
+            android:layout_alignParentRight="true"
+            android:backgroundTint="#ffffff"
+            android:src="@drawable/edit_pencil"/>
+        <ImageButton
+            android:id="@+id/btnOK"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:scaleType="fitCenter"
+            android:layout_alignParentRight="true"
+            android:backgroundTint="#ffffff"
+            android:src="@drawable/tick_ok"
+            android:visibility="gone"/>
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/panelRouteInfo"
+        android:visibility="visible">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/panel"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <TextView
-                style="@style/panelTitleStyle"
-                android:id="@+id/panel1Label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="PANEL1" />
-
-            <TextView
-                android:id="@+id/txtPanel1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="8.88km"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
-
+            android:orientation="vertical">
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp">
+            android:orientation="horizontal">
 
-            <TextView
-                style="@style/panelTitleStyle"
-                android:id="@+id/panel2Label"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="PANEL2" />
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
 
-            <TextView
-                android:id="@+id/txtPanel2"
-                android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/panel1Label"
+                    style="@style/panelTitleStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="PANEL1" />
+
+                <TextView
+                    android:id="@+id/txtPanel1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="8.88km"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/oswald_bold"
-                android:text="888m"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/panel2Label"
+                    style="@style/panelTitleStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="PANEL2" />
+
+                <TextView
+                    android:id="@+id/txtPanel2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:maxLines="1"
+                    android:text="888m"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+            <SeekBar
+                android:id="@+id/profileTransparency"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:max="255"
+                android:min="0"
+                android:progress="190"
+                android:layout_weight="1"
+                android:text="Profile Transparency"/>
+        </LinearLayout>
+        <RelativeLayout
+            android:id="@+id/panelOffRoute"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignLeft="@+id/panel"
+            android:layout_alignTop="@id/panel"
+            android:layout_alignBottom="@id/panel"
+            android:background="@color/white"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="3dp"
+                android:layout_weight="50"
+                android:background="@drawable/layout_border"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/txtOffRoute"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoSizeMaxTextSize="60sp"
+                    android:autoSizeMinTextSize="28sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:fontFamily="@font/oswald_bold"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="OFF ROUTE"
+                    android:textColor="@color/reddish"
+                    android:shadowColor="#000000"
+                    android:shadowDx="1.5"
+                    android:shadowDy="1.3"
+                    android:shadowRadius="1.6"
+                    android:textSize="60sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </RelativeLayout>
+
+    </RelativeLayout>
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <com.sk7software.climbviewer.view.ClimbView
-            android:id="@+id/fullRouteView"
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/mapView"
+            android:name="com.sk7software.climbviewer.MapFragment"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:background="#ffffff" />
-        <LinearLayout
-            android:id="@+id/panelOffRoute"
+            android:layout_height="match_parent"
+            tools:layout="@layout/fragment_map" />
+
+        <ImageButton
+            android:id="@+id/showClimbsBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_margin="8dp"
+            android:layout_alignTop="@id/mapView"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:backgroundTint="@android:color/transparent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/monitor_climb_solid" />
+
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="3dp"
-            android:layout_weight="50"
-            android:background="@drawable/layout_border"
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:layout_alignLeft="@+id/fullRouteView"
-            android:layout_alignTop="@id/fullRouteView"
-            android:visibility="gone">
+            android:layout_alignBottom="@+id/mapView">
 
-            <TextView
-                android:id="@+id/txtOffRoute"
+            <com.sk7software.climbviewer.view.ClimbView
+                android:id="@+id/fullRouteView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fontFamily="@font/oswald_bold"
-                android:text="OFF ROUTE"
-                android:maxLines="1"
-                android:textSize="60sp"
-                android:textColor="#FF0000"
-                android:autoSizeMaxTextSize="60sp"
-                android:autoSizeMinTextSize="28sp"
-                android:autoSizeStepGranularity="2sp"
-                android:autoSizeTextType="uniform"
-                android:textStyle="bold" />
-        </LinearLayout>
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentLeft="true"
+                android:layout_height="200dp"
+                android:background="#00ffffff" />
+            <com.sk7software.climbviewer.view.ClimbView
+                android:id="@+id/nextClimbView"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentLeft="true"
+                android:background="#00ffffff" />
+        </RelativeLayout>
     </RelativeLayout>
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/mapView"
-        android:name="com.sk7software.climbviewer.MapFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"/>
-
 </LinearLayout>

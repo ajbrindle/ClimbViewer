@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".GPXLoadActivity">
+
+    <LinearLayout
+        android:id="@+id/panelChoose"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="What type of data is in the file?"
+            android:layout_marginTop="10dp"
+            android:layout_marginLeft="5dp"/>
+
+        <RadioGroup
+            android:id="@+id/grpType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginLeft="5dp"
+            android:layout_marginTop="5dp">
+
+            <RadioButton
+                android:id="@+id/radRoute"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Route" />
+
+            <RadioButton
+                android:id="@+id/radClimb"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Climb" />
+
+            <RadioButton
+                android:id="@+id/radAttempt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attempt" />
+
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtTolerance"
+            android:layout_marginTop="3dp"
+            android:layout_marginLeft="5dp"
+            android:visibility="gone"
+            android:text="Climb recognition sensitivity"/>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/panelFileList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+    </LinearLayout>
+    <SeekBar
+        android:id="@+id/seekTolerance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:max="4"
+        android:min="1"
+        android:visibility="gone"
+        android:progress="1" />
+
+    <Button
+        android:id="@+id/btnLoad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load"
+        android:layout_margin="5dp"/>
+
+    <ScrollView
+        android:id="@+id/allItems"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <LinearLayout
+                android:id="@+id/chkBoxes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/chkItem1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
+                    android:layout_marginTop="10dp"
+                    android:text="Item 1"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/btnCommit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Load Selected"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+                <Button
+                    android:id="@+id/btnCancelLoad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel"
+                    android:layout_weight="1"
+                    android:layout_margin="5dp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

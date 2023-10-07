@@ -2,7 +2,6 @@ package com.sk7software.climbviewer;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.Environment;
 
 public class ApplicationContextProvider extends Application {
     /**

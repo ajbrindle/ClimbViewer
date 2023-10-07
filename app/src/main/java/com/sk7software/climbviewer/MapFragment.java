@@ -1,17 +1,10 @@
 package com.sk7software.climbviewer;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
-
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
+import android.graphics.Path;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Property;
@@ -19,41 +12,55 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
+import com.google.maps.android.SphericalUtil;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
+import com.sk7software.climbviewer.view.Palette;
+import com.sk7software.climbviewer.view.PositionMarker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class MapFragment extends Fragment {
 
     private GPXRoute track;
     private GoogleMap map;
-    private Map<ClimbController.PointType, Marker> marker;
+    private Map<ClimbController.PointType, Map<PositionMarker.Size, Marker>> marker;
     private boolean mapReady = false;
     private boolean trackRider = false;
-    private boolean mirror = false;
     private PlotType plotType;
     private int zoom = 20;
     private float tilt = 67.5f;
+    private LatLng centre;
+    private Marker locationMarkerIcon = null;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
+    private Polyline climbTrack = null;
+    private Polyline localTrack = null;
+    private List<Polyline> localTracks = new ArrayList<>();
+    private List<Polyline> climbSections = new ArrayList<>();
 
     private static final String TAG = MapFragment.class.getSimpleName();
     private static final int MARKER_ANIMATION_MS = 1000;
@@ -61,35 +68,39 @@ public class MapFragment extends Fragment {
     public enum PlotType {
         FULL_CLIMB,
         PURSUIT,
-        ROUTE;
+        ROUTE,
+        FOLLOW_ROUTE,
+        NORMAL
     }
 
-    private OnMapReadyCallback callback = new OnMapReadyCallback() {
-
-        /**
-         * Manipulates the map once available.
-         * This callback is triggered when the map is ready to be used.
-         * This is where we can add markers or lines, add listeners or move the camera.
-         * In this case, we just add a marker near Sydney, Australia.
-         * If Google Play services is not installed on the device, the user will be prompted to
-         * install it inside the SupportMapFragment. This method will only be triggered once the
-         * user has installed Google Play services and returned to the app.
-         */
+    private final OnMapReadyCallback callback = new OnMapReadyCallback() {
         @Override
         public void onMapReady(GoogleMap googleMap) {
+            Log.d(TAG, "MAP READY");
             googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                 @Override
                 public void onMapLoaded() {
+                    Log.d(TAG, "MAP LOADED");
                     map = googleMap;
                     map.setMapType(mapType);
-                    track = (plotType == PlotType.ROUTE ? ClimbController.getInstance().getRoute() : ClimbController.getInstance().getClimb());
+                    if (plotType == PlotType.ROUTE || plotType == PlotType.FOLLOW_ROUTE) {
+                        track = ClimbController.getInstance().getRoute();
+                    } else {
+                        track = ClimbController.getInstance().getClimb();
+                    }
                     mapReady = true;
+
+                    if (centre != null) {
+                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(centre, zoom));
+                    }
                     plotTrack();
 
-                    if (ClimbController.getInstance().isAttemptInProgress()) {
-                        addMarker(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()),
-                                ClimbController.PointType.ATTEMPT, Color.CYAN, plotType == PlotType.PURSUIT);
-                    }
+                    // Force recalculation of radius if zooming
+                    map.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
+                        @Override
+                        public void onCameraMove() {
+                        }
+                    });
                 }
             });
         }
@@ -98,7 +109,16 @@ public class MapFragment extends Fragment {
     public void setMapType(int type, PlotType plotType, boolean mirror) {
         this.mapType = type;
         this.plotType = plotType;
-        this.mirror = mirror;
+    }
+
+    public void updateMap() {
+        map.setMapType(mapType);
+        map.clear();
+        marker.clear();
+    }
+
+    public void setReady(boolean ready) {
+        mapReady = ready;
     }
 
     @Nullable
@@ -120,6 +140,10 @@ public class MapFragment extends Fragment {
         }
     }
 
+    public void setPlotType(PlotType plotType) {
+        this.plotType = plotType;
+    }
+
     public void setTrackRider(boolean trackRider) {
         this.trackRider = trackRider;
     }
@@ -132,12 +156,16 @@ public class MapFragment extends Fragment {
         this.tilt = tilt;
     }
 
-    public void plotTrack(LatLng... position) {
-        Log.d(TAG, "Map ready: " + mapReady);
+    public void setCentre(LatLng centre) {
+        this.centre = centre;
+    }
+
+    public void plotTrack() {
         if (!mapReady || track == null) {
             return;
         }
 
+        // Determine bounds
         List<LatLng> points = new ArrayList<>();
         LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
 
@@ -146,33 +174,193 @@ public class MapFragment extends Fragment {
             points.add(point);
             boundsBuilder.include(point);
         }
-        if (position != null && position.length > 0) {
-            boundsBuilder.include(position[0]);
+        if (plotType == PlotType.FULL_CLIMB) {
+            // Plot gradient shaded line for climb
+            int zIdx = track.getPoints().size() + 1;
+            for (int i = 1; i < track.getPoints().size(); i++) {
+                plotElevationLine(track.getPoints(), i, zIdx--, 180, true);
+            }
+        } else {
+            // Plot basic line for route
+            PolylineOptions lineOptions = new PolylineOptions();
+            lineOptions.addAll(points)
+                       .width(20)
+                       .zIndex(2)
+                       .color(0xBBFF0000);
+            map.addPolyline(lineOptions);
         }
-
-        // Plot polyline
-        PolylineOptions lineOptions = new PolylineOptions();
-        lineOptions.addAll(points);
-
-        lineOptions.width(15);
-        lineOptions.color(Color.RED);
-        map.addPolyline(lineOptions);
-
         updateView(boundsBuilder.build());
     }
 
+    private Polyline plotElevationLine(List<RoutePoint> pts, int i, int zIdx, int width, boolean smoothed) {
+        PolylineOptions lineOptions = new PolylineOptions();
+        List<LatLng> line = new ArrayList<>();
+        line.add(new LatLng(pts.get(i - 1).getLat(), pts.get(i - 1).getLon()));
+        line.add(new LatLng(pts.get(i).getLat(), pts.get(i).getLon()));
+
+        double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
+        if (!smoothed) {
+            elevDiff = pts.get(i).getElevation() - pts.get(i-1).getElevation();
+        }
+        double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
+        double gradient = elevDiff * 100 / distBetween;
+
+        lineOptions.width(width)
+                .color(Palette.getColour(gradient))
+                .startCap(new RoundCap())
+                .endCap(new RoundCap())
+                .addAll(line)
+                .zIndex(zIdx);
+        return map.addPolyline(lineOptions);
+    }
+
+    private Polyline plotRouteBoundary(List<RoutePoint> pts, int i, int zIdx, int width) {
+        PolylineOptions lineOptions = new PolylineOptions();
+        List<LatLng> line = new ArrayList<>();
+        line.add(new LatLng(pts.get(i - 1).getLat(), pts.get(i - 1).getLon()));
+        line.add(new LatLng(pts.get(i).getLat(), pts.get(i).getLon()));
+
+        lineOptions.width(width)
+                .color(Color.BLACK)
+                .startCap(new RoundCap())
+                .endCap(new RoundCap())
+                .addAll(line)
+                .zIndex(zIdx);
+        return map.addPolyline(lineOptions);
+    }
+
+    public void plotLocalSection(int minIdx, int maxIdx) {
+        if (!mapReady || track == null) {
+            return;
+        }
+
+        if (minIdx < 0) {
+            minIdx = 0;
+        }
+
+        if (maxIdx >= track.getPoints().size()) {
+            maxIdx = track.getPoints().size()-1;
+        }
+
+        if (localTrack != null) {
+            localTrack.remove();
+        }
+
+        if (localTracks != null && !localTracks.isEmpty()) {
+            localTracks.forEach(t -> t.remove());
+            localTracks.clear();
+        } else {
+            localTracks = new ArrayList<>();
+        }
+
+        for (int i=minIdx+1; i<=maxIdx; i++) {
+            localTracks.add(plotRouteBoundary(track.getPoints(), i, -1, 66));
+            localTracks.add(plotElevationLine(track.getPoints(), i, 0, 60, false));
+        }
+    }
+
+    public void plotClimbTrackFromRoutePoints(List<RoutePoint> points) {
+        List<LatLng> pointsLL = new ArrayList<>();
+        for (RoutePoint pt : points) {
+            LatLng ll = new LatLng(pt.getLat(), pt.getLon());
+            pointsLL.add(ll);
+        }
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(pointsLL)
+                .width(20)
+                .color(0xFF555555)
+                .zIndex(10);
+        climbSections.add(map.addPolyline(lineOptions));
+    }
+
+    public void clearClimbTracks() {
+        climbSections.forEach(c -> c.remove());
+        climbSections.clear();
+    }
+
+    public void plotClimbTrack(List<LatLng> points) {
+        if (!mapReady || track == null || points == null) {
+            return;
+        }
+
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+
+        for (LatLng point : points) {
+            boundsBuilder.include(point);
+        }
+
+        if (climbTrack != null) {
+            climbTrack.remove();
+        }
+
+        // Plot basic line for route
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(points)
+                .width(20)
+                .color(0xFF555555)
+                .zIndex(10);
+        climbTrack = map.addPolyline(lineOptions);
+        updateView(boundsBuilder.build());
+    }
+
+    public void plotOffRouteTrack(double radius, LatLng currentPoint, float bearing) {
+        if (!mapReady || track == null) {
+            return;
+        }
+
+        plotType = PlotType.ROUTE;
+
+        // Increase radius to give a bit of padding but limit to 1km
+        if (radius > 500) {
+            radius = 500;
+        }
+        radius *= 1.2;
+
+        double distanceFromCenterToCorner = radius * Math.sqrt(2.0);
+        LatLng southwestCorner =
+                SphericalUtil.computeOffset(currentPoint, distanceFromCenterToCorner, 225.0);
+        LatLng northeastCorner =
+                SphericalUtil.computeOffset(currentPoint, distanceFromCenterToCorner, 45.0);
+        List<LatLng> points = new ArrayList<>();
+        LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+
+        for (RoutePoint pt : track.getPoints()) {
+            LatLng point = new LatLng(pt.getLat(), pt.getLon());
+            points.add(point);
+        }
+
+        boundsBuilder.include(southwestCorner);
+        boundsBuilder.include(northeastCorner);
+
+        // Plot polyline
+        PolylineOptions lineOptions = new PolylineOptions();
+        lineOptions.addAll(points)
+                .width(20)
+                .zIndex(2)
+                .color(0xBBFF0000);
+        map.addPolyline(lineOptions);
+
+        updateOffRouteView(boundsBuilder.build());
+    }
+
+    private void updateOffRouteView(LatLngBounds bounds) {
+        int padding = 50; // offset from edges of the map in pixels
+
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+        map.moveCamera(cu);
+        zoom = (int) map.getCameraPosition().zoom;
+    }
+
     private void updateView(LatLngBounds bounds) {
-        if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.ROUTE) {
-            int padding = 50; // offset from edges of the map in pixels
-            CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
-            map.animateCamera(cu);
-        } else if (plotType == PlotType.PURSUIT) {
+        if (plotType == PlotType.ROUTE || plotType == PlotType.NORMAL) {
+            updateOffRouteView(bounds);
+        } else if (plotType == PlotType.FULL_CLIMB || plotType == PlotType.PURSUIT || plotType == PlotType.FOLLOW_ROUTE) {
             CameraPosition position = new CameraPosition.Builder()
-                    .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon())) // Sets the new camera position
-                    .zoom(zoom) // Sets the zoom
-                    .bearing(0) // Rotate the camera
-                    .tilt(tilt) // Set the camera tilt
-                    .build(); // Creates a CameraPosition from the builder
+                    .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()))
+                    .zoom(zoom)
+                    .bearing(0)
+                    .tilt(tilt)
+                    .build();
             map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 2000,new GoogleMap.CancelableCallback() {
                 @Override
                 public void onFinish() {
@@ -190,14 +378,9 @@ public class MapFragment extends Fragment {
         }
     }
 
-    public void moveCamera(RoutePoint point, boolean isMirror) {
-        if (!trackRider) return;
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
 
-        ClimbController.PointType ptType = (ClimbController.getInstance().isAttemptInProgress() ?
-                ClimbController.PointType.ATTEMPT : ClimbController.PointType.ROUTE);
-        float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
-
-        if (ptType == ClimbController.PointType.ATTEMPT) {
+        if (zoomToPB && ptType == ClimbController.PointType.ATTEMPT) {
             float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
             zoom = 20;
 
@@ -219,42 +402,102 @@ public class MapFragment extends Fragment {
                 .tilt(tilt)
                 .bearing(bearing)
                 .build();
-        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, null);
+        map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, new GoogleMap.CancelableCallback() {
+            @Override
+            public void onCancel() {
+                if (activity != null) {
+                    activity.acceptMoveEvents();
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                if (activity != null) {
+                    activity.acceptMoveEvents();
+                }
+            }
+        });
     }
 
-    public void addMarker(LatLng ll, ClimbController.PointType type, int colour, boolean large) {
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB) {
+        if (!mapReady || !trackRider || plotType == PlotType.NORMAL) return;
+
+        ClimbController.PointType ptType = (ClimbController.getInstance().isAttemptInProgress() ?
+                ClimbController.PointType.ATTEMPT : ClimbController.PointType.ROUTE);
+
+        float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
+
+        moveCamera(point, isMirror, zoomToPB, ptType, bearing, null);
+    }
+
+    public void addMarker(LatLng ll, ClimbController.PointType type, int colour, PositionMarker.Size size) {
+        List<LatLng> lls = new ArrayList<>();
+        lls.add(ll);
+        addMarker(lls, type, colour, size);
+    }
+
+    public void addMarker(List<LatLng> lls, ClimbController.PointType type, int colour, PositionMarker.Size size) {
+        if (!mapReady || lls.isEmpty()) {
+            return;
+        }
+
+        Marker m = null;
+        Map<PositionMarker.Size, Marker> sizeMarkers = marker.get(type);
+        if (sizeMarkers != null) {
+            m = sizeMarkers.get(size);
+        } else {
+            sizeMarkers = new HashMap<>();
+        }
+
+        if (m != null) {
+            animateMarker(m, lls, new LatLngInterpolator.Linear());
+        } else {
+            sizeMarkers.put(size, map.addMarker(new MarkerOptions()
+                    .position(lls.get(0))
+                    .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(size, colour)))));
+            marker.put(type, sizeMarkers);
+        }
+    }
+
+    public void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size) {
+        Marker m = null;
+        Map<PositionMarker.Size, Marker> sizeMarkers = marker.get(type);
+        if (sizeMarkers != null) {
+            m = sizeMarkers.get(size);
+            if (m != null) {
+                m.remove();
+                sizeMarkers.remove(size);
+            }
+        }
+    }
+
+    public void showPosition(LatLng ll) {
         if (!mapReady) {
             return;
         }
 
-        Marker m = marker.get(type);
-        if (m != null) {
-            animateMarker(m, ll, new LatLngInterpolator.LinearFixed());
-        } else {
-            marker.put(type, map.addMarker(new MarkerOptions()
-                    .position(ll)
-                    .icon(bitmapDescriptorFromVector(getActivity(), R.drawable.ic_biking_solid, colour, large))));
+        if (ll == null) {
+            return;
         }
+
+        if (locationMarkerIcon != null) {
+            locationMarkerIcon.remove();
+        }
+
+        // Plot location
+        locationMarkerIcon = map.addMarker(new MarkerOptions()
+                .position(ll)
+                .zIndex(101)
+                .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(PositionMarker.Size.SMALL, Color.YELLOW))));
     }
 
-    private BitmapDescriptor bitmapDescriptorFromVector(Context context, int vectorResId, int colour, boolean large) {
-        float scaleFac = large ? 1.5f : 1;
-        int right = (int)(77 * scaleFac);
-        int bottom = (int)(102 * scaleFac);
-        Drawable background = ContextCompat.getDrawable(context, R.drawable.ic_map_marker_solid);
-        background.setBounds(0, 0, right, bottom);
-        background.setTint(Color.BLACK);
-        Drawable vectorDrawable = ContextCompat.getDrawable(context, vectorResId);
-        vectorDrawable.setBounds((int)(10 * scaleFac), (int)(8 * scaleFac), (int)(60 * scaleFac), (int)(50 * scaleFac));
-        vectorDrawable.setTint(colour);
-        Bitmap bitmap = Bitmap.createBitmap(right, bottom, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        background.draw(canvas);
-        vectorDrawable.draw(canvas);
-        return BitmapDescriptorFactory.fromBitmap(bitmap);
-    }
+    private static void animateMarker(Marker marker, List<LatLng> positions, final LatLngInterpolator latLngInterpolator) {
+        if (positions.isEmpty()) {
+            return;
+        }
 
-    private static void animateMarker(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+        LatLng[] lls = new LatLng[positions.size()];
+        lls = positions.toArray(lls);
         TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
             @Override
             public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
@@ -262,8 +505,8 @@ public class MapFragment extends Fragment {
             }
         };
         Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
-        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, finalPosition);
+        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, lls);
         animator.setDuration(MARKER_ANIMATION_MS);
         animator.start();
     }
- }
+}

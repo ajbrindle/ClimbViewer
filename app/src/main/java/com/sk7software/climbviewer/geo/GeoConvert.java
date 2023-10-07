@@ -247,7 +247,6 @@ public class GeoConvert {
             // square containing the location
             int cellE = (int)(rndLoc.getEasting()/(resolution/1000.0));
             int cellN = (int)(rndLoc.getNorthing()/(resolution/1000.0));
-            //System.out.println(cellE + "," + cellN);
 
             // Check limits
             if ((cellE > 13) || (cellN > 24))
@@ -265,7 +264,6 @@ public class GeoConvert {
             e1 = eShiftArr[cellN][cellE+1];
             e2 = eShiftArr[cellN+1][cellE+1];
             e3 = eShiftArr[cellN+1][cellE];
-            //System.out.println("e: " +e0+","+e1+","+e2+","+e3);
 
             n0 = nShiftArr[cellN][cellE];
             n1 = nShiftArr[cellN][cellE+1];
@@ -281,7 +279,7 @@ public class GeoConvert {
             if (e1 == 0.0) e1 = maxE;
             if (e2 == 0.0) e2 = maxE;
             if (e3 == 0.0) e3 = maxE;
-//			System.out.println("e: " +e0+","+e1+","+e2+","+e3);
+
             // Northing shifts are all negative, so look for lowest
             double maxN = Math.min(Math.min(n0, n1), Math.min(n2, n3));
             if (n0 == 0.0) n0 = maxN;

@@ -18,13 +18,8 @@ import com.google.gson.GsonBuilder;
 import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.BackupData;
-import com.sk7software.climbviewer.model.GPXFile;
-import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
-import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
-import com.sk7software.climbviewer.model.TrackMetadata;
-import com.sk7software.climbviewer.model.TrackSegment;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,6 +27,8 @@ import org.json.JSONObject;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 public class NetworkRequest {
 
@@ -44,20 +41,21 @@ public class NetworkRequest {
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
-        public void onRequestCompleted(Object callbackData);
-        public void onError(Exception e);
+        void onRequestCompleted(Object callbackData);
+        void onError(Exception e);
     }
 
-    private synchronized static RequestQueue getQueue(Context context) {
+    private static synchronized RequestQueue getQueue(Context context) {
         if (queue == null) {
             queue = Volley.newRequestQueue(context);
         }
         return queue;
     }
 
-    public static void fetchGPX(final Context context, String dir, String gpxFile, final NetworkCallback callback) {
+    public static void fetchGPX(final Context context, String dir, String gpxFile, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
         Log.d(TAG, "Fetching: " + gpxFile);
         try {
+            uiUpdate.setProgress(true, "Fetching file: " + gpxFile);
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.GET, GPX_LOAD_URL + "?dir=" + dir + "&name=" + gpxFile,
                             null,
@@ -67,13 +65,13 @@ public class NetworkRequest {
                                     try {
                                         ObjectMapper mapper = new ObjectMapper();
                                         GPXRoute route = mapper.readValue(response.toString(), GPXRoute.class);
-
-                                        updateDatabase(dir, route);
                                         Log.d(TAG, route.getName());
                                         callback.onRequestCompleted(route);
                                     } catch (JsonProcessingException e) {
                                         Log.d(TAG, "Error getting GPX data: " + e.getMessage());
                                         callback.onRequestCompleted(null);
+                                    } finally {
+                                        uiUpdate.setProgress(false, null);
                                     }
                                 }
                             },
@@ -81,6 +79,7 @@ public class NetworkRequest {
                                 @Override
                                 public void onErrorResponse(VolleyError error) {
                                     Log.d(TAG, "Error => " + error.toString());
+                                    uiUpdate.setProgress(false, null);
                                     callback.onError(error);
                                 }
                             }
@@ -104,31 +103,12 @@ public class NetworkRequest {
                                 public void onResponse(JSONArray response) {
                                     try {
                                         ObjectMapper mapper = new ObjectMapper();
-                                        FileList files = new FileList();
-                                        files.setFiles(Arrays.asList(mapper.readValue(response.toString(), FileDescription[].class)));
-
-                                        for (FileDescription desc : files.getFiles()) {
-                                            Log.d(TAG, "File: " + desc.getName());
-                                            // Fetch climb if it isn't already in the database
-                                            if (!exists(dir, desc)) {
-                                                fetchGPX(context, dir, desc.getName(), new NetworkCallback() {
-                                                    @Override
-                                                    public void onRequestCompleted(Object callbackData) {
-                                                        Log.d(TAG, "Loaded file: " + desc.getName());
-                                                    }
-
-                                                    @Override
-                                                    public void onError(Exception e) {
-                                                        Log.d(TAG, "Error reading file: " + desc.getName());
-                                                    }
-                                                });
-                                            }
-                                        }
-
+                                        List<FileDescription> fileList = new LinkedList<FileDescription>(Arrays.asList(mapper.readValue(response.toString(), FileDescription[].class)));
+                                        FileList files = new FileList(fileList);
                                         uiUpdate.setProgress(false, null);
                                         callback.onRequestCompleted(files);
                                     } catch (JsonProcessingException e) {
-                                        Log.d(TAG, "Error getting dev messages: " + e.getMessage());
+                                        Log.d(TAG, "Error getting file List: " + e.getMessage());
                                     }
                                 }
                             },
@@ -148,34 +128,30 @@ public class NetworkRequest {
         }
     }
 
-    private static void updateDatabase(String dir, GPXRoute route) {
-        if ("climbs".equals(dir)) {
-            GPXFile f = new GPXFile();
-            GPXMetadata m = new GPXMetadata();
-            m.setName(route.getName());
-            f.setMetadata(m);
-            f.setRoute(route);
-            Database.getInstance().addClimb(f);
-        } else if ("attempts".equals(dir)) {
-            TrackFile f = new TrackFile();
-            TrackMetadata m = new TrackMetadata();
-            Track t = new Track();
-            TrackSegment s = new TrackSegment();
+    private static void loadFiles(Context context, ActivityUpdateInterface uiUpdate, String dir, List<FileDescription> files) {
+        FileDescription desc = files.get(0);
+        Log.d(TAG, "File: " + desc.getName());
+        files.remove(0);
 
-            m.setTime(route.getTime());
-            s.setPoints(route.getPoints());
-            t.setName(route.getName());
-            t.setTrackSegment(s);
-            f.setRoute(t);
-            f.setMetadata(m);
-            TrackFile.processTrackFile(f);
-        } else if ("routes".equals(dir)) {
-            GPXFile f = new GPXFile();
-            GPXMetadata m = new GPXMetadata();
-            m.setName(route.getName());
-            f.setMetadata(m);
-            f.setRoute(route);
-            Database.getInstance().addRoute(f);
+        // Fetch file contents if it isn't already in the database
+        if (!exists(dir, desc)) {
+            fetchGPX(context, dir, desc.getName(), uiUpdate, new NetworkCallback() {
+                @Override
+                public void onRequestCompleted(Object callbackData) {
+                    Log.d(TAG, "Loaded file: " + desc.getName());
+                    if (!files.isEmpty()) {
+                        loadFiles(context, uiUpdate, dir, files);
+                    }
+                }
+
+                @Override
+                public void onError(Exception e) {
+                    Log.d(TAG, "Error reading file: " + desc.getName());
+                    if (!files.isEmpty()) {
+                        loadFiles(context, uiUpdate, dir, files);
+                    }
+                }
+            });
         }
     }
 
@@ -185,6 +161,7 @@ public class NetworkRequest {
                     .create();
             String json = gson.toJson(backupData);
             JSONObject backup = new JSONObject(json);
+            uiUpdate.setProgress(true, "Backing up database");
 
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.POST, BACKUP_URL, backup,
@@ -223,7 +200,6 @@ public class NetworkRequest {
                                 @Override
                                 public void onResponse(JSONObject response) {
                                     try {
-                                        ObjectMapper mapper = new ObjectMapper();
                                         String data = response.getString("data");
                                         Log.d(TAG, "Restore data fetched");
                                         callback.onRequestCompleted(data);

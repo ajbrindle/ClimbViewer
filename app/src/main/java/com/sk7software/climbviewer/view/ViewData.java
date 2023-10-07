@@ -1,7 +1,6 @@
 package com.sk7software.climbviewer.view;
 
 import com.sk7software.climbviewer.ClimbController;
-import com.sk7software.climbviewer.model.PlotType;
 import com.sk7software.climbviewer.model.RoutePoint;
 
 import lombok.Getter;
