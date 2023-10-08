@@ -4,7 +4,9 @@ public enum TableIdentifier {
     CLIMB("C"),
     CLIMB_POINT("CP"),
     CLIMB_ATTEMPT("CA"),
-    CLIMB_ATTEMPT_POINT("CAP");
+    CLIMB_ATTEMPT_POINT("CAP"),
+    ROUTE("R"),
+    ROUTE_POINT("RP");
 
     private final String abbrev;
 

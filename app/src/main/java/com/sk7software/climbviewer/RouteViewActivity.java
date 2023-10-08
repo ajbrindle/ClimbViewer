@@ -11,6 +11,7 @@ import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
@@ -204,6 +205,23 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
         ImageButton btnEdit = (ImageButton)findViewById(R.id.btnEdit);
         ImageButton btnOK = (ImageButton)findViewById(R.id.btnOK);
+
+        txtRouteName.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                txtRouteName.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (hasFocus) {
+                            imm.showSoftInput(txtRouteName, InputMethodManager.SHOW_IMPLICIT);
+                        } else {
+                            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                        }
+                    }
+                });
+            }
+        });
 
         btnEdit.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -529,9 +547,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         return Math.sqrt(Math.pow(currentGrid.getEasting() - lastGrid.getEasting(), 2) +
                          Math.pow(currentGrid.getNorthing() - lastGrid.getNorthing(), 2));
     }
-
-    @Override
-    public void setProgress(boolean showProgressDialog, String progressMessage) {}
 
     @Override
     public void clearCompletionPanel() {

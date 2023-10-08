@@ -1,5 +1,7 @@
 package com.sk7software.climbviewer;
 
+import static android.app.PendingIntent.getActivity;
+
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Point;
@@ -212,6 +214,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
                 map.plotClimbTrack(zoomClimbView.getMarkedPoints());
                 zoomClimbView.invalidate();
                 showClimbRating();
+                defineClimb.setEnabled(true);
             }
         });
 
@@ -249,10 +252,6 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         ViewGroup messageView = (ViewGroup)inflater.inflate(R.layout.entry_message, null);
 
         EditText input = messageView.findViewById(R.id.txtEdit);
-        input.setText(defaultName);
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        input.requestFocus();
-        input.selectAll();
         builder.setView(messageView);
 
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
@@ -267,7 +266,29 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
                 dialog.cancel();
             }
         });
-        builder.show();
+        AlertDialog dialog = builder.show();
+
+        input.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                input.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (hasFocus) {
+                            imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+                        } else {
+                            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                        }
+                    }
+                });
+            }
+        });
+
+        input.setText(defaultName);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.requestFocus();
+        input.selectAll();
     }
 
     private void createClimb(String climbName) {
