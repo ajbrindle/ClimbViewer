@@ -246,13 +246,16 @@ public class RoutesFragment extends Fragment {
         if (savedRouteId > 0) {
             // There is a route to resume so set route id and select in list
             GPXRoute savedRoute = Database.getInstance().getRoute(savedRouteId);
-            currentRoute = savedRoute.getName();
-            currentRouteId = savedRouteId;
-            HashMap<String, String> h = routeList.get(0);
-            h.put("value", currentRoute);
-            txtRoute.setText(currentRoute);
-            routeListAdapter.notifyDataSetChanged();
-            enableRouteButtons(true);
+
+            if (savedRoute != null) {
+                currentRoute = savedRoute.getName();
+                currentRouteId = savedRouteId;
+                HashMap<String, String> h = routeList.get(0);
+                h.put("value", currentRoute);
+                txtRoute.setText(currentRoute);
+                routeListAdapter.notifyDataSetChanged();
+                enableRouteButtons(true);
+            }
         }
     }
 

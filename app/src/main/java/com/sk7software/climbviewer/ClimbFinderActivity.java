@@ -7,15 +7,19 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 import android.view.Display;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -44,6 +48,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
     private int routeId;
     private GPXRoute route;
     private TextView txtClimbRating;
+    private Button defineClimb;
     private LinearLayout zoomPanel;
     private boolean layoutResizing;
 
@@ -144,7 +149,6 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_DOWN ) {
-                    Log.d(TAG, "X click: " + (int)motionEvent.getX());
                     routeClimbView.setShowGradientAt((int)motionEvent.getX());
                     routeClimbView.setX0((int)motionEvent.getX());
                     zoomClimbView.clearClimbMarker();
@@ -155,6 +159,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
                     map.setReady(false);
                     layoutResizing = true;
                     zoomPanel.setVisibility(View.VISIBLE);
+                    defineClimb.setEnabled(false);
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     routeClimbView.setShowGradientAt((int)motionEvent.getX());
                     routeClimbView.setXN((int)motionEvent.getX());
@@ -176,13 +181,13 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
-                    Log.d(TAG, "X click: " + (int) motionEvent.getX());
                     zoomClimbView.setShowGradientAt((int) motionEvent.getX());
                     zoomClimbView.setX0((int) motionEvent.getX());
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
                     zoomClimbView.setShowGradientAt((int) motionEvent.getX());
                     zoomClimbView.setXN((int) motionEvent.getX());
                     map.plotClimbTrack(zoomClimbView.getMarkedPoints());
+                    defineClimb.setEnabled(true);
                     showClimbRating();
                 }
                 zoomClimbView.invalidate();
@@ -194,7 +199,8 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
 
         ImageButton findAuto = findViewById(R.id.btnAuto);
-        Button defineClimb = findViewById(R.id.btnSetClimb);
+        defineClimb = findViewById(R.id.btnSetClimb);
+        defineClimb.setEnabled(false);
         txtClimbRating = findViewById(R.id.txtRating);
 
         findAuto.setMaxWidth((int)(zoomPadding * 0.75));
@@ -237,13 +243,17 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
     }
 
     private void showCreateClimbDialog(String defaultName) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(ClimbFinderActivity.this);
         builder.setTitle("Climb Name");
+        LayoutInflater inflater = getLayoutInflater();
+        ViewGroup messageView = (ViewGroup)inflater.inflate(R.layout.entry_message, null);
 
-        final EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        EditText input = messageView.findViewById(R.id.txtEdit);
         input.setText(defaultName);
-        builder.setView(input);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.requestFocus();
+        input.selectAll();
+        builder.setView(messageView);
 
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
@@ -257,7 +267,6 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
                 dialog.cancel();
             }
         });
-
         builder.show();
     }
 
@@ -278,7 +287,27 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         }
 
         climbFile.setRoute(climbPoints);
-        Database.getInstance().addClimb(climbFile);
+        if (Database.getInstance().addClimb(climbFile)) {
+            Toast.makeText(getApplicationContext(), "Climb '" + climbName + "' created", Toast.LENGTH_SHORT).show();
+        } else {
+            showErrorDialog(climbName);
+        }
+    }
+
+    private void showErrorDialog(final String name) {
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(ClimbFinderActivity.this);
+        builder.setTitle("Climb not added");
+        LayoutInflater inflater = getLayoutInflater();
+        ViewGroup messageView = (ViewGroup)inflater.inflate(R.layout.alert_message, null);
+
+        TextView message = messageView.findViewById(R.id.txtAlertMessage);
+        message.setText("Climb could not be added as that name already exists: " + name);
+        builder.setView(messageView);
+
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            showCreateClimbDialog(name);
+        });
+        builder.show();
     }
 
     @Override

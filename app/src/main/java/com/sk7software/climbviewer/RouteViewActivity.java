@@ -211,6 +211,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 btnEdit.setVisibility(View.GONE);
                 btnOK.setVisibility(View.VISIBLE);
                 txtRouteName.setEnabled(true);
+                txtRouteName.requestFocus();
                 txtRouteName.selectAll();
             }
         });
