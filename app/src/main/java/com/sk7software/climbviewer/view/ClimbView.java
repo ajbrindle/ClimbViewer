@@ -227,14 +227,21 @@ public class ClimbView extends View {
         int minIdx = -1;
         int maxIdx = -1;
 
+        // Find max elevation in the section
         for (int i=0; i<points.size(); i++) {
+            PlotPoint p = points.get(i);
+            if (p.getElevation() > maxElevation) {
+                maxElevation = p.getElevation();
+                maxIdx = i;
+            }
+        }
+
+        // Find min elevation before the max
+        for (int i=0; i<maxIdx; i++) {
             PlotPoint p = points.get(i);
             if (p.getElevation() <= minElevation) {
                 minElevation = p.getElevation();
                 minIdx = i;
-            } else if (p.getElevation() > maxElevation) {
-                maxElevation = p.getElevation();
-                maxIdx = i;
             }
         }
 

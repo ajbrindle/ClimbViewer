@@ -1,5 +1,6 @@
 package com.sk7software.climbviewer.db;
 
+import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -8,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.geo.Ellipsoid;
@@ -44,6 +46,10 @@ public class Database extends SQLiteOpenHelper {
     private static final List<String> CLIMB_POINT_COLUMNS = Arrays.asList ("ID", "POINT_NO", "LAT", "LON", "EASTING", "NORTHING", "ELEVATION");
     private static final List<String> CLIMB_ATTEMPT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "TIMESTAMP", "DURATION");
     private static final List<String> CLIMB_ATTEMPT_POINT_COLUMNS = Arrays.asList("ID", "ATTEMPT_ID", "POINT_NO", "TIMESTAMP", "LAT", "LON", "EASTING", "NORTHING");
+    private static final List<String> ROUTE_COLUMNS = Arrays.asList("ID", "NAME", "PROJECTION_ID", "ZONE");
+    private static final List<String> ROUTE_POINT_COLUMNS = Arrays.asList("ID", "POINT_NO", "LAT", "LON", "EASTING", "NORTHING", "ELEVATION");
+
+    private static final DecimalFormat df = new DecimalFormat();
 
     public static Database getInstance() {
         if (dbInstance == null) {
@@ -55,6 +61,8 @@ public class Database extends SQLiteOpenHelper {
 
     private Database(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        df.setMaximumFractionDigits(8);
+        df.setGroupingUsed(false);
     }
 
 
@@ -1067,7 +1075,10 @@ public class Database extends SQLiteOpenHelper {
         backupStr.append(backupTable(db, "CLIMB", CLIMB_COLUMNS))
                  .append(backupTable(db, "CLIMB_POINT", CLIMB_POINT_COLUMNS))
                  .append(backupTable(db, "CLIMB_ATTEMPT", CLIMB_ATTEMPT_COLUMNS))
-                 .append(backupTable(db, "CLIMB_ATTEMPT_POINT", CLIMB_ATTEMPT_POINT_COLUMNS));
+                 .append(backupTable(db, "CLIMB_ATTEMPT_POINT", CLIMB_ATTEMPT_POINT_COLUMNS))
+                 .append(backupTable(db, "ROUTE", ROUTE_COLUMNS))
+                 .append(backupTable(db, "ROUTE_POINT", ROUTE_POINT_COLUMNS));
+
         return backupStr.toString();
     }
 
@@ -1096,7 +1107,12 @@ public class Database extends SQLiteOpenHelper {
                     while (!cursor.isAfterLast()) {
                         backup.append(TableIdentifier.getAbbrev(table)).append("|");
                         for (int i=0; i<columns.size(); i++) {
-                            backup.append(cursor.getString(i)).append(i<columns.size()-1 ? "|" : "~");
+                            String val = cursor.getString(i);
+
+                            if (cursor.getType(i) == Cursor.FIELD_TYPE_FLOAT) {
+                                val = df.format(cursor.getFloat(i));
+                            }
+                            backup.append(val).append(i<columns.size()-1 ? "|" : "~");
                         }
                         cursor.moveToNext();
                     }
@@ -1109,37 +1125,55 @@ public class Database extends SQLiteOpenHelper {
         return null;
     }
 
-    public void restore(String[] rows) {
-        SQLiteDatabase db = getReadableDatabase();
+    public void restore(String[] rows, ActivityUpdateInterface activity) {
 
-        // Clear existing tables
-        String del = "DELETE FROM CLIMB;";
-        db.execSQL(del);
-        del = "DELETE FROM CLIMB_POINT;";
-        db.execSQL(del);
-        del = "DELETE FROM CLIMB_ATTEMPT;";
-        db.execSQL(del);
-        del = "DELETE FROM CLIMB_ATTEMPT_POINT;";
-        db.execSQL(del);
+        Thread t = new Thread(new Runnable() {
+               @Override
+               public void run() {
+                   SQLiteDatabase db = getReadableDatabase();
 
-        Map<String, List<String>> tableColumns = new HashMap<>();
-        tableColumns.put("CLIMB", CLIMB_COLUMNS);
-        tableColumns.put("CLIMB_POINT", CLIMB_POINT_COLUMNS);
-        tableColumns.put("CLIMB_ATTEMPT", CLIMB_ATTEMPT_COLUMNS);
-        tableColumns.put("CLIMB_ATTEMPT_POINT", CLIMB_ATTEMPT_POINT_COLUMNS);
+                   // Clear existing tables
+                   String del = "DELETE FROM CLIMB;";
+                   db.execSQL(del);
+                   del = "DELETE FROM CLIMB_POINT;";
+                   db.execSQL(del);
+                   del = "DELETE FROM CLIMB_ATTEMPT;";
+                   db.execSQL(del);
+                   del = "DELETE FROM CLIMB_ATTEMPT_POINT;";
+                   db.execSQL(del);
+                   del = "DELETE FROM ROUTE;";
+                   db.execSQL(del);
+                   del = "DELETE FROM ROUTE_POINT;";
+                   db.execSQL(del);
 
-        for (String row : rows) {
-            String[] values = row.split("\\|");
-            ContentValues cv = new ContentValues();
-            String tableName = TableIdentifier.getEnumFromAbbrev(values[0]).name();
-            List<String> cols = tableColumns.get(tableName);
-            int i = 1;
+                   Map<String, List<String>> tableColumns = new HashMap<>();
+                   tableColumns.put("CLIMB", CLIMB_COLUMNS);
+                   tableColumns.put("CLIMB_POINT", CLIMB_POINT_COLUMNS);
+                   tableColumns.put("CLIMB_ATTEMPT", CLIMB_ATTEMPT_COLUMNS);
+                   tableColumns.put("CLIMB_ATTEMPT_POINT", CLIMB_ATTEMPT_POINT_COLUMNS);
+                   tableColumns.put("ROUTE", ROUTE_COLUMNS);
+                   tableColumns.put("ROUTE_POINT", ROUTE_POINT_COLUMNS);
 
-            for (String col : cols) {
-                cv.put(col, values[i++]);
-            }
+                   int index = 1;
+                   int numRows = rows.length;
 
-            db.insertOrThrow(tableName, null, cv);
-        }
+                   for (String row : rows) {
+                       String[] values = row.split("\\|");
+                       ContentValues cv = new ContentValues();
+                       String tableName = TableIdentifier.getEnumFromAbbrev(values[0]).name();
+                       List<String> cols = tableColumns.get(tableName);
+                       int i = 1;
+
+                       for (String col : cols) {
+                           cv.put(col, values[i++]);
+                       }
+                       activity.updateProgressMessage("Restoring record: " + index + "/" + numRows);
+                       index++;
+                       db.insertOrThrow(tableName, null, cv);
+                   }
+                   activity.setProgress(false, null);
+               }
+           });
+        t.start();
     }
  }

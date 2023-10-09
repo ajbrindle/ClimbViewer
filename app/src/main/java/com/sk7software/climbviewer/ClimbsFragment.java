@@ -226,13 +226,16 @@ public class ClimbsFragment extends Fragment {
         if (savedClimbId > 0) {
             // There is a route to resume so set route id and select in list
             GPXRoute savedClimb = Database.getInstance().getClimb(savedClimbId);
-            currentClimb = savedClimb.getName();
-            currentClimbId = savedClimbId;
-            HashMap<String, String> h = climbList.get(0);
-            h.put("value", currentClimb);
-            txtClimb.setText(currentClimb);
-            climbListAdapter.notifyDataSetChanged();
-            enableClimbButtons(true);
+
+            if (savedClimb != null) {
+                currentClimb = savedClimb.getName();
+                currentClimbId = savedClimbId;
+                HashMap<String, String> h = climbList.get(0);
+                h.put("value", currentClimb);
+                txtClimb.setText(currentClimb);
+                climbListAdapter.notifyDataSetChanged();
+                enableClimbButtons(true);
+            }
         }
     }
 

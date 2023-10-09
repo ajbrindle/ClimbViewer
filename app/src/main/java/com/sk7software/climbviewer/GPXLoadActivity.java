@@ -392,10 +392,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
                 gpxType = GPXType.CLIMB;
         }
     }
-    @Override
-    public void locationChanged(RoutePoint route) {
-        // Do nothing
-    }
+
     private void goToMainActivity() {
         Intent i = new Intent(this, MainActivity.class);
         startActivity(i);
@@ -435,9 +432,6 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         NETWORK,
         LOCAL;
     }
-
-    @Override
-    public void clearCompletionPanel() {}
 
     public enum GPXType {
         ATTEMPT("attempts"),
