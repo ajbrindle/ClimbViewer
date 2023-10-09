@@ -195,7 +195,7 @@ public class ClimbController {
             // Reset off-climb counter
             offClimbCount = 0;
             forceClose = false;
-            setNearEnd(currentPoint, distDone);
+            calcNearEnd(distDone);
         } else {
             int minOffCount = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_ULTRA_TOLERANCE) ? 1000 : 15;
             // Update "off climb" counter
@@ -257,7 +257,7 @@ public class ClimbController {
         distToPB = attempts.get(PointType.ATTEMPT).getDist() - pb.getDist();
     }
 
-    private void setNearEnd(PointF currentPoint, float distDone) {
+    private void calcNearEnd(float distDone) {
         int endIndex = climb.getPoints().size() - 1;
 
         // Near end if within 100m of the end
@@ -294,7 +294,6 @@ public class ClimbController {
 
         // Calculate duration
         long startTime = attempt.getDatetime().atZone(ZoneId.systemDefault()).toEpochSecond();
-//                attempt.getPoints().get(0).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
         long endTime = attempt.getPoints().get(attempt.getPoints().size()-1).getTimestamp().atZone(ZoneId.systemDefault()).toEpochSecond();
         Log.d(TAG, "Duration: " + startTime + " to " + endTime);
         attempt.setDuration((int)(endTime - startTime));
@@ -493,8 +492,8 @@ public class ClimbController {
 
     public AttemptStats getLastAttemptStats(int lastClimbId) {
         AttemptStats stats = new AttemptStats();
-        List<AttemptStats> attempts = Database.getInstance().getClimbAttemptDurations(lastClimbId);
-        stats.calcStats(attempts);
+        List<AttemptStats> attemptStats = Database.getInstance().getClimbAttemptDurations(lastClimbId);
+        stats.calcStats(attemptStats);
 
         GPXRoute lastClimb = Database.getInstance().getClimb(lastClimbId);
         lastClimb.setPointsDist();

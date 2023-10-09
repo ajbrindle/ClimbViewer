@@ -155,13 +155,12 @@ public class NetworkRequest {
         }
     }
 
-    public static void backupDB(final Context context, BackupData backupData, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+    public static void backupDB(final Context context, BackupData backupData, final NetworkCallback callback) {
         try {
             Gson gson = new GsonBuilder()
                     .create();
             String json = gson.toJson(backupData);
             JSONObject backup = new JSONObject(json);
-            uiUpdate.setProgress(true, "Backing up database");
 
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.POST, BACKUP_URL, backup,
@@ -169,7 +168,6 @@ public class NetworkRequest {
                                 @Override
                                 public void onResponse(JSONObject response) {
                                     Log.d(TAG, "Response: " + response.toString());
-                                    uiUpdate.setProgress(false, null);
                                     callback.onRequestCompleted(null);
                                 }
                             },
@@ -177,7 +175,6 @@ public class NetworkRequest {
                                 @Override
                                 public void onErrorResponse(VolleyError error) {
                                     Log.d(TAG, "Error => " + error.toString());
-                                    uiUpdate.setProgress(false, null);
                                     callback.onError(error);
                                 }
                             }
@@ -186,7 +183,7 @@ public class NetworkRequest {
             getQueue(context).add(jsObjRequest);
         } catch (JSONException e) {
             Log.d(TAG, "Error uploading backup: " + e.getMessage());
-            uiUpdate.setProgress(false, null);
+            callback.onError(e);
         }
     }
 

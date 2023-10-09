@@ -3,6 +3,7 @@ package com.sk7software.climbviewer;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -36,6 +37,9 @@ import com.sk7software.climbviewer.network.NetworkRequest;
 import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class MainActivity extends AppCompatActivity implements ActivityUpdateInterface {
 
     private TabLayout tabLayout;
@@ -47,7 +51,8 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
     private LocationMonitor monitor;
     RelativeLayout completionPanel;
     private AlertDialog.Builder progressDialogBuilder;
-    private Dialog progressDialog;
+    private AlertDialog progressDialog;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private static final int LOCATION_PERMISSION = 1;
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -69,7 +74,6 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
         // Set up database
         Database db = Database.getInstance();
         db.getWritableDatabase();
-        db.backup();
 
         int lastClimbId = getIntent().getIntExtra("lastClimbId", 0);
 
@@ -171,42 +175,55 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
                 doLoad("routes");
                 return true;
             case R.id.action_backup_db:
-                Toast.makeText(getApplicationContext(), "Backing up data...", Toast.LENGTH_SHORT).show();
-                BackupData data = new BackupData();
-                data.setId(1);
-                data.setTableData(Database.getInstance().backup());
-                NetworkRequest.backupDB(getApplicationContext(), data, this, new NetworkRequest.NetworkCallback() {
+                setProgress(true, "Backing-up database");
+                executorService.execute(new Runnable() {
                     @Override
-                    public void onRequestCompleted(Object callbackData) {
-                        Toast.makeText(getApplicationContext(), "Data backed up successfully", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "Database backed up successfully");
-                    }
+                    public void run() {
+                        BackupData data = new BackupData();
+                        data.setId(1);
+                        data.setTableData(Database.getInstance().backup());
+                        NetworkRequest.backupDB(getApplicationContext(), data, new NetworkRequest.NetworkCallback() {
+                            @Override
+                            public void onRequestCompleted(Object callbackData) {
+                                setProgress(false, null);
+                                Toast.makeText(getApplicationContext(), "Data backed up successfully", Toast.LENGTH_SHORT).show();
+                            }
 
-                    @Override
-                    public void onError(Exception e) {
-                        Toast.makeText(getApplicationContext(), "Unable to backup data", Toast.LENGTH_LONG).show();
-                        Log.e(TAG, "Error backing up database: " + e);
+                            @Override
+                            public void onError(Exception e) {
+                                setProgress(false, null);
+                                Toast.makeText(getApplicationContext(), "Unable to backup data", Toast.LENGTH_LONG).show();
+                                Log.e(TAG, "Error backing up database: " + e);
+                            }
+                        });
                     }
                 });
                 return true;
-            case R.id.action_restore_db:
-                Toast.makeText(getApplicationContext(), "Fetching data...", Toast.LENGTH_SHORT).show();
-                setProgress(true, "Resstoring databaase");
-                NetworkRequest.restoreDB(getApplicationContext(), 1, new NetworkRequest.NetworkCallback() {
-                    @Override
-                    public void onRequestCompleted(Object callbackData) {
-                        Toast.makeText(getApplicationContext(), "Restoring data...", Toast.LENGTH_SHORT).show();
-                        String[] rows = callbackData.toString().split("~");
-                        Database.getInstance().restore(rows);
-                        setProgress(false, null);
-                        Toast.makeText(getApplicationContext(), "Database restore complete", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "Database restore completed");
-                    }
 
+            case R.id.action_restore_db:
+                setProgress(true, "Restoring database");
+                executorService.execute(new Runnable() {
                     @Override
-                    public void onError(Exception e) {
-                        setProgress(false, null);
-                        Toast.makeText(getApplicationContext(), "Unable to restore data", Toast.LENGTH_LONG).show();
+                    public void run() {
+                        NetworkRequest.restoreDB(getApplicationContext(), 1, new NetworkRequest.NetworkCallback() {
+                            @Override
+                            public void onRequestCompleted(Object callbackData) {
+                                Toast.makeText(getApplicationContext(), "Restoring data...", Toast.LENGTH_SHORT).show();
+                                String[] rows = callbackData.toString().split("~");
+                                Database.getInstance().restore(rows, MainActivity.this);
+                            }
+
+                            @Override
+                            public void onError(Exception e) {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        setProgress(false, null);
+                                    }
+                                });
+                                Toast.makeText(getApplicationContext(), "Unable to restore data", Toast.LENGTH_LONG).show();
+                            }
+                        });
                     }
                 });
                 return true;
@@ -433,7 +450,36 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
         // permissions this app might request.
     }
     @Override
-    public void setProgress(boolean showProgressDialog, String progressMessage){}
+    public void setProgress(boolean showProgressDialog, String progressMessage){
+        if (showProgressDialog && progressDialog == null) {
+            progressDialog = progressDialogBuilder
+                    .setMessage(progressMessage)
+                    .setCancelable(false)
+                    .create();
+            progressDialog.show();
+        } else {
+            if (progressDialog != null) {
+                progressDialog.dismiss();
+                progressDialog = null;
+            }
+        }
+    }
+
     @Override
-    public void clearCompletionPanel(){completionPanel.setVisibility(View.GONE);}
+    public void clearCompletionPanel() {
+        completionPanel.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void updateProgressMessage(String message) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (progressDialog != null) {
+                    TextView t = progressDialog.findViewById(R.id.loading_msg);
+                    t.setText(message);
+                }
+            }
+        });
+    }
 }

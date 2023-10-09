@@ -357,10 +357,4 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             map.plotTrack();
         }
     }
-
-    @Override
-    public void setProgress(boolean showProgressDialog, String progressMessage) {}
-
-    @Override
-    public void clearCompletionPanel() {}
 }

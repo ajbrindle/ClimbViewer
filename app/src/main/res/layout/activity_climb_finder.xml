@@ -6,16 +6,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     tools:context=".ClimbFinderActivity">
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/btnSetClimb"
-        android:text="Define Climb"
-        android:layout_margin="4dp"/>
     <com.sk7software.climbviewer.view.ClimbView
         android:id="@+id/climbFinder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
         android:layout_marginBottom="5dp"
         android:background="#00ffffff" />
     <LinearLayout
@@ -36,57 +31,57 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:padding="0dp"
-                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
                 android:layout_alignBottom="@+id/climbZoom"
                 android:layout_marginBottom="5dp"
-                android:layout_marginLeft="2dp"
-                android:id="@+id/btnNudgeLLeft"
-                android:scaleType="fitCenter"
-                android:adjustViewBounds="true"
-                app:backgroundTint="#00ffffff"
-                app:tint="#000000"
-                android:src="@drawable/circle_chevron_left_solid"/>
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:padding="0dp"
-                android:layout_alignParentLeft="true"
-                android:layout_above="@+id/btnNudgeLLeft"
-                android:layout_marginBottom="25dp"
-                android:layout_marginLeft="2dp"
+                android:layout_marginStart="2dp"
                 android:id="@+id/btnNudgeLRight"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="#000000"
+                app:tint="@color/teal_200"
                 android:src="@drawable/circle_chevron_right_solid"/>
             <ImageButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:padding="0dp"
-                android:layout_alignParentRight="true"
-                android:layout_alignBottom="@+id/climbZoom"
-                android:layout_marginBottom="5dp"
-                android:layout_marginRight="2dp"
-                android:id="@+id/btnNudgeRLeft"
+                android:layout_alignParentStart="true"
+                android:layout_marginBottom="25dp"
+                android:layout_above="@+id/btnNudgeLRight"
+                android:layout_marginStart="2dp"
+                android:id="@+id/btnNudgeLLeft"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="#000000"
+                app:tint="@color/purple_500"
                 android:src="@drawable/circle_chevron_left_solid"/>
             <ImageButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:padding="0dp"
-                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true"
+                android:layout_alignBottom="@+id/climbZoom"
+                android:layout_marginBottom="5dp"
+                android:layout_marginEnd="2dp"
+                android:id="@+id/btnNudgeRLeft"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                app:backgroundTint="#00ffffff"
+                app:tint="@color/teal_200"
+                android:src="@drawable/circle_chevron_left_solid"/>
+            <ImageButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_alignParentEnd="true"
                 android:layout_above="@+id/btnNudgeRLeft"
                 android:layout_marginBottom="25dp"
-                android:layout_marginRight="2dp"
+                android:layout_marginEnd="2dp"
                 android:id="@+id/btnNudgeRRight"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="#000000"
+                app:tint="@color/purple_500"
                 android:src="@drawable/circle_chevron_right_solid"/>
         </RelativeLayout>
         <LinearLayout
@@ -98,12 +93,11 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/btnAuto"
                 android:padding="0dp"
-                android:layout_alignParentLeft="true"
-                android:layout_below="@+id/climbZoom"
+                android:layout_gravity="center_vertical"
                 android:layout_marginBottom="5dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginLeft="2dp"
-                android:layout_marginRight="10dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="15dp"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
@@ -120,7 +114,24 @@
                 android:autoSizeStepGranularity="1sp"
                 android:autoSizeTextType="uniform"
                 android:textStyle="bold"
+                android:layout_marginBottom="3dp"
+                android:layout_gravity="center_vertical"
                 android:id="@+id/txtRating"/>
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:layout_marginTop="0dp"
+                android:layout_marginEnd="5dp"
+                android:layout_marginBottom="4dp">
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/btnSetClimb"
+                    android:layout_gravity="end"
+                    android:layout_alignParentEnd="true"
+                    android:text="Define Climb" />
+            </RelativeLayout>
         </LinearLayout>
     </LinearLayout>
     <androidx.fragment.app.FragmentContainerView
