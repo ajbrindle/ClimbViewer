@@ -51,6 +51,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private RelativeLayout completionPanel;
     private MapFragment map;
     private ImageButton btnShowClimbs;
+    private ImageButton btnShowLabels;
     private int routeId;
     private GPXRoute route;
     private float totalDist;
@@ -67,6 +68,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private float nextClimbHeight;
     private int nextClimbCounter;
     private boolean showingClimbs;
+    private boolean showingLabels;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
     private static final int DEFAULT_TRANSPARENCY = 190;
@@ -134,6 +136,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     LatLng ll = fullRouteView.getLatLongAtX((int)motionEvent.getX());
                     if (ll != null) {
                         map.showPosition(ll);
+                        showClimbMarker((int)motionEvent.getX(), ll);
                     }
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
                     fullRouteView.setShowGradientAt(-1);
@@ -145,6 +148,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
 
         btnShowClimbs = (ImageButton) findViewById(R.id.showClimbsBtn);
+        btnShowLabels = (ImageButton) findViewById(R.id.showLabelsBtn);
+        btnShowLabels.setVisibility(View.GONE);
 
         if (!ignoreLocationUpdates) {
             btnShowClimbs.setVisibility(View.GONE);
@@ -164,6 +169,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 map.clearClimbTracks();
                 if (!showingClimbs) {
                     showingClimbs = true;
+                    showingLabels = false;
                     List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
                     String climbIds = climbs.stream()
                             .map(r -> String.valueOf(r.getId()))
@@ -171,6 +177,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     fullRouteView.setShowClimbsList(climbIds);
                     fullRouteView.invalidate();
                     btnShowClimbs.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
+                    btnShowLabels.setVisibility(View.VISIBLE);
 
                     for (GPXRoute climb : climbs) {
                         List<RoutePoint> pts = climb.getPoints();
@@ -178,9 +185,33 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     }
                 } else {
                     showingClimbs = false;
+                    showingLabels = false;
                     fullRouteView.setShowClimbsList("");
                     fullRouteView.invalidate();
                     btnShowClimbs.getDrawable().clearColorFilter();
+                    btnShowLabels.getDrawable().clearColorFilter();
+                    btnShowLabels.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        btnShowLabels.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!showingLabels) {
+                    showingLabels = true;
+                    map.clearClimbMarkers();
+                    btnShowLabels.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
+                    List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
+                    for (GPXRoute climb : climbs) {
+                        List<RoutePoint> pts = climb.getPoints();
+                        int midIndex = climb.getPoints().size()/2;
+                        map.setClimbIcon(climb.getName(), climb.getPoints().get(midIndex).getLat(), climb.getPoints().get(midIndex).getLon());
+                    }
+                } else {
+                    showingLabels = false;
+                    map.clearClimbMarkers();
+                    btnShowLabels.getDrawable().clearColorFilter();
                 }
             }
         });
@@ -575,5 +606,24 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         return Double.valueOf(-1);
+    }
+
+    private void showClimbMarker(int x, LatLng ll) {
+        if (showingLabels || fullRouteView.getClimbCoords() == null) {
+            return;
+        }
+
+        boolean found = false;
+
+        for (ClimbView.ClimbCoords cc : fullRouteView.getClimbCoords()) {
+            if (cc.idAtLocation(x) > 0) {
+                found = true;
+                map.setSingleClimbIcon(cc.nameAtLocation(x), ll);
+            }
+        }
+
+        if (!found) {
+            map.clearClimbMarkers();
+        }
     }
 }

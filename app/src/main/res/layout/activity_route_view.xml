@@ -210,6 +210,19 @@
             android:scaleType="fitCenter"
             android:src="@drawable/monitor_climb_solid" />
 
+        <ImageButton
+            android:id="@+id/showLabelsBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_margin="8dp"
+            android:layout_alignTop="@id/mapView"
+            android:layout_toRightOf="@+id/showClimbsBtn"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:backgroundTint="@android:color/transparent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/signpost" />
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

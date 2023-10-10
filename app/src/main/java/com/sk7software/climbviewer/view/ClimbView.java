@@ -526,8 +526,17 @@ public class ClimbView extends View {
                 gradient = 0;
             }
 
-            climbRating = (int)((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
-                    (distance / 1000)) * 100);
+            if (elevation > 0) {
+                // Difficulty rating based on climbbybike formula (multipled by 100 to avoid messing with fractions)
+                // https://www.climbbybike.com/climb_difficulty.asp
+                float elevationAtTop = elevation + pts.get(x0Index).getElevation();
+                float extra = (elevationAtTop > 1000 ? (elevationAtTop - 1000) / 100 : 0);
+                climbRating = (int) ((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
+                        (distance / 1000) + extra) * 100);
+            } else {
+                // Don't rate descents
+                climbRating = 0;
+            }
         }
 
         DecimalFormat df1 = new DecimalFormat();
@@ -970,6 +979,10 @@ public class ClimbView extends View {
         return indexes;
     }
 
+    public List<ClimbCoords> getClimbCoords() {
+        return this.climbCoords;
+    }
+
     @Getter
     @Setter
     public class ClimbCoords {
@@ -991,5 +1004,12 @@ public class ClimbView extends View {
             }
             return "";
         }
-    }
+
+        public int idAtLocation(int x) {
+            if (x >= x0 && x <= xN) {
+                return id;
+            }
+            return -1;
+        }
+     }
 }

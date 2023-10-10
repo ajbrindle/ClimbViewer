@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
 import android.graphics.Color;
 import android.graphics.Path;
+import android.graphics.drawable.Icon;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,7 +33,9 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
+import com.google.android.material.resources.TextAppearance;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.ui.IconGenerator;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -61,6 +64,7 @@ public class MapFragment extends Fragment {
     private Polyline localTrack = null;
     private List<Polyline> localTracks = new ArrayList<>();
     private List<Polyline> climbSections = new ArrayList<>();
+    private List<Marker> climbMarkers = new ArrayList<>();
 
     private static final String TAG = MapFragment.class.getSimpleName();
     private static final int MARKER_ANIMATION_MS = 1000;
@@ -273,9 +277,38 @@ public class MapFragment extends Fragment {
         climbSections.add(map.addPolyline(lineOptions));
     }
 
+    public void setSingleClimbIcon(String name, LatLng ll) {
+        clearClimbMarkers();
+        setClimbIcon(name, ll.latitude, ll.longitude);
+    }
+    public void setClimbIcon(String name, double lat, double lon) {
+        IconGenerator iconFactory = new IconGenerator(ApplicationContextProvider.getContext());
+        iconFactory.setStyle(IconGenerator.STYLE_PURPLE);
+        iconFactory.setContentPadding(4,0,4,0);
+        iconFactory.setTextAppearance(R.style.climbMarkerTextStyle);
+        addIcon(iconFactory, name, new LatLng(lat, lon));
+    }
+
+    private void addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {
+        MarkerOptions markerOptions = new MarkerOptions()
+                .icon(BitmapDescriptorFactory.fromBitmap(iconFactory.makeIcon(text)))
+                .position(position)
+                .draggable(false)
+                .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV());
+        climbMarkers.add(map.addMarker(markerOptions));
+    }
+
     public void clearClimbTracks() {
         climbSections.forEach(c -> c.remove());
         climbSections.clear();
+        clearClimbMarkers();
+    }
+
+    public void clearClimbMarkers() {
+        if (climbMarkers != null) {
+            climbMarkers.forEach(m -> m.remove());
+            climbMarkers.clear();
+        }
     }
 
     public void plotClimbTrack(List<LatLng> points) {
