@@ -187,7 +187,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     showingClimbs = false;
                     showingLabels = false;
                     fullRouteView.setShowClimbsList("", false);
-                    fullRouteView.invalidate();us
+                    fullRouteView.invalidate();
 
                     btnShowClimbs.getDrawable().clearColorFilter();
                     btnShowLabels.getDrawable().clearColorFilter();
