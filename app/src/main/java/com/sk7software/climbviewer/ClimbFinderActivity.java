@@ -82,7 +82,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
         routeClimbView.setClimb(route, 20);
         routeClimbView.setHeight(viewHeight, false);
         routeClimbView.setTransparency(0xFF);
-        routeClimbView.setShowClimbsList(climbIds);
+        routeClimbView.setShowClimbsList(climbIds, true);
         routeClimbView.invalidate();
 
         // Zoom view is 80% of the width

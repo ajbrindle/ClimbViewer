@@ -86,6 +86,7 @@ public class ClimbView extends View {
 
     // X position where the gradient value needs to be displayed
     private int showGradientAt;
+    private boolean showInline;
 
     // Stores the profile image when it has been calculated the first time
     private Bitmap profileBitmap = null;
@@ -266,9 +267,10 @@ public class ClimbView extends View {
         startIndex = findIndexAtDistance(distance);
     }
 
-    public void setShowClimbsList(String ids) {
+    public void setShowClimbsList(String ids, boolean showInline) {
         this.showClimbsList = ids;
         this.climbCoords = null;
+        this.showInline = showInline;
     }
 
     public void setTrackDistance(double distance) {
@@ -554,7 +556,7 @@ public class ClimbView extends View {
         canvas.drawText(gradientText, calcTextPos(showGradientAt, textBounds), textBounds.height(), p);
         p.getTextBounds(distanceText, 0, distanceText.length(), textBounds);
         canvas.drawText(distanceText, calcTextPos(showGradientAt, textBounds), height-7, p);
-        if (climbCoords != null) {
+        if (climbCoords != null && showInline) {
             for (ClimbCoords c : climbCoords) {
                 String climbName = c.nameAtLocation(showGradientAt);
                 if (!"".equals(climbName)) {

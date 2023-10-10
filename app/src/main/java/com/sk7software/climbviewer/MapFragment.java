@@ -279,14 +279,18 @@ public class MapFragment extends Fragment {
 
     public void setSingleClimbIcon(String name, LatLng ll) {
         clearClimbMarkers();
-        setClimbIcon(name, ll.latitude, ll.longitude);
+        setClimbIcon(name, ll, true);
     }
-    public void setClimbIcon(String name, double lat, double lon) {
+    public void setClimbIcon(String name, LatLng ll, boolean under) {
         IconGenerator iconFactory = new IconGenerator(ApplicationContextProvider.getContext());
         iconFactory.setStyle(IconGenerator.STYLE_PURPLE);
         iconFactory.setContentPadding(4,0,4,0);
         iconFactory.setTextAppearance(R.style.climbMarkerTextStyle);
-        addIcon(iconFactory, name, new LatLng(lat, lon));
+        if (under) {
+            iconFactory.setRotation(180);
+            iconFactory.setContentRotation(180);
+        }
+        addIcon(iconFactory, name, ll);
     }
 
     private void addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {

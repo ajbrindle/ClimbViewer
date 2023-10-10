@@ -174,7 +174,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     String climbIds = climbs.stream()
                             .map(r -> String.valueOf(r.getId()))
                             .collect(Collectors.joining(","));
-                    fullRouteView.setShowClimbsList(climbIds);
+                    fullRouteView.setShowClimbsList(climbIds, false);
                     fullRouteView.invalidate();
                     btnShowClimbs.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
                     btnShowLabels.setVisibility(View.VISIBLE);
@@ -186,8 +186,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 } else {
                     showingClimbs = false;
                     showingLabels = false;
-                    fullRouteView.setShowClimbsList("");
-                    fullRouteView.invalidate();
+                    fullRouteView.setShowClimbsList("", false);
+                    fullRouteView.invalidate();us
+
                     btnShowClimbs.getDrawable().clearColorFilter();
                     btnShowLabels.getDrawable().clearColorFilter();
                     btnShowLabels.setVisibility(View.GONE);
@@ -206,7 +207,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     for (GPXRoute climb : climbs) {
                         List<RoutePoint> pts = climb.getPoints();
                         int midIndex = climb.getPoints().size()/2;
-                        map.setClimbIcon(climb.getName(), climb.getPoints().get(midIndex).getLat(), climb.getPoints().get(midIndex).getLon());
+                        map.setClimbIcon(climb.getName(), new LatLng(climb.getPoints().get(midIndex).getLat(), climb.getPoints().get(midIndex).getLon()), false);
                     }
                 } else {
                     showingLabels = false;
