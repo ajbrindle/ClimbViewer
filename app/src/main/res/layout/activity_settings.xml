@@ -55,21 +55,21 @@
         android:min="0"
         android:progress="1000" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiAutoMonitor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text="Auto-monitor climbs on route" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbTolerance"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text="Assume climbs complete when started" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbSort"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -35,14 +34,15 @@
             android:autoSizeMinTextSize="14sp"
             android:autoSizeStepGranularity="2sp"
             android:autoSizeTextType="uniform"
-            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:inputType="text"
             android:text="Route Name"/>
         <ImageButton
             android:id="@+id/btnEdit"
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:scaleType="fitCenter"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:backgroundTint="#ffffff"
             android:src="@drawable/edit_pencil"/>
         <ImageButton
@@ -50,7 +50,7 @@
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:scaleType="fitCenter"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:backgroundTint="#ffffff"
             android:src="@drawable/tick_ok"
             android:visibility="gone"/>
@@ -175,7 +175,7 @@
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="OFF ROUTE"
-                    android:textColor="@color/reddish"
+                    android:textColor="?attr/colorError"
                     android:shadowColor="#000000"
                     android:shadowDx="1.5"
                     android:shadowDy="1.3"
@@ -200,8 +200,8 @@
 
         <ImageButton
             android:id="@+id/showClimbsBtn"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_margin="8dp"
             android:layout_alignTop="@id/mapView"
             android:padding="0dp"
@@ -212,9 +212,9 @@
 
         <ImageButton
             android:id="@+id/showLabelsBtn"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_margin="8dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
             android:layout_alignTop="@id/mapView"
             android:layout_toRightOf="@+id/showClimbsBtn"
             android:padding="0dp"

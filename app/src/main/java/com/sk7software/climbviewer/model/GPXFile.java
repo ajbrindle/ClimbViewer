@@ -2,7 +2,6 @@ package com.sk7software.climbviewer.model;
 
 import android.util.Log;
 
-import com.google.gson.Gson;
 import com.sk7software.climbviewer.db.Database;
 
 import org.simpleframework.xml.Element;

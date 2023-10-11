@@ -1,10 +1,5 @@
 package com.sk7software.climbviewer.view;
 
-import android.graphics.Color;
-
-import java.util.List;
-
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 

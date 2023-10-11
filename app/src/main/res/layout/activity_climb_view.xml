@@ -29,6 +29,7 @@
                 android:autoSizeStepGranularity="2sp"
                 android:autoSizeTextType="uniform"
                 android:layout_alignParentLeft="true"
+                android:inputType="text"
                 android:text="Climb Name"/>
             <ImageButton
                 android:id="@+id/btnEdit"

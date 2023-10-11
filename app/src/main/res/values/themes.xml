@@ -12,6 +12,7 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
+        <item name="colorError">#B00020</item>
         <!--
         <item name="android:textViewStyle">@style/RideMeisterTextStyle</item>
         <item name="android:buttonStyle">@style/RideMeisterButtonStyle</item>
@@ -63,6 +64,11 @@
     <style name="climbMarkerTextStyle">
         <item name="android:fontFamily">@font/gabarito_medium</item>
         <item name="android:textSize">12sp</item>
+        <item name="android:textColor">#ffff00</item>
+    </style>
+    <style name="climbMarkerBigTextStyle">
+        <item name="android:fontFamily">@font/gabarito_medium</item>
+        <item name="android:textSize">24sp</item>
         <item name="android:textColor">#ffff00</item>
     </style>
 

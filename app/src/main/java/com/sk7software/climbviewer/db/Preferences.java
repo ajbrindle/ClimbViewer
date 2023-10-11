@@ -1,7 +1,5 @@
 package com.sk7software.climbviewer.db;
 
-import static java.lang.reflect.Array.getInt;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 

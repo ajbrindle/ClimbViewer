@@ -5,8 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Point;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.WindowManager;
+
+import androidx.core.content.ContextCompat;
 
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
@@ -117,5 +120,11 @@ public class ScreenController {
         Point size = new Point();
         display.getSize(size);
         return size;
+    }
+
+    public static int getThemeColour(Context ctxt, int attrId) {
+        TypedValue typedValue = new TypedValue();
+        ctxt.getTheme().resolveAttribute(attrId, typedValue, true);
+        return ContextCompat.getColor(ctxt, typedValue.resourceId);
     }
 }

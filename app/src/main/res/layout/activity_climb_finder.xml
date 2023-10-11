@@ -39,7 +39,7 @@
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="@color/teal_200"
+                app:tint="?attr/colorSecondary"
                 android:src="@drawable/circle_chevron_right_solid"/>
             <ImageButton
                 android:layout_width="wrap_content"
@@ -53,7 +53,7 @@
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="@color/purple_500"
+                app:tint="?attr/colorPrimary"
                 android:src="@drawable/circle_chevron_left_solid"/>
             <ImageButton
                 android:layout_width="wrap_content"
@@ -67,7 +67,7 @@
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="@color/teal_200"
+                app:tint="?attr/colorSecondary"
                 android:src="@drawable/circle_chevron_left_solid"/>
             <ImageButton
                 android:layout_width="wrap_content"
@@ -81,7 +81,7 @@
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 app:backgroundTint="#00ffffff"
-                app:tint="@color/purple_500"
+                app:tint="?attr/colorPrimary"
                 android:src="@drawable/circle_chevron_right_solid"/>
         </RelativeLayout>
         <LinearLayout

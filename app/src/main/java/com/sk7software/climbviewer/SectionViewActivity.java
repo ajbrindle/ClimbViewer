@@ -2,22 +2,15 @@ package com.sk7software.climbviewer;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.RippleDrawable;
-import android.graphics.drawable.ShapeDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -209,7 +202,6 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             LatLng climbPoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
             map.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
                     ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.LARGE);
-
             if (plotType == MapFragment.PlotType.PURSUIT) {
                 mirrorMap.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
                         ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);

@@ -1,19 +1,15 @@
 package com.sk7software.climbviewer;
 
-import static android.app.PendingIntent.getActivity;
-
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.text.InputType;
-import android.util.Log;
 import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -32,9 +28,7 @@ import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
-import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
-import com.sk7software.climbviewer.model.TrackSegment;
 import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.PlotPoint;
 import com.sk7software.climbviewer.view.ScreenController;

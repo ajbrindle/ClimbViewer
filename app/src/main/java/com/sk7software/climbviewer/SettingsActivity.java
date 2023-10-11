@@ -1,17 +1,15 @@
 package com.sk7software.climbviewer;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.CompoundButton;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 
-import com.sk7software.climbviewer.db.Preferences;
+import androidx.appcompat.app.AppCompatActivity;
 
-import java.nio.channels.SelectionKey;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.sk7software.climbviewer.db.Preferences;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -32,16 +30,16 @@ public class SettingsActivity extends AppCompatActivity {
         int warn = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_CLIMB_WARNING, 1000);
         boolean sortRating = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, false);
 
-        SeekBar smoothDist = (SeekBar)findViewById(R.id.seekSmoothDistance);
-        SeekBar delayS = (SeekBar)findViewById(R.id.seekScreenDelay);
-        SeekBar climbWarn = (SeekBar)findViewById(R.id.seekClimbWarn);
-        Switch autoMonitor = (Switch)findViewById(R.id.swiAutoMonitor);
-        Switch ultraTolerance = (Switch)findViewById(R.id.swiClimbTolerance);
-        Switch climbSort = (Switch)findViewById(R.id.swiClimbSort);
+        SeekBar smoothDist = findViewById(R.id.seekSmoothDistance);
+        SeekBar delayS = findViewById(R.id.seekScreenDelay);
+        SeekBar climbWarn = findViewById(R.id.seekClimbWarn);
+        SwitchMaterial autoMonitor = findViewById(R.id.swiAutoMonitor);
+        SwitchMaterial ultraTolerance = findViewById(R.id.swiClimbTolerance);
+        SwitchMaterial climbSort = findViewById(R.id.swiClimbSort);
 
-        TextView smoothLabel = (TextView)findViewById(R.id.txtSmoothDistance);
-        TextView delayLabel = (TextView)findViewById(R.id.txtScreenDelay);
-        TextView warnLabel = (TextView)findViewById(R.id.txtClimbWarn);
+        TextView smoothLabel = findViewById(R.id.txtSmoothDistance);
+        TextView delayLabel = findViewById(R.id.txtScreenDelay);
+        TextView warnLabel = findViewById(R.id.txtClimbWarn);
 
         smoothLabel.setText(SMOOTH_LABEL + smooth + "m");
         delayLabel.setText(DELAY_LABEL + delay + "s");

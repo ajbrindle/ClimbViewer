@@ -1,6 +1,5 @@
 package com.sk7software.climbviewer.view;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -17,17 +16,13 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
 
 import com.google.android.gms.common.util.Strings;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.SphericalUtil;
-import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.DrawableUpdateInterface;
 import com.sk7software.climbviewer.LocationMonitor;
-import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.DirectionChecker;

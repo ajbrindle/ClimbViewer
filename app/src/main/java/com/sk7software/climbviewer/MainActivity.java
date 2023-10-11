@@ -2,8 +2,6 @@ package com.sk7software.climbviewer;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;

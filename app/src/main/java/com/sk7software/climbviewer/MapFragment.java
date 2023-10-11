@@ -3,9 +3,6 @@ package com.sk7software.climbviewer;
 import android.animation.ObjectAnimator;
 import android.animation.TypeEvaluator;
 import android.graphics.Color;
-import android.graphics.Path;
-import android.graphics.drawable.Icon;
-import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Property;
@@ -24,8 +21,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
-import com.google.android.gms.maps.model.Circle;
-import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -33,7 +28,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
-import com.google.android.material.resources.TextAppearance;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
@@ -277,13 +271,39 @@ public class MapFragment extends Fragment {
         climbSections.add(map.addPolyline(lineOptions));
     }
 
+    public void animateClimbNameIcon(String name, LatLng ll) {
+        if (!mapReady) {
+            return;
+        }
+
+        if (climbMarkers != null && !climbMarkers.isEmpty()) {
+            Marker m = climbMarkers.get(0);
+            List<LatLng> lls = new ArrayList<>();
+            lls.add(m.getPosition());
+            lls.add(ll);
+            animateMarker(m, lls, new LatLngInterpolator.Linear());
+            return;
+        }
+
+        IconGenerator iconFactory = new IconGenerator(ApplicationContextProvider.getContext());
+        iconFactory.setStyle(IconGenerator.STYLE_WHITE);
+        iconFactory.setColor(Color.parseColor("#333333"));
+        iconFactory.setContentPadding(4,0,4,0);
+        iconFactory.setTextAppearance(R.style.climbMarkerBigTextStyle);
+        iconFactory.setRotation(180);
+        iconFactory.setContentRotation(180);
+        addIcon(iconFactory, name, ll);
+    }
+
     public void setSingleClimbIcon(String name, LatLng ll) {
         clearClimbMarkers();
         setClimbIcon(name, ll, true);
     }
+
     public void setClimbIcon(String name, LatLng ll, boolean under) {
         IconGenerator iconFactory = new IconGenerator(ApplicationContextProvider.getContext());
-        iconFactory.setStyle(IconGenerator.STYLE_PURPLE);
+        iconFactory.setStyle(IconGenerator.STYLE_WHITE);
+        iconFactory.setColor(Color.parseColor("#333333"));
         iconFactory.setContentPadding(4,0,4,0);
         iconFactory.setTextAppearance(R.style.climbMarkerTextStyle);
         if (under) {

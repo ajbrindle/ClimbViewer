@@ -1,48 +1,36 @@
 package com.sk7software.climbviewer;
 
-import android.Manifest;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
-
-import android.text.TextUtils;
-import android.util.Log;
-import android.util.TypedValue;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
-import android.widget.TextView;
 
 import com.google.android.material.button.MaterialButton;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.list.RouteListActivity;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackSegment;
-import com.sk7software.climbviewer.view.SummaryPanel;
+import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.ArrayList;
@@ -136,7 +124,7 @@ public class RoutesFragment extends Fragment {
                 } else {
                     animations.forEach(a -> a.cancel());
                     animations.clear();
-                    followRouteButton.setBackgroundColor(getResources().getColor(R.color.purple_500, getActivity().getTheme()));
+                    followRouteButton.setBackgroundColor(ScreenController.getThemeColour(getContext(), R.attr.colorPrimary));
                     followRouteButton.setTextSize(24);
                     followRouteButton.setIconSize(88);
                 }
@@ -178,8 +166,8 @@ public class RoutesFragment extends Fragment {
 
     private void animateButtonBackground() {
         animations = new ArrayList<>();
-        int colorFrom = getResources().getColor(R.color.purple_500, getActivity().getTheme());
-        int colorTo = getResources().getColor(R.color.teal_200, getActivity().getTheme());
+        int colorFrom = ScreenController.getThemeColour(getContext(), R.attr.colorPrimary);
+        int colorTo = ScreenController.getThemeColour(getContext(), R.attr.colorSecondary);
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo);
         colorAnimation.setDuration(1500); // milliseconds
         colorAnimation.setRepeatMode(ValueAnimator.REVERSE);

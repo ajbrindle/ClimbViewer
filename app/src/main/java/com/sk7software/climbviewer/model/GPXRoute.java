@@ -1,13 +1,8 @@
 package com.sk7software.climbviewer.model;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
-import com.google.android.gms.maps.model.LatLng;
-import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.view.PlotPoint;
 
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
