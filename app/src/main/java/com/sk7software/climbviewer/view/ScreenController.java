@@ -14,11 +14,11 @@ import androidx.core.content.ContextCompat;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.MainActivity;
-import com.sk7software.climbviewer.MapFragment;
 import com.sk7software.climbviewer.PositionMonitor;
 import com.sk7software.climbviewer.RouteViewActivity;
 import com.sk7software.climbviewer.SectionViewActivity;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.maps.IMapFragment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,18 +37,18 @@ public class ScreenController {
         return INSTANCE;
     }
 
-    public MapFragment.PlotType getNextPlotType(MapFragment.PlotType currentType, boolean inPursuit) {
+    public IMapFragment.PlotType getNextPlotType(IMapFragment.PlotType currentType, boolean inPursuit) {
         // For climbs, loop through selected screens
         if (ClimbController.getInstance().isAttemptInProgress()) {
-            List<MapFragment.PlotType> availableScreens = new ArrayList<>();
+            List<IMapFragment.PlotType> availableScreens = new ArrayList<>();
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D)) {
-                availableScreens.add(MapFragment.PlotType.NORMAL);
+                availableScreens.add(IMapFragment.PlotType.NORMAL);
             }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_ELEVATION)) {
-                availableScreens.add(MapFragment.PlotType.FULL_CLIMB);
+                availableScreens.add(IMapFragment.PlotType.FULL_CLIMB);
             }
             if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_PURSUIT) && inPursuit) {
-                availableScreens.add(MapFragment.PlotType.PURSUIT);
+                availableScreens.add(IMapFragment.PlotType.PURSUIT);
             }
 
             if (availableScreens.size() == 1 && currentType != null && currentType == availableScreens.get(0)) {

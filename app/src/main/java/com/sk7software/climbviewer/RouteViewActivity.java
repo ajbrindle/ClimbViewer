@@ -20,12 +20,15 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
+import com.sk7software.climbviewer.maps.IMapFragment;
+import com.sk7software.climbviewer.maps.MapFragmentFactory;
+import com.sk7software.climbviewer.maps.MapProvider;
+import com.sk7software.climbviewer.maps.MapType;
 import com.sk7software.climbviewer.model.DirectionChecker;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -49,7 +52,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private RelativeLayout offRoutePanel;
     private RelativeLayout routeInfoPanel;
     private RelativeLayout completionPanel;
-    private MapFragment map;
+    private IMapFragment map;
     private ImageButton btnShowClimbs;
     private ImageButton btnShowLabels;
     private int routeId;
@@ -137,10 +140,15 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     if (ll != null) {
                         map.showPosition(ll);
                         showClimbMarker((int)motionEvent.getX(), ll);
+                    } else {
+                        map.clearClimbMarkers();
                     }
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
                     fullRouteView.setShowGradientAt(-1);
                     map.showPosition(null);
+                    if (!showingLabels) {
+                        map.clearClimbMarkers();
+                    }
                 }
                 fullRouteView.invalidate();
                 return true;
@@ -181,7 +189,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
                     for (GPXRoute climb : climbs) {
                         List<RoutePoint> pts = climb.getPoints();
-                        map.plotClimbTrackFromRoutePoints(pts);
+                        map.plotClimbTrackFromRoutePoints(climb.getName(), pts);
                     }
                 } else {
                     showingClimbs = false;
@@ -204,11 +212,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     map.clearClimbMarkers();
                     btnShowLabels.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
                     List<GPXRoute> climbs = TrackFile.findClimbsOnTrackFromPoints(route);
-                    for (GPXRoute climb : climbs) {
-                        List<RoutePoint> pts = climb.getPoints();
-                        int midIndex = climb.getPoints().size()/2;
-                        map.setClimbIcon(climb.getName(), new LatLng(climb.getPoints().get(midIndex).getLat(), climb.getPoints().get(midIndex).getLon()), false);
-                    }
+                    map.showClimbLabels(climbs);
                 } else {
                     showingLabels = false;
                     map.clearClimbMarkers();
@@ -287,14 +291,22 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             panel.showSummary(completionPanel, lastClimbId, this);
         }
 
-        map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
+        Map<MapProvider, Integer> mapFragments = setMapFragmentIds();
+        map = MapFragmentFactory.getProviderMap(this, mapFragments);
 
         if (ClimbController.getInstance().isRouteInProgress()) {
             setMapForFollowing();
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
         } else {
-            map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
+            map.setMapType(MapType.NORMAL, IMapFragment.PlotType.ROUTE, false);
         }
+    }
+
+    private Map<MapProvider, Integer> setMapFragmentIds() {
+        Map<MapProvider, Integer> fragmentIds = new HashMap<>();
+        fragmentIds.put(MapProvider.GOOGLE_MAPS, R.id.mapView);
+        fragmentIds.put(MapProvider.MAPBOX, R.id.mapboxView);
+        return fragmentIds;
     }
 
     @Override
@@ -359,8 +371,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         if (ClimbController.getInstance().isRouteInProgress()) {
-            Log.d(TAG, "Climb view initialised: " + fullRouteView.isInitialised());
-
             if (!fullRouteView.isInitialised()) {
                 return;
             }
@@ -368,7 +378,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             fullRouteView.invalidate();
             updateDistAndElevation();
 
-            Log.d(TAG, "Position camera");
             RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getSnappedPosition();
             if (map != null && snappedPos != null) {
                 lastRoutePoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
@@ -430,9 +439,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     }
 
     private void setMapForFollowing() {
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FOLLOW_ROUTE, false);
+        map.setMapType(MapType.NORMAL, IMapFragment.PlotType.FOLLOW_ROUTE, false);
         map.setZoom(18);
-        map.setTilt(45);
+        map.setTilt(1);
         map.setCentre(ClimbController.getInstance().getLastPointLL());
     }
 

@@ -17,8 +17,8 @@ import java.util.Map;
 public class PositionMarker {
 
     public enum Size {
-        TINY(0.3f),
-        SMALL(0.5f),
+        TINY(0.5f),
+        SMALL(0.85f),
         MEDIUM(1.0f),
         LARGE(1.5f);
 
@@ -67,7 +67,7 @@ public class PositionMarker {
         Context context = ApplicationContextProvider.getContext();
         float scaleFac = size.getScale();
 
-        int right = (int) (82 * scaleFac);
+        int right = (int) (82    * scaleFac);
         int bottom = (int) (107 * scaleFac);
         Drawable background = ContextCompat.getDrawable(context, R.drawable.ic_map_marker_solid);
         background.setBounds(0, 0, right, bottom);

@@ -11,13 +11,17 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.maps.IMapFragment;
+import com.sk7software.climbviewer.maps.MapFragmentFactory;
+import com.sk7software.climbviewer.maps.MapProvider;
+import com.sk7software.climbviewer.maps.MapType;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -30,6 +34,8 @@ import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SectionViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
     // Segment
@@ -38,10 +44,10 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     private ClimbView climbView;
 
     // Maps (mirror is for pursuit mode)
-    private MapFragment map;
-    private MapFragment mirrorMap;
+    private IMapFragment map;
+    private IMapFragment mirrorMap;
     private LocationMonitor monitor;
-    private LinearLayout mirrorPanel;
+    private RelativeLayout mirrorPanel;
 
     // Panels
     private TextView txtPanel1;
@@ -59,7 +65,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
     // State
     private long loadTime;
-    private MapFragment.PlotType plotType;
+    private IMapFragment.PlotType plotType;
 
     private static final String TAG = SectionViewActivity.class.getSimpleName();
     private static final int DEFAULT_DISPLAY_INTERVAL = 15;
@@ -97,8 +103,11 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         // Load first screen type
         plotType = null;
         mirrorPanel = findViewById(R.id.mirror);
-        map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
-        mirrorMap = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mirrorMap);
+
+        map = MapFragmentFactory.getProviderMap(this, setMapFragmentIds());
+        mirrorMap = MapFragmentFactory.getProviderMap(this, setMirrorMapFragmentIds());
+        mirrorMap.setMapType(MapType.HYBRID, null, true);
+
         loadNextScreen(true, null);
 
         if (ClimbController.getInstance().isAttemptInProgress()) {
@@ -127,6 +136,23 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         SummaryPanel.setVisible(false);
     }
 
+    private Map<MapProvider, Integer> setMapFragmentIds() {
+        Map<MapProvider, Integer> fragmentIds = new HashMap<>();
+        fragmentIds.put(MapProvider.GOOGLE_MAPS, R.id.mapView);
+        fragmentIds.put(MapProvider.MAPBOX, R.id.mapboxView);
+        return fragmentIds;
+    }
+
+    private Map<MapProvider, Integer> setMirrorMapFragmentIds() {
+        Map<MapProvider, Integer> fragmentIds = new HashMap<>();
+        fragmentIds.put(MapProvider.GOOGLE_MAPS, R.id.mirrorMap);
+        fragmentIds.put(MapProvider.MAPBOX, R.id.mirrorMapbox);
+        return fragmentIds;
+    }
+
+    private void destroyMirrorMap() {
+        MapFragmentFactory.removeFragment(this, setMirrorMapFragmentIds());
+    }
     @Override
     protected void onResume() {
         super.onResume();
@@ -202,7 +228,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             LatLng climbPoint = new LatLng(snappedPos.getLat(), snappedPos.getLon());
             map.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
                     ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.LARGE);
-            if (plotType == MapFragment.PlotType.PURSUIT) {
+            if (plotType == IMapFragment.PlotType.PURSUIT) {
                 mirrorMap.addMarker(climbPoint, ClimbController.PointType.ATTEMPT,
                         ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);
             }
@@ -213,23 +239,25 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                     map.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
                             ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.LARGE);
 
-                    if (plotType == MapFragment.PlotType.PURSUIT) {
+                    if (plotType == IMapFragment.PlotType.PURSUIT) {
                         mirrorMap.addMarker(new LatLng(pbPos.getLat(), pbPos.getLon()),
                                 ClimbController.PointType.PB, Color.GREEN, PositionMarker.Size.MEDIUM);
 
                         if (ClimbController.getInstance().getDistToPB() > 20) {
                             mirrorPanel.setVisibility(View.VISIBLE);
+                            mirrorMap.show(true);
                         } else {
-                            mirrorPanel.setVisibility(View.INVISIBLE);
+                            mirrorPanel.setVisibility(View.GONE);
+                            mirrorMap.show(false);
                         }
                     }
                 }
             }
 
             // Move camera (and adjust zoom if it is pursuit mode)
-            map.moveCamera(snappedPos, false, plotType == MapFragment.PlotType.PURSUIT);
+            map.moveCamera(snappedPos, false, plotType == IMapFragment.PlotType.PURSUIT);
 
-            if (plotType == MapFragment.PlotType.PURSUIT) {
+            if (plotType == IMapFragment.PlotType.PURSUIT) {
                 mirrorMap.moveCamera(snappedPos, true, true);
             }
         }
@@ -302,7 +330,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     }
 
     private void loadNextScreen(boolean firstLoad, RoutePoint centre) {
-        MapFragment.PlotType currentType = plotType;
+        IMapFragment.PlotType currentType = plotType;
         boolean inPursuit = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.PB) != null
                 && !ClimbController.getInstance().isPbFinished();
         plotType = ScreenController.getInstance().getNextPlotType(currentType, inPursuit);
@@ -320,27 +348,28 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             map.setCentre(ClimbController.getInstance().getLastPointLL());
         }
 
-        if (plotType == MapFragment.PlotType.FULL_CLIMB) {
-            mirrorPanel.setVisibility(View.INVISIBLE);
-            map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.FULL_CLIMB, false);
+        if (plotType == IMapFragment.PlotType.FULL_CLIMB) {
+            mirrorPanel.setVisibility(View.GONE);
+            mirrorMap.show(false);
+            map.setMapType(MapType.NORMAL, IMapFragment.PlotType.FULL_CLIMB, false);
             map.setZoom(18);
-            map.setTilt(45);
+            map.setTilt(1);
             if (centre != null) {
                 map.setCentre(new LatLng(centre.getLat(), centre.getLon()));
             }
-        } else if (plotType == MapFragment.PlotType.PURSUIT) {
-            map.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, false);
-            map.setTilt(67.5f);
-            mirrorMap.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, true);
+        } else if (plotType == IMapFragment.PlotType.PURSUIT) {
+            map.setMapType(MapType.HYBRID, IMapFragment.PlotType.PURSUIT, false);
+            map.setTilt(2);
             mirrorMap.setCentre(ClimbController.getInstance().getLastPointLL());
-            mirrorMap.setTilt(67.5f);
+            mirrorMap.setTilt(2);
             if (centre != null) {
                 map.setCentre(new LatLng(centre.getLat(), centre.getLon()));
                 mirrorMap.setCentre(new LatLng(centre.getLat(), centre.getLon()));
             }
-        } else if (plotType == MapFragment.PlotType.NORMAL) {
-            mirrorPanel.setVisibility(View.INVISIBLE);
-            map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);
+        } else if (plotType == IMapFragment.PlotType.NORMAL) {
+            mirrorPanel.setVisibility(View.GONE);
+            mirrorMap.show(false);
+            map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
             map.setTilt(0);
         }
 

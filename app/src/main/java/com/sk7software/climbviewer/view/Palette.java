@@ -44,18 +44,23 @@ public class Palette {
 
     public static int getColour(double elevation) {
         if (elevation <= MIN_ANGLE) {
-            return colours[0].getRgb();
+            return colours[0].getRgb().intValue();
         } else if (elevation >= MAX_ANGLE) {
-            return colours[colours.length-1].getRgb();
+            return colours[colours.length-1].getRgb().intValue();
         }
 
         for (PaletteColour colour : colours) {
             if (colour.getElevation() >= elevation) {
-                return colour.getRgb();
+                return colour.getRgb().intValue();
             }
         }
 
         // Unreachable
         return 0xFF000000;
+    }
+
+    public static String getColourRGB(double elevation) {
+        int colourVal = Palette.getColour(elevation);
+        return "#" + Integer.toHexString(colourVal & 0x00FFFFFF).toUpperCase();
     }
 }

@@ -26,6 +26,7 @@ public class Preferences {
     public static final String PREFERENCES_CLIMB_START_TIME = "PREF_START_TIME";
     public static final String PREFERENCES_TRANSPARENCY = "PREF_TRANSPARENCY";
     public static final String PREFERENCES_CLIMB_LABELS = "PREF_CLIMB_LABELS";
+    public static final String PREFERENCES_MAP_TYPE = "PREF_MAP_TYPE";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

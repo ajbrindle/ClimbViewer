@@ -18,10 +18,13 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.maps.IMapFragment;
+import com.sk7software.climbviewer.maps.MapFragmentFactory;
+import com.sk7software.climbviewer.maps.MapProvider;
+import com.sk7software.climbviewer.maps.MapType;
 import com.sk7software.climbviewer.model.AttemptStats;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -30,13 +33,15 @@ import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.PositionMarker;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ClimbViewActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
     private ClimbView elevationView;
     private int elevationViewX;
-    private MapFragment map;
+    private IMapFragment map;
     private int climbId;
     private GPXRoute climb;
     private boolean infoShown;
@@ -54,12 +59,14 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         setContentView(R.layout.activity_climb_view);
         getSupportActionBar().hide();
 
+
         infoShown = false;
         map3dView = false;
         acceptMoveEvent = true;
         climbId = getIntent().getIntExtra("id", 0);
         climb = Database.getInstance().getClimb(climbId);
         ClimbController.getInstance().loadClimb(climb);
+
 
         txtClimbName = (EditText) findViewById(R.id.txtClimbName);
         txtClimbName.setText(climb.getName());
@@ -153,8 +160,9 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             }
         });
 
-        map = (MapFragment)getSupportFragmentManager().findFragmentById(R.id.mapView);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);
+        Map<MapProvider, Integer> mapFragments = setMapFragmentIds();
+        map = MapFragmentFactory.getProviderMap(this, mapFragments);
+        map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
 
         Button btn3d = findViewById(R.id.btn3d);
         LinearLayout panelInfo = findViewById(R.id.panelClimbInfo);
@@ -165,7 +173,6 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 map.setZoom(seekBar.getProgress());
                 map.updateMap();
-                map.plotTrack();
                 moveMapCamera(elevationViewX);
             }
 
@@ -185,8 +192,8 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     btn3d.setText("2D");
                     panelInfo.setVisibility(View.GONE);
                     zoomLevel.setVisibility(View.VISIBLE);
-                    map.setMapType(GoogleMap.MAP_TYPE_HYBRID, MapFragment.PlotType.PURSUIT, false);
-                    map.setTilt(67.5f);
+                    map.setMapType(MapType.HYBRID, IMapFragment.PlotType.PURSUIT, false);
+                    map.setTilt(2);
                     map.setZoom(zoomLevel.getProgress());
                     map.updateMap();
                     map.plotTrack();
@@ -196,22 +203,41 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     btn3d.setText("3D");
                     panelInfo.setVisibility(View.VISIBLE);
                     zoomLevel.setVisibility(View.GONE);
-                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.NORMAL, false);
+                    map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
+                    map.setTilt(0);
                     map.updateMap();
-                    map.plotTrack();
+
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    map.plotTrack();
+                                }
+                            });
+                        }
+                    }).start();
                 }
             }
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+    private Map<MapProvider, Integer> setMapFragmentIds() {
+        Map<MapProvider, Integer> fragmentIds = new HashMap<>();
+        fragmentIds.put(MapProvider.GOOGLE_MAPS, R.id.mapView);
+        fragmentIds.put(MapProvider.MAPBOX, R.id.mapboxView);
+        return fragmentIds;
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onResume() {
+        super.onResume();
     }
 
     @Override

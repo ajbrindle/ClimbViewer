@@ -22,8 +22,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.maps.IMapFragment;
+import com.sk7software.climbviewer.maps.MapFragmentFactory;
+import com.sk7software.climbviewer.maps.MapProvider;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -33,12 +35,14 @@ import com.sk7software.climbviewer.view.ClimbView;
 import com.sk7software.climbviewer.view.PlotPoint;
 import com.sk7software.climbviewer.view.ScreenController;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ClimbFinderActivity extends AppCompatActivity implements DrawableUpdateInterface {
 
-    private MapFragment map;
+    private IMapFragment map;
     private ClimbView routeClimbView;
     private ClimbView zoomClimbView;
     private int routeId;
@@ -191,8 +195,7 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
             }
         });
 
-        map = (MapFragment) getSupportFragmentManager().findFragmentById(R.id.mapClimbView);
-        map.setMapType(GoogleMap.MAP_TYPE_NORMAL, MapFragment.PlotType.ROUTE, false);
+        map = MapFragmentFactory.getProviderMap(this, setMapFragmentIds());
 
         ImageButton findAuto = findViewById(R.id.btnAuto);
         defineClimb = findViewById(R.id.btnSetClimb);
@@ -218,6 +221,13 @@ public class ClimbFinderActivity extends AppCompatActivity implements DrawableUp
                 showCreateClimbDialog(route.getName() + " climb");
             }
         });
+    }
+
+    private Map<MapProvider, Integer> setMapFragmentIds() {
+        Map<MapProvider, Integer> fragmentIds = new HashMap<>();
+        fragmentIds.put(MapProvider.GOOGLE_MAPS, R.id.mapClimbView);
+        fragmentIds.put(MapProvider.MAPBOX, R.id.mapboxClimbView);
+        return fragmentIds;
     }
 
     private void showClimbRating() {

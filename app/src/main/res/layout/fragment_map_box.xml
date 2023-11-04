@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:mapbox="http://schemas.android.com/apk/res-auto"
+    tools:context=".maps.MapBoxFragment">
+
+    <com.mapbox.maps.MapView xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/map3dView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        mapbox:mapbox_mapSurface="texture_view"
+        android:visibility="visible" />
+</androidx.constraintlayout.widget.ConstraintLayout>
