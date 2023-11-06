@@ -101,4 +101,12 @@
             android:text="MapBox" />
     </RadioGroup>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:id="@+id/btnMapBoxSettings"
+        android:text="MapBox Settings"
+        android:visibility="gone"/>
+
 </LinearLayout>

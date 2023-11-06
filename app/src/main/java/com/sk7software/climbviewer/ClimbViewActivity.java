@@ -96,7 +96,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                                 float bearing = (float) elevationView.getBearingAtX((int) motionEvent.getX());
                                 acceptMoveEvent = false;
                                 lastMotionX = (int)motionEvent.getX();
-                                map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+                                map.moveCamera(mapPt, false, false, true, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
                             }
                         } else {
                             map.showPosition(ll);
@@ -166,7 +166,21 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
 
         Button btn3d = findViewById(R.id.btn3d);
         LinearLayout panelInfo = findViewById(R.id.panelClimbInfo);
+        LinearLayout zoomPanel = findViewById(R.id.panelZoom);
+        zoomPanel.setVisibility(View.GONE);
+
         SeekBar zoomLevel = findViewById(R.id.zoomLevel);
+        SeekBar pitchLevel = findViewById(R.id.pitchLevel);
+
+        int defaultZoom = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_DEFAULT_ZOOM, -1);
+        int defaultPitch = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_DEFAULT_PITCH, -1);
+
+        if (defaultZoom > 0) {
+            zoomLevel.setProgress(defaultZoom);
+        }
+        if (defaultPitch > 0) {
+            pitchLevel.setProgress(defaultPitch);
+        }
 
         zoomLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -174,6 +188,23 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                 map.setZoom(seekBar.getProgress());
                 map.updateMap();
                 moveMapCamera(elevationViewX);
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_DEFAULT_ZOOM, i);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        pitchLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                map.setPitch(seekBar.getProgress());
+                map.updateMap();
+                moveMapCamera(elevationViewX);
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_DEFAULT_PITCH, i);
             }
 
             @Override
@@ -191,9 +222,9 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     acceptMoveEvent = false;
                     btn3d.setText("2D");
                     panelInfo.setVisibility(View.GONE);
-                    zoomLevel.setVisibility(View.VISIBLE);
-                    map.setMapType(MapType.HYBRID, IMapFragment.PlotType.PURSUIT, false);
-                    map.setTilt(2);
+                    zoomPanel.setVisibility(View.VISIBLE);
+                    map.setMapType(MapType.HYBRID, IMapFragment.PlotType.CLIMB_3D, false);
+                    map.setPitch(pitchLevel.getProgress());
                     map.setZoom(zoomLevel.getProgress());
                     map.updateMap();
                     map.plotTrack();
@@ -202,7 +233,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     map3dView = false;
                     btn3d.setText("3D");
                     panelInfo.setVisibility(View.VISIBLE);
-                    zoomLevel.setVisibility(View.GONE);
+                    zoomPanel.setVisibility(View.GONE);
                     map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
                     map.setTilt(0);
                     map.updateMap();
@@ -256,7 +287,7 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
             mapPt.setLat(ll.latitude);
             mapPt.setLon(ll.longitude);
             float bearing = (float) elevationView.getBearingAtX(x);
-            map.moveCamera(mapPt, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
+            map.moveCamera(mapPt, false, false, false, ClimbController.PointType.ROUTE, bearing, ClimbViewActivity.this);
         }
     }
 

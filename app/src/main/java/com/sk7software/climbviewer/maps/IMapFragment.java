@@ -9,7 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -22,6 +21,7 @@ public interface IMapFragment {
     enum PlotType {
         FULL_CLIMB,
         PURSUIT,
+        CLIMB_3D,
         ROUTE,
         FOLLOW_ROUTE,
         NORMAL
@@ -49,6 +49,7 @@ public interface IMapFragment {
     void setTrackRider(boolean trackRider);
 
     void setZoom(int zoom);
+    void setPitch(int pitch);
 
     void setTilt(int tiltIdx);
 
@@ -58,7 +59,8 @@ public interface IMapFragment {
 
     void plotLocalSection(int minIdx, int maxIdx);
 
-    void plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points);
+    boolean plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points);
+    default void reloadMap() {}
 
     void setSingleClimbIcon(String name, LatLng ll);
 
@@ -72,9 +74,7 @@ public interface IMapFragment {
 
     void plotOffRouteTrack(double radius, LatLng currentPoint, float bearing);
 
-    void updateView(LatLngBounds bounds);
-
-    void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity);
+    void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, boolean keepZoomAndPitch, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity);
 
     void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB);
 

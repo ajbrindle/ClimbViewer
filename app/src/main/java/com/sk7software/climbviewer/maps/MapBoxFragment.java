@@ -14,9 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
 import com.mapbox.bindgen.Value;
@@ -29,8 +27,10 @@ import com.mapbox.maps.EdgeInsets;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.MapboxMap;
 import com.mapbox.maps.Style;
+import com.mapbox.maps.extension.observable.eventdata.CameraChangedEventData;
 import com.mapbox.maps.extension.style.StyleContract;
 import com.mapbox.maps.extension.style.StyleExtensionImpl;
+import com.mapbox.maps.extension.style.expressions.generated.Expression;
 import com.mapbox.maps.extension.style.image.ImageExtensionImpl;
 import com.mapbox.maps.extension.style.layers.generated.LineLayer;
 import com.mapbox.maps.extension.style.layers.generated.SymbolLayer;
@@ -43,10 +43,12 @@ import com.mapbox.maps.plugin.animation.CameraAnimationsPlugin;
 import com.mapbox.maps.plugin.animation.CameraAnimationsUtils;
 import com.mapbox.maps.plugin.animation.Cancelable;
 import com.mapbox.maps.plugin.animation.MapAnimationOptions;
+import com.mapbox.maps.plugin.delegates.listeners.OnCameraChangeListener;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
 import com.sk7software.climbviewer.R;
+import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -74,12 +76,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     private int zoom = 20;
     private double tilt;
     private LatLng centre;
-    private Marker locationMarkerIcon = null;
-    private int mapType;
-    private Polyline climbTrack = null;
-    private Polyline localTrack = null;
-    private List<Polyline> localTracks = new ArrayList<>();
-    private List<String> climbSections = new ArrayList<>();
+    private String mapType;
     private List<SymbolLayer> climbMarkers = new ArrayList<>();
     private StyleExtensionImpl.Builder styleBuilder;
     Map<String, LoadedLayer> loadedLayers = new HashMap<>();
@@ -94,6 +91,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     private static final String SOURCE = "source";
     private static final String LAYER = "layer";
     private static final String IMAGE = "img";
+    private static final String MAPBOX_STYLE_PREFIX = "mapbox://styles/ajbrindle/";
 
     private static final double[] TILTS = {0.0, 45.0, 80.0};
 
@@ -101,16 +99,20 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
     @Override
     public void setMapType(MapType type, IMapFragment.PlotType plotType, boolean mirror) {
+        String mapId = null;
         switch(type) {
             case NORMAL:
-                this.mapType = R.string.mapbox_style_2d;
+                mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
+                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
                 break;
             case HYBRID:
             case SATELLITE:
-                this.mapType = R.string.mapbox_style_satellite;
+                mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_3D_MAP_ID);
+                this.mapType = mapId == null ? getString(R.string.mapbox_style_satellite) : MAPBOX_STYLE_PREFIX + mapId;
                 break;
             default:
-                this.mapType = R.string.mapbox_style_3d;
+                mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
+                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
         }
         this.plotType = plotType;
     }
@@ -164,6 +166,12 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             }
         });
 
+        map.addOnCameraChangeListener(new OnCameraChangeListener() {
+            @Override
+            public void onCameraChanged(@NonNull CameraChangedEventData cameraChangedEventData) {
+            }
+        });
+
         camera = CameraAnimationsUtils.getCamera(mapView);
     }
 
@@ -182,6 +190,10 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         this.zoom = zoom;
     }
 
+    @Override
+    public void setPitch(int pitch) {
+        this.tilt = (float)pitch;
+    }
     @Override
     public void setTilt(int tiltIdx) {
         this.tilt = (float)TILTS[tiltIdx];
@@ -202,11 +214,11 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     }
 
     private StyleContract.StyleExtension showTrack() {
-        styleBuilder = new StyleExtensionImpl.Builder(getString(this.mapType));
+        styleBuilder = new StyleExtensionImpl.Builder(this.mapType);
         loadedLayers.clear();
         double trackOpacity = 0.7;
 
-        if (this.plotType == PlotType.FULL_CLIMB) {
+        if (this.plotType == PlotType.FULL_CLIMB || this.plotType == PlotType.CLIMB_3D) {
             trackOpacity = 0.0;
         }
 
@@ -227,8 +239,8 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         SymbolLayer symbol = new SymbolLayer(RIDER_PREFIX + LAYER, RIDER_PREFIX + SOURCE);
         symbol.iconImage(RIDER_PREFIX + IMAGE).iconAnchor(IconAnchor.BOTTOM).iconAllowOverlap(true);
 
-        addLoadedLayer(TRACK_PREFIX, trackJsonSource, false);
-        addLoadedLayer(RIDER_PREFIX, symbolJsonSource, false);
+        addLoadedLayer(TRACK_PREFIX, trackJsonSource, false, false);
+        addLoadedLayer(RIDER_PREFIX, symbolJsonSource, false, false);
 
         styleBuilder.addSource(trackJsonSource);
         styleBuilder.addLayer(linelayer);
@@ -240,6 +252,8 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         if (this.plotType == PlotType.FULL_CLIMB) {
             plotElevationLines(track.getPoints(), 0, track.getPoints().size()-1, 60, true);
+        } else if (this.plotType == PlotType.CLIMB_3D) {
+            plotElevationLines(track.getPoints(), 0, track.getPoints().size()-1, 6, true);
         }
 
         return styleBuilder.build();
@@ -259,6 +273,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
     @Override
     public void plotLocalSection(int minIdx, int maxIdx) {
+        Log.d(TAG, "Plot local section: " + minIdx + " to " + maxIdx);
         if (!mapReady || track == null) {
             return;
         }
@@ -271,11 +286,12 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             maxIdx = track.getPoints().size()-1;
         }
 
+        Log.d(TAG, "Adjusted to: " + minIdx + " to " + maxIdx);
         plotElevationLines(track.getPoints(), minIdx, maxIdx, 21, false);
     }
 
     @Override
-    public void plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points) {
+    public boolean plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points) {
         if (!isLayerAdded(getClimbTrackLayerPrefix(name))) {
             List<Point> trackCoordinates = new ArrayList<>();
             for (RoutePoint pt : points) {
@@ -289,28 +305,44 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             LineLayer linelayer = new LineLayer(getClimbTrackLayerPrefix(name) + LAYER, getClimbTrackLayerPrefix(name) + SOURCE);
             linelayer.lineWidth(5).lineColor("#555555").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
 
-            addLoadedLayer(getClimbTrackLayerPrefix(name), geoJsonSource, false);
+            addLoadedLayer(getClimbTrackLayerPrefix(name), geoJsonSource, false, true);
             styleBuilder.addSource(geoJsonSource);
             styleBuilder.addLayer(linelayer);
-            map.loadStyle(styleBuilder.build());
+            createClimbLabelIcon(name, new LatLng(points.get(0).getLat(), points.get(0).getLon()), true);
+            return true;
         } else {
             // Make existing loaded layer visible
             map.getStyle().setStyleLayerProperty(getClimbTrackLayerPrefix(name) + LAYER, "visibility", new Value(Visibility.VISIBLE.getValue()));
         }
+        return false;
+    }
+
+    public void reloadMap() {
+        map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
+            @Override
+            public void onStyleLoaded(@NonNull Style style) {
+                for (Map.Entry<String, LoadedLayer> layer : loadedLayers.entrySet()) {
+                    if (layer.getValue().isPending()) {
+                        layer.getValue().setLoaded(true);
+                        layer.getValue().setPending(false);
+                    }
+                }
+            }
+        });
     }
 
     private void plotElevationLines(List<RoutePoint> pts, int minIdx, int maxIdx, int width, boolean smoothed) {
         boolean first = true;
         boolean buildStyle = false;
         int count = 1;
-        for (int i=minIdx+1; i<=maxIdx; i++) {
-            String name = LOCAL_TRACK_PREFIX + count + "-";
+        List<Feature> features = new ArrayList<>();
+        String name = LOCAL_TRACK_PREFIX;
 
+        for (int i=maxIdx; i>minIdx; i--) {
             List<Point> line = new ArrayList<>();
             line.add(Point.fromLngLat(pts.get(i - 1).getLon(), pts.get(i - 1).getLat()));
             line.add(Point.fromLngLat(pts.get(i).getLon(), pts.get(i).getLat()));
             LineString lineString = LineString.fromLngLats(line);
-            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
 
             double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
             if (!smoothed) {
@@ -319,50 +351,112 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
             double gradient = elevDiff * 100 / distBetween;
 
-            if (!isLayerAdded(name)) {
-                buildStyle = true;
-                GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
+            Feature feature = Feature.fromGeometry(lineString);
+            feature.addStringProperty("color", Palette.getColourRGB(gradient));
+            features.add(feature);
+        }
 
-                LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
-                LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
-                linelayer.lineWidth(width).lineColor(Palette.getColour(gradient)).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
-                lineBorder.lineWidth(width+4).lineColor("#000000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
+        Feature[] featureArray = new Feature[features.size()];
+        featureArray = features.toArray(featureArray);
+        FeatureCollection featureCollection = FeatureCollection.fromFeatures(featureArray);
 
-                String behind;
+        if (!isLayerAdded(name)) {
+            buildStyle = true;
+            GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
 
-                if (first) {
-                    behind = TRACK_PREFIX + LAYER;
-                    first = false;
-                } else {
-                    behind = LOCAL_TRACK_PREFIX + (count - 1) + "-" + LAYER;
-                }
-                styleBuilder.addSource(trackJsonSource);
-                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(linelayer, null, behind));
-                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(lineBorder, null, name + LAYER));
-                addLoadedLayer(name, trackJsonSource, false);
-            } else {
-                LoadedLayer lineLayer = loadedLayers.get(name + LAYER);
-                if (lineLayer.isLoaded()) {
-                    map.getStyle().setStyleLayerProperty(name + LAYER, "line-color", new Value(Palette.getColourRGB(gradient)));
-                    GeoJsonSource lineSource = lineLayer.getSource();
-                    lineSource.featureCollection(featureCollection);
-                }
+            LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
+            LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
+            linelayer.lineWidth(width).lineColor(Expression.get("color")).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
+            lineBorder.lineWidth(width+4).lineColor("#000000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
+
+            styleBuilder.addSource(trackJsonSource);
+            styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(linelayer, null, TRACK_PREFIX + LAYER));
+            styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(lineBorder, null, name + LAYER));
+            addLoadedLayer(name, trackJsonSource, false, false);
+        } else {
+            LoadedLayer lineLayer = loadedLayers.get(name + LAYER);
+            if (lineLayer.isLoaded()) {
+                // As both the line and the edge use the same source, this will update both
+                GeoJsonSource lineSource = lineLayer.getSource();
+                lineSource.featureCollection(featureCollection);
             }
-            count++;
         }
 
         if (buildStyle) {
-            final int endIndex = count-1;
             map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
                 @Override
                 public void onStyleLoaded(@NonNull Style style) {
-                    for (int i=1; i<=endIndex; i++) {
-                        loadedLayers.get(LOCAL_TRACK_PREFIX + i + "-" + LAYER).setLoaded(true);
-                    }
+                    loadedLayers.get(LOCAL_TRACK_PREFIX + LAYER).setLoaded(true);
                 }
             });
         }
     }
+//    private void plotElevationLines(List<RoutePoint> pts, int minIdx, int maxIdx, int width, boolean smoothed) {
+//        boolean first = true;
+//        boolean buildStyle = false;
+//        int count = 1;
+//        List<Feature> features = new ArrayList<>();
+//
+//        for (int i=minIdx+1; i<=maxIdx; i++) {
+//            String name = LOCAL_TRACK_PREFIX + count + "-";
+//
+//            List<Point> line = new ArrayList<>();
+//            line.add(Point.fromLngLat(pts.get(i - 1).getLon(), pts.get(i - 1).getLat()));
+//            line.add(Point.fromLngLat(pts.get(i).getLon(), pts.get(i).getLat()));
+//            LineString lineString = LineString.fromLngLats(line);
+//            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
+//
+//            double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
+//            if (!smoothed) {
+//                elevDiff = pts.get(i).getElevation() - pts.get(i - 1).getElevation();
+//            }
+//            double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
+//            double gradient = elevDiff * 100 / distBetween;
+//
+//            if (!isLayerAdded(name)) {
+//                buildStyle = true;
+//                GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
+//
+//                LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
+//                LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
+//                linelayer.lineWidth(width).lineColor(Palette.getColour(gradient)).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
+//                lineBorder.lineWidth(width+4).lineColor("#000000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
+//
+//                String behind;
+//
+//                if (first) {
+//                    behind = TRACK_PREFIX + LAYER;
+//                    first = false;
+//                } else {
+//                    behind = LOCAL_TRACK_PREFIX + (count - 1) + "-" + LAYER;
+//                }
+//                styleBuilder.addSource(trackJsonSource);
+//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(linelayer, null, behind));
+//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(lineBorder, null, name + LAYER));
+//                addLoadedLayer(name, trackJsonSource, false);
+//            } else {
+//                LoadedLayer lineLayer = loadedLayers.get(name + LAYER);
+//                if (lineLayer.isLoaded()) {
+//                    map.getStyle().setStyleLayerProperty(name + LAYER, "line-color", new Value(Palette.getColourRGB(gradient)));
+//                    GeoJsonSource lineSource = lineLayer.getSource();
+//                    lineSource.featureCollection(featureCollection);
+//                }
+//            }
+//            count++;
+//        }
+//
+//        if (buildStyle) {
+//            final int endIndex = count-1;
+//            map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
+//                @Override
+//                public void onStyleLoaded(@NonNull Style style) {
+//                    for (int i=1; i<=endIndex; i++) {
+//                        loadedLayers.get(LOCAL_TRACK_PREFIX + i + "-" + LAYER).setLoaded(true);
+//                    }
+//                }
+//            });
+//        }
+//    }
 
     private String addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {
         String name = text.toString();
@@ -374,7 +468,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             SymbolLayer symbol = new SymbolLayer(getClimbLabelLayerPrefix(name, false) + LAYER, getClimbLabelLayerPrefix(name, false) + SOURCE);
             symbol.iconImage(getClimbLabelLayerPrefix(name, false) + IMAGE).iconAnchor(IconAnchor.BOTTOM).iconAllowOverlap(true);
 
-            addLoadedLayer(getClimbLabelLayerPrefix(name, false), labelJsonSource, false);
+            addLoadedLayer(getClimbLabelLayerPrefix(name, false), labelJsonSource, false, false);
             styleBuilder.addSource(labelJsonSource);
             styleBuilder.addImage(img);
             styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(symbol, getClimbTrackLayerPrefix(name) + LAYER));
@@ -402,49 +496,9 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     }
 
     @Override
-    public void updateView(LatLngBounds bounds) {
-//        if (plotType == IMapFragment.PlotType.ROUTE || plotType == IMapFragment.PlotType.NORMAL) {
-//            updateOffRouteView(bounds);
-//        } else if (plotType == IMapFragment.PlotType.FULL_CLIMB || plotType == IMapFragment.PlotType.PURSUIT || plotType == IMapFragment.PlotType.FOLLOW_ROUTE) {
-//            CameraPosition position = new CameraPosition.Builder()
-//                    .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()))
-//                    .zoom(zoom)
-//                    .bearing(0)
-//                    .tilt(tilt)
-//                    .build();
-//            map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 2000, new GoogleMap.CancelableCallback() {
-//                @Override
-//                public void onFinish() {
-//                    trackRider = true;
-//                }
-//
-//                @Override
-//                public void onCancel() {
-//                    trackRider = true;
-//                }
-//            });
-//        }
-//
-//        if (ClimbController.getInstance().isRouteInProgress()) {
-//            trackRider = true;
-//        }
-    }
-
-    @Override
     public void setSingleClimbIcon(String name, LatLng ll) {
         if (!isLayerAdded(getClimbLabelLayerPrefix(name, true))) {
-            ImageExtensionImpl img = new ImageExtensionImpl.Builder(getClimbLabelLayerPrefix(name, true) + IMAGE).bitmap(createClimbLabelIcon(true).makeIcon(name)).build();
-
-            FeatureCollection symbolCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(Point.fromLngLat(ll.longitude, ll.latitude))});
-            final GeoJsonSource climbMarkerJsonSource = new GeoJsonSource.Builder(getClimbLabelLayerPrefix(name, true) + SOURCE).featureCollection(symbolCollection).build();
-            SymbolLayer symbol = new SymbolLayer(getClimbLabelLayerPrefix(name, true) + LAYER, getClimbLabelLayerPrefix(name, true) + SOURCE);
-            symbol.iconImage(getClimbLabelLayerPrefix(name, true) + IMAGE).iconAnchor(IconAnchor.TOP).iconAllowOverlap(true);
-
-            climbMarkers.add(symbol);
-            styleBuilder.addSource(climbMarkerJsonSource);
-            styleBuilder.addImage(img);
-            styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(symbol, getClimbTrackLayerPrefix(name) + LAYER));
-            addLoadedLayer(getClimbLabelLayerPrefix(name, true), climbMarkerJsonSource, false);
+            createClimbLabelIcon(name, ll, true);
             map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
                 @Override
                 public void onStyleLoaded(@NonNull Style style) {
@@ -460,6 +514,21 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
                 map.getStyle().setStyleLayerProperty(getClimbLabelLayerPrefix(name, true) + LAYER, "visibility", new Value(Visibility.VISIBLE.getValue()));
             }
         }
+    }
+
+    private void createClimbLabelIcon(String name, LatLng ll, boolean pending) {
+        ImageExtensionImpl img = new ImageExtensionImpl.Builder(getClimbLabelLayerPrefix(name, true) + IMAGE).bitmap(createClimbLabelIcon(true).makeIcon(name)).build();
+
+        FeatureCollection symbolCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(Point.fromLngLat(ll.longitude, ll.latitude))});
+        final GeoJsonSource climbMarkerJsonSource = new GeoJsonSource.Builder(getClimbLabelLayerPrefix(name, true) + SOURCE).featureCollection(symbolCollection).build();
+        SymbolLayer symbol = new SymbolLayer(getClimbLabelLayerPrefix(name, true) + LAYER, getClimbLabelLayerPrefix(name, true) + SOURCE);
+        symbol.iconImage(getClimbLabelLayerPrefix(name, true) + IMAGE).iconAnchor(IconAnchor.TOP).iconAllowOverlap(true).visibility(pending ? Visibility.NONE : Visibility.VISIBLE);
+
+        climbMarkers.add(symbol);
+        styleBuilder.addSource(climbMarkerJsonSource);
+        styleBuilder.addImage(img);
+        styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(symbol, getClimbTrackLayerPrefix(name) + LAYER));
+        addLoadedLayer(getClimbLabelLayerPrefix(name, true), climbMarkerJsonSource, false, pending);
     }
 
     private String getClimbLabelLayerPrefix(String name, boolean under) {
@@ -499,6 +568,13 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
                 public void onStyleLoaded(@NonNull Style style) {
                     for (String newLayer : newLayers) {
                         setLayerLoaded(newLayer);
+                    }
+
+                    // Remove "under" markers
+                    for (Map.Entry<String, LoadedLayer> layer : loadedLayers.entrySet()) {
+                        if (layer.getKey().startsWith(CLIMB_LABEL_PREFIX) && layer.getKey().contains("-U-")) {
+                            map.getStyle().setStyleLayerProperty(layer.getKey(), "visibility", new Value(Visibility.NONE.getValue()));
+                        }
                     }
                 }
             });
@@ -561,7 +637,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
 
         if (!isLayerAdded(CLIMB_TRACK_PREFIX)) {
-            styleBuilder = new StyleExtensionImpl.Builder(getString(this.mapType));
+            styleBuilder = new StyleExtensionImpl.Builder(this.mapType);
             loadedLayers.clear();
             double trackOpacity = 0.7;
 
@@ -570,7 +646,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             LineLayer linelayer = new LineLayer(CLIMB_TRACK_PREFIX + LAYER, CLIMB_TRACK_PREFIX + SOURCE);
             linelayer.lineWidth(5).lineColor("#FF0000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(trackOpacity);
 
-            addLoadedLayer(CLIMB_TRACK_PREFIX, trackJsonSource, false);
+            addLoadedLayer(CLIMB_TRACK_PREFIX, trackJsonSource, false, false);
 
             styleBuilder.addSource(trackJsonSource);
             styleBuilder.addLayer(linelayer);
@@ -621,7 +697,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     }
 
     @Override
-    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, boolean keepZoomAndPitch, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
         if (zoomToPB && ptType == ClimbController.PointType.ATTEMPT) {
             float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
             zoom = 20;
@@ -638,7 +714,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             }
         }
 
-        Log.d(TAG, "Moving camera");
         camera.easeTo(
                 new CameraOptions.Builder()
                         .center(Point.fromLngLat(point.getLon(), point.getLat()))
@@ -681,7 +756,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
 
-        moveCamera(point, isMirror, zoomToPB, ptType, bearing, null);
+        moveCamera(point, isMirror, zoomToPB, false, ptType, bearing, null);
     }
 
     @Override
@@ -706,7 +781,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             SymbolLayer symbol = new SymbolLayer(riderTrackPrefix + LAYER, riderTrackPrefix + SOURCE);
             symbol.iconImage(riderTrackPrefix + IMAGE).iconAnchor(IconAnchor.BOTTOM).iconAllowOverlap(true);
 
-            addLoadedLayer(riderTrackPrefix, symbolJsonSource, false);
+            addLoadedLayer(riderTrackPrefix, symbolJsonSource, false, false);
             styleBuilder.addSource(symbolJsonSource);
             styleBuilder.addImage(img);
             styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(symbol, TRACK_PREFIX + LAYER, null));
@@ -807,8 +882,8 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             mapView.onDestroy();
     }
 
-    public void addLoadedLayer(String prefix, GeoJsonSource source, boolean beenRemoved) {
-        LoadedLayer layer = new LoadedLayer(source, beenRemoved, false);
+    private void addLoadedLayer(String prefix, GeoJsonSource source, boolean beenRemoved, boolean pending) {
+        LoadedLayer layer = new LoadedLayer(source, beenRemoved, false, pending);
         loadedLayers.put(prefix + LAYER, layer);
     }
 
@@ -820,6 +895,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         private GeoJsonSource source;
         private boolean beenRemoved;
         private boolean loaded;
+        private boolean pending;
 
     }
 }

@@ -1,7 +1,9 @@
 package com.sk7software.climbviewer;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.SeekBar;
@@ -124,11 +126,17 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
+        final Button btnMapBoxSettings = findViewById(R.id.btnMapBoxSettings);
+        if (provider == MapProvider.MAPBOX) {
+            btnMapBoxSettings.setVisibility(View.VISIBLE);
+        }
+
         radGoogle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if (b) {
                     Preferences.getInstance().addPreference(Preferences.PREFERENCES_MAP_TYPE, MapProvider.GOOGLE_MAPS.getValue());
+                    btnMapBoxSettings.setVisibility(View.GONE);
                 }
             }
         });
@@ -138,23 +146,17 @@ public class SettingsActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if (b) {
                     Preferences.getInstance().addPreference(Preferences.PREFERENCES_MAP_TYPE, MapProvider.MAPBOX.getValue());
+                    btnMapBoxSettings.setVisibility(View.VISIBLE);
                 }
             }
         });
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                onBackPressed();
-                break;
-        }
-        return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        finish();
+        btnMapBoxSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(SettingsActivity.this, MapBoxSettingsActivity.class);
+                startActivity(i);
+            }
+        });
     }
 }

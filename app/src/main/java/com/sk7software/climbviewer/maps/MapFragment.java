@@ -172,6 +172,11 @@ public class MapFragment extends Fragment implements IMapFragment {
     }
 
     @Override
+    public void setPitch(int pitch) {
+        this.tilt = (float)pitch;
+    }
+
+    @Override
     public void setTilt(int tiltIdx) {
         this.tilt = (float)TILTS[tiltIdx];
     }
@@ -246,7 +251,7 @@ public class MapFragment extends Fragment implements IMapFragment {
     }
 
     @Override
-    public void plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points) {
+    public boolean plotClimbTrackFromRoutePoints(String name, List<RoutePoint> points) {
         List<LatLng> pointsLL = new ArrayList<>();
         for (RoutePoint pt : points) {
             LatLng ll = new LatLng(pt.getLat(), pt.getLon());
@@ -258,6 +263,7 @@ public class MapFragment extends Fragment implements IMapFragment {
                 .color(0xFF555555)
                 .zIndex(10);
         climbSections.add(map.addPolyline(lineOptions));
+        return false;
     }
 
     private Polyline plotElevationLine(List<RoutePoint> pts, int i, int zIdx, int width, boolean smoothed) {
@@ -314,11 +320,11 @@ public class MapFragment extends Fragment implements IMapFragment {
         zoom = (int) map.getCameraPosition().zoom;
     }
 
-    @Override
-    public void updateView(LatLngBounds bounds) {
+    private void updateView(LatLngBounds bounds) {
         if (plotType == IMapFragment.PlotType.ROUTE || plotType == IMapFragment.PlotType.NORMAL) {
             updateOffRouteView(bounds);
-        } else if (plotType == IMapFragment.PlotType.FULL_CLIMB || plotType == IMapFragment.PlotType.PURSUIT || plotType == IMapFragment.PlotType.FOLLOW_ROUTE) {
+        } else if (plotType == IMapFragment.PlotType.FULL_CLIMB || plotType == IMapFragment.PlotType.PURSUIT ||
+                plotType == IMapFragment.PlotType.FOLLOW_ROUTE || plotType == PlotType.CLIMB_3D) {
             CameraPosition position = new CameraPosition.Builder()
                     .target(new LatLng(track.getPoints().get(0).getLat(), track.getPoints().get(0).getLon()))
                     .zoom(zoom)
@@ -461,7 +467,7 @@ public class MapFragment extends Fragment implements IMapFragment {
     }
 
     @Override
-    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
+    public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, boolean keepZoomAndPitch, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
 
         if (zoomToPB && ptType == ClimbController.PointType.ATTEMPT) {
             float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
@@ -480,11 +486,11 @@ public class MapFragment extends Fragment implements IMapFragment {
         }
 
         CameraPosition position = new CameraPosition.Builder()
-                .target(new LatLng(point.getLat(), point.getLon()))
-                .zoom(zoom)
-                .tilt(tilt)
-                .bearing(bearing)
-                .build();
+                    .target(new LatLng(point.getLat(), point.getLon()))
+                    .zoom(zoom)
+                    .tilt(tilt)
+                    .bearing(bearing)
+                    .build();
         map.animateCamera(CameraUpdateFactory.newCameraPosition(position), 800, new GoogleMap.CancelableCallback() {
             @Override
             public void onCancel() {
@@ -511,7 +517,7 @@ public class MapFragment extends Fragment implements IMapFragment {
 
         float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
 
-        moveCamera(point, isMirror, zoomToPB, ptType, bearing, null);
+        moveCamera(point, isMirror, zoomToPB, false, ptType, bearing, null);
     }
 
     @Override
@@ -568,8 +574,10 @@ public class MapFragment extends Fragment implements IMapFragment {
             return;
         }
 
+        Marker lastMarker = null;
+
         if (locationMarkerIcon != null) {
-            locationMarkerIcon.remove();
+            lastMarker = locationMarkerIcon;
         }
 
         // Plot location
@@ -577,6 +585,10 @@ public class MapFragment extends Fragment implements IMapFragment {
                 .position(ll)
                 .zIndex(101)
                 .icon(BitmapDescriptorFactory.fromBitmap(PositionMarker.getInstance().getIcon(PositionMarker.Size.TINY, Color.YELLOW))));
+
+        if (lastMarker != null) {
+            lastMarker.remove();
+        }
     }
 
     private static void animateMarker(Marker marker, List<LatLng> positions, LatLngInterpolator latLngInterpolator) {

@@ -615,11 +615,23 @@ public class ClimbView extends View {
         }
         for (int i=0; i<pts.size()-1; i++) {
             if (pts.get(i).getX() <= x && pts.get(i+1).getX() > x) {
-                return i;
+                if (nearest(x, pts.get(i).getX(), pts.get(i+1).getX()) == 1) {
+                    return i;
+                } else {
+                    return i+1;
+                }
             }
         }
 
         return pts.size()-1;
+    }
+
+    private int nearest(int x, float x1, float x2) {
+        if (Math.abs(x1-x) < Math.abs(x2-x)) {
+            return 1;
+        } else {
+            return 2;
+        }
     }
 
     private void drawTracker(Canvas canvas, PlotPoint pt, int colour) {

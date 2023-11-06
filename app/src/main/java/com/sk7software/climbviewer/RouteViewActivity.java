@@ -187,9 +187,16 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     btnShowClimbs.getDrawable().setColorFilter(new ColorMatrixColorFilter(NEGATIVE));
                     btnShowLabels.setVisibility(View.VISIBLE);
 
+                    boolean newLayersLoaded = false;
+
                     for (GPXRoute climb : climbs) {
                         List<RoutePoint> pts = climb.getPoints();
-                        map.plotClimbTrackFromRoutePoints(climb.getName(), pts);
+                        if (map.plotClimbTrackFromRoutePoints(climb.getName(), pts)) {
+                            newLayersLoaded = true;
+                        }
+                    }
+                    if (newLayersLoaded) {
+                        map.reloadMap();
                     }
                 } else {
                     showingClimbs = false;
