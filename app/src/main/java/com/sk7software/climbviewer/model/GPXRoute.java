@@ -1,13 +1,8 @@
 package com.sk7software.climbviewer.model;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
-import com.google.android.gms.maps.model.LatLng;
-import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.db.Preferences;
-import com.sk7software.climbviewer.view.PlotPoint;
 
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
@@ -99,6 +94,8 @@ public class GPXRoute {
     }
 
 
+    // Difficulty rating based on climbbybike formula (multipled by 100 to avoid messing with fractions)
+    // https://www.climbbybike.com/climb_difficulty.asp
     public long calcRating() {
         // Work out distances and elevations if it hasn't already been done
         if (getPoints().get(getPoints().size()-1).getDistFromStart() < 0.1) {
@@ -109,10 +106,11 @@ public class GPXRoute {
         double elevationChange = this.getElevationChange();
         double dist = this.getPoints().get(this.getPoints().size()-1).getDistFromStart();
 
-        if (dist != 0) {
+        if (dist != 0 && elevationChange > 0) {
             rating = (long)((2 * (elevationChange * 100.0 / dist) + (elevationChange * elevationChange / dist) +
                     (dist / 1000) + (maxElevation > 1000 ? (maxElevation - 1000)/100 : 0)) * 100);
         } else {
+            // Don't rate descents
             rating = 0;
         }
         return rating;
@@ -132,16 +130,26 @@ public class GPXRoute {
     public double getElevationChange() {
         double maxElevation = Double.MIN_VALUE;
         double minElevation = Double.MAX_VALUE;
+        int minIdx = 0;
+        int maxIdx = 0;
+        int pointIdx = 0;
 
         for (RoutePoint p : this.getPoints()) {
             if (p.getElevation() < minElevation) {
                 minElevation = p.getElevation();
+                minIdx = pointIdx;
             }
             if (p.getElevation() > maxElevation) {
                 maxElevation = p.getElevation();
+                maxIdx = pointIdx;
             }
+            pointIdx++;
         }
-        return maxElevation - minElevation;
+
+        // If the minimum elevation is after the maximum one then this is a descent
+        // so the elevation difference is negative
+        double multiplier = (minIdx < maxIdx ? 1.0 : -1.0);
+        return multiplier * (maxElevation - minElevation);
     }
     public void calcSmoothedPoints() {
         float distFromLast = 0;

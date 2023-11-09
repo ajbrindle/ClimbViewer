@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:keepScreenOn="true"
     android:animateLayoutChanges="true">
@@ -29,6 +30,7 @@
                 android:autoSizeStepGranularity="2sp"
                 android:autoSizeTextType="uniform"
                 android:layout_alignParentLeft="true"
+                android:inputType="text"
                 android:text="Climb Name"/>
             <ImageButton
                 android:id="@+id/btnEdit"
@@ -321,29 +323,77 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"
+        android:visibility="visible"
         android:background="#ffffff" />
 
-    <SeekBar
-        android:id="@+id/zoomLevel"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="22"
-        android:min="15"
-        android:progress="20"
-        android:layout_marginTop="3dp"
-        android:layout_marginBottom="3dp"
-        android:text="Zoom Level"
-        android:visibility="gone" />
-
+        android:orientation="horizontal"
+        android:id="@+id/panelZoom"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="0dp"
+            android:padding="0dp"
+            android:text="Z"/>
+        <SeekBar
+            android:id="@+id/zoomLevel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:max="22"
+            android:min="8"
+            android:progress="18"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="3dp"
+            android:layout_weight="8"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="0dp"
+            android:padding="0dp"
+            android:text="P"/>
+        <SeekBar
+            android:id="@+id/pitchLevel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:max="90"
+            android:min="30"
+            android:progress="67"
+            android:layout_marginTop="3dp"
+            android:layout_marginBottom="3dp"
+            android:layout_weight="8"
+            android:text="Pitch" />
+    </LinearLayout>
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/mapView"
-            android:name="com.sk7software.climbviewer.MapFragment"
+            android:name="com.sk7software.climbviewer.maps.MapFragment"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            tools:layout="@layout/fragment_map"
+            android:visibility="visible"/>
+
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/mapboxView"
+            android:name="com.sk7software.climbviewer.maps.MapBoxFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:layout="@layout/fragment_map_box"
+            android:visibility="visible" />
+
         <Button
             android:id="@+id/btn3d"
             android:layout_width="40dp"

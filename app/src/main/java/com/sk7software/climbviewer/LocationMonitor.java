@@ -16,7 +16,6 @@ import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
-import java.math.BigDecimal;
 import java.text.DecimalFormat;
 
 public class LocationMonitor {

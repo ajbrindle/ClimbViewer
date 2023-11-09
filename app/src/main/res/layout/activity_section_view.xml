@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:mapbox="http://schemas.android.com/apk/res-auto"
     android:keepScreenOn="true"
     tools:context=".SectionViewActivity">
 
@@ -201,30 +201,56 @@
 
             <androidx.fragment.app.FragmentContainerView
                 android:id="@+id/mapView"
-                android:name="com.sk7software.climbviewer.MapFragment"
+                android:name="com.sk7software.climbviewer.maps.MapFragment"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                tools:layout="@layout/fragment_map" />
+                tools:layout="@layout/fragment_map"
+                android:visibility="visible"/>
 
-                <LinearLayout
-                    android:id="@+id/mirror"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/layout_border"
-                    android:backgroundTint="@color/white"
-                    android:layout_alignParentRight="true"
-                    android:layout_alignTop="@+id/mapView"
-                    android:padding="8dp"
-                    android:orientation="vertical"
-                    android:layout_margin="5dp"
-                    android:visibility="invisible">
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/mapboxView"
+                android:name="com.sk7software.climbviewer.maps.MapBoxFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:layout="@layout/fragment_map_box"
+                mapbox:mapbox_mapSurface="texture_view"
+                android:visibility="visible" />
 
-                    <androidx.fragment.app.FragmentContainerView
-                        android:id="@+id/mirrorMap"
-                        android:name="com.sk7software.climbviewer.MapFragment"
-                        android:layout_width="150dp"
-                        android:layout_height="150dp" />
-                </LinearLayout>
+
+            <RelativeLayout
+                android:id="@+id/mirror"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/layout_border"
+                android:backgroundTint="@color/white"
+                android:backgroundTintMode="add"
+                android:layout_alignParentRight="true"
+                android:layout_alignTop="@+id/mapView"
+                android:padding="8dp"
+                android:layout_margin="5dp"
+                android:visibility="gone">
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/mirrorMap"
+                    android:name="com.sk7software.climbviewer.maps.MapFragment"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentStart="true"
+                    tools:layout="@layout/fragment_map"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp" />
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/mirrorMapbox"
+                    android:name="com.sk7software.climbviewer.maps.MapBoxFragment"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentStart="true"
+                    tools:layout="@layout/fragment_map_box"
+                    mapbox:mapbox_mapSurface="texture_view"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp" />
+            </RelativeLayout>
 
             <RelativeLayout
                 android:id="@+id/sectionPanel"

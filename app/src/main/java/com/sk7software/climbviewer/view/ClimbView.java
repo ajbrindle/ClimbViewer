@@ -1,6 +1,5 @@
 package com.sk7software.climbviewer.view;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -17,17 +16,13 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.content.res.AppCompatResources;
 
 import com.google.android.gms.common.util.Strings;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.SphericalUtil;
-import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.DrawableUpdateInterface;
 import com.sk7software.climbviewer.LocationMonitor;
-import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.model.DirectionChecker;
@@ -86,6 +81,7 @@ public class ClimbView extends View {
 
     // X position where the gradient value needs to be displayed
     private int showGradientAt;
+    private boolean showInline;
 
     // Stores the profile image when it has been calculated the first time
     private Bitmap profileBitmap = null;
@@ -266,9 +262,10 @@ public class ClimbView extends View {
         startIndex = findIndexAtDistance(distance);
     }
 
-    public void setShowClimbsList(String ids) {
+    public void setShowClimbsList(String ids, boolean showInline) {
         this.showClimbsList = ids;
         this.climbCoords = null;
+        this.showInline = showInline;
     }
 
     public void setTrackDistance(double distance) {
@@ -526,8 +523,17 @@ public class ClimbView extends View {
                 gradient = 0;
             }
 
-            climbRating = (int)((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
-                    (distance / 1000)) * 100);
+            if (elevation > 0) {
+                // Difficulty rating based on climbbybike formula (multipled by 100 to avoid messing with fractions)
+                // https://www.climbbybike.com/climb_difficulty.asp
+                float elevationAtTop = elevation + pts.get(x0Index).getElevation();
+                float extra = (elevationAtTop > 1000 ? (elevationAtTop - 1000) / 100 : 0);
+                climbRating = (int) ((2 * (elevation * 100.0 / distance) + (elevation * elevation / distance) +
+                        (distance / 1000) + extra) * 100);
+            } else {
+                // Don't rate descents
+                climbRating = 0;
+            }
         }
 
         DecimalFormat df1 = new DecimalFormat();
@@ -545,7 +551,7 @@ public class ClimbView extends View {
         canvas.drawText(gradientText, calcTextPos(showGradientAt, textBounds), textBounds.height(), p);
         p.getTextBounds(distanceText, 0, distanceText.length(), textBounds);
         canvas.drawText(distanceText, calcTextPos(showGradientAt, textBounds), height-7, p);
-        if (climbCoords != null) {
+        if (climbCoords != null && showInline) {
             for (ClimbCoords c : climbCoords) {
                 String climbName = c.nameAtLocation(showGradientAt);
                 if (!"".equals(climbName)) {
@@ -609,11 +615,23 @@ public class ClimbView extends View {
         }
         for (int i=0; i<pts.size()-1; i++) {
             if (pts.get(i).getX() <= x && pts.get(i+1).getX() > x) {
-                return i;
+                if (nearest(x, pts.get(i).getX(), pts.get(i+1).getX()) == 1) {
+                    return i;
+                } else {
+                    return i+1;
+                }
             }
         }
 
         return pts.size()-1;
+    }
+
+    private int nearest(int x, float x1, float x2) {
+        if (Math.abs(x1-x) < Math.abs(x2-x)) {
+            return 1;
+        } else {
+            return 2;
+        }
     }
 
     private void drawTracker(Canvas canvas, PlotPoint pt, int colour) {
@@ -970,6 +988,10 @@ public class ClimbView extends View {
         return indexes;
     }
 
+    public List<ClimbCoords> getClimbCoords() {
+        return this.climbCoords;
+    }
+
     @Getter
     @Setter
     public class ClimbCoords {
@@ -991,5 +1013,12 @@ public class ClimbView extends View {
             }
             return "";
         }
-    }
+
+        public int idAtLocation(int x) {
+            if (x >= x0 && x <= xN) {
+                return id;
+            }
+            return -1;
+        }
+     }
 }

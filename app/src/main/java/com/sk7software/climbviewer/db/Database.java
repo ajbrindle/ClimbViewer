@@ -1,6 +1,5 @@
 package com.sk7software.climbviewer.db;
 
-import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;

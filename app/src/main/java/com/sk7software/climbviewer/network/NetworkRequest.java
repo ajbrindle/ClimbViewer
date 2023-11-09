@@ -16,9 +16,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.sk7software.climbviewer.ActivityUpdateInterface;
+import com.sk7software.climbviewer.BuildConfig;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.model.MapBoxMap;
 import com.sk7software.climbviewer.model.TrackFile;
 
 import org.json.JSONArray;
@@ -26,6 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +41,7 @@ public class NetworkRequest {
     private static final String GPX_LIST_URL = "http://www.sk7software.co.uk/gpxloader/gpxlist.php?dir=";
     private static final String BACKUP_URL = "http://www.sk7software.co.uk/climbviewer/backup/backup.php";
     private static final String RESTORE_URL = "http://www.sk7software.co.uk/climbviewer/backup/restore.php?id=";
+    private static final String MAPBOX_URL = "https://api.mapbox.com/styles/v1/ajbrindle?access_token=";
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
@@ -127,6 +131,52 @@ public class NetworkRequest {
             Log.d(TAG, "Error fetching GPX route: " + e.getMessage());
         }
     }
+
+    public static void fetchMapBoxMaps(final Context context, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetching maps");
+        try {
+            uiUpdate.setProgress(true, "Fetching map names");
+            JsonArrayRequest jsArrayRequest = new JsonArrayRequest
+                    (Request.Method.GET, MAPBOX_URL + BuildConfig.MAPBOX_FETCH_MAPS_TOKEN + "&limit=10",
+                            null,
+                            new Response.Listener<JSONArray>() {
+                                @Override
+                                public void onResponse(JSONArray response) {
+                                    try {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        List<MapBoxMap> maps = new ArrayList<>();
+                                        for (int i=0; i<response.length(); i++) {
+                                            try {
+                                                maps.add(mapper.readValue(response.get(i).toString(), MapBoxMap.class));
+                                            } catch (JSONException e) {
+                                                Log.e(TAG, "Error reading return array: " + e.getMessage());
+                                            }
+                                        }
+                                        callback.onRequestCompleted(maps);
+                                    } catch (JsonProcessingException e) {
+                                        Log.e(TAG, "Error getting map data: " + e.getMessage());
+                                        callback.onRequestCompleted(null);
+                                    } finally {
+                                        uiUpdate.setProgress(false, null);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    uiUpdate.setProgress(false, null);
+                                    callback.onError(error);
+                                }
+                            }
+                    );
+            jsArrayRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsArrayRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error fetching maps: " + e.getMessage());
+        }
+    }
+
 
     private static void loadFiles(Context context, ActivityUpdateInterface uiUpdate, String dir, List<FileDescription> files) {
         FileDescription desc = files.get(0);

@@ -55,26 +55,58 @@
         android:min="0"
         android:progress="1000" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiAutoMonitor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text="Auto-monitor climbs on route" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbTolerance"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text="Assume climbs complete when started" />
 
-    <Switch
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbSort"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:text="Sort climbs by rating" />
 
+    <RadioGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Map Provider"
+            android:layout_marginRight="8dp"/>
+        <RadioButton
+            android:id="@+id/radGoogle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="8dp"
+            android:checked="true"
+            android:text="Google" />
+        <RadioButton
+            android:id="@+id/radMapBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MapBox" />
+    </RadioGroup>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:id="@+id/btnMapBoxSettings"
+        android:text="MapBox Settings"
+        android:visibility="gone"/>
 
 </LinearLayout>

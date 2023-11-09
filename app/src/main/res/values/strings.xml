@@ -4,4 +4,8 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="tab_text_1">Tab 1</string>
     <string name="tab_text_2">Tab 2</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiYWpicmluZGxlIiwiYSI6ImNsbnhwem0yajBsam4ybW82eG11ZGg4dWgifQ.S22dfuMzaCXTFcTNoj759g</string>
+    <string name="mapbox_style_2d">mapbox://styles/ajbrindle/clnxtyeul008001qmavvfbij5</string>
+    <string name="mapbox_style_3d">mapbox://styles/ajbrindle/clnxtyeul008001qmavvfbij5</string>
+    <string name="mapbox_style_satellite">mapbox://styles/ajbrindle/clnxu7pwa008k01qq43fsh5dr</string>
 </resources>

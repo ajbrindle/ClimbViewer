@@ -3,6 +3,25 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url 'https://api.mapbox.com/downloads/v2/releases/maven'
+            authentication {
+                basic(BasicAuthentication)
+            }
+            Properties properties = new Properties()
+            File propFile = new File(rootDir.absolutePath + "/local.properties")
+            InputStream dataStream = propFile.newDataInputStream()
+            properties.load(dataStream)
+            dataStream.close()
+
+            credentials {
+                // Do not change the username below.
+                // This should always be `mapbox` (not your username).
+                username = "mapbox"
+                // Use the secret token you stored in gradle.properties as the password
+                password = properties.getProperty('MAPBOX_SECRET_TOKEN')
+            }
+        }
         jcenter() // Warning: this repository is going to shut down soon
     }
 }

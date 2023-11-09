@@ -1,17 +1,19 @@
 package com.sk7software.climbviewer;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.RadioButton;
 import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 
-import com.sk7software.climbviewer.db.Preferences;
+import androidx.appcompat.app.AppCompatActivity;
 
-import java.nio.channels.SelectionKey;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.maps.MapProvider;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -31,17 +33,28 @@ public class SettingsActivity extends AppCompatActivity {
         boolean ultra = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_ULTRA_TOLERANCE, false);
         int warn = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_CLIMB_WARNING, 1000);
         boolean sortRating = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, false);
+        int mapType = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_MAP_TYPE, 1);
 
-        SeekBar smoothDist = (SeekBar)findViewById(R.id.seekSmoothDistance);
-        SeekBar delayS = (SeekBar)findViewById(R.id.seekScreenDelay);
-        SeekBar climbWarn = (SeekBar)findViewById(R.id.seekClimbWarn);
-        Switch autoMonitor = (Switch)findViewById(R.id.swiAutoMonitor);
-        Switch ultraTolerance = (Switch)findViewById(R.id.swiClimbTolerance);
-        Switch climbSort = (Switch)findViewById(R.id.swiClimbSort);
+        SeekBar smoothDist = findViewById(R.id.seekSmoothDistance);
+        SeekBar delayS = findViewById(R.id.seekScreenDelay);
+        SeekBar climbWarn = findViewById(R.id.seekClimbWarn);
+        SwitchMaterial autoMonitor = findViewById(R.id.swiAutoMonitor);
+        SwitchMaterial ultraTolerance = findViewById(R.id.swiClimbTolerance);
+        SwitchMaterial climbSort = findViewById(R.id.swiClimbSort);
 
-        TextView smoothLabel = (TextView)findViewById(R.id.txtSmoothDistance);
-        TextView delayLabel = (TextView)findViewById(R.id.txtScreenDelay);
-        TextView warnLabel = (TextView)findViewById(R.id.txtClimbWarn);
+        TextView smoothLabel = findViewById(R.id.txtSmoothDistance);
+        TextView delayLabel = findViewById(R.id.txtScreenDelay);
+        TextView warnLabel = findViewById(R.id.txtClimbWarn);
+
+        RadioButton radGoogle = findViewById(R.id.radGoogle);
+        RadioButton radMapbox = findViewById(R.id.radMapBox);
+        MapProvider provider = MapProvider.fromValue(mapType);
+
+        if (provider == MapProvider.GOOGLE_MAPS) {
+            radGoogle.setChecked(true);
+        } else {
+            radMapbox.setChecked(true);
+        }
 
         smoothLabel.setText(SMOOTH_LABEL + smooth + "m");
         delayLabel.setText(DELAY_LABEL + delay + "s");
@@ -112,20 +125,38 @@ public class SettingsActivity extends AppCompatActivity {
                 Preferences.getInstance().addPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, isChecked);
             }
         });
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                onBackPressed();
-                break;
+        final Button btnMapBoxSettings = findViewById(R.id.btnMapBoxSettings);
+        if (provider == MapProvider.MAPBOX) {
+            btnMapBoxSettings.setVisibility(View.VISIBLE);
         }
-        return true;
-    }
 
-    @Override
-    public void onBackPressed() {
-        finish();
+        radGoogle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b) {
+                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_MAP_TYPE, MapProvider.GOOGLE_MAPS.getValue());
+                    btnMapBoxSettings.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        radMapbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b) {
+                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_MAP_TYPE, MapProvider.MAPBOX.getValue());
+                    btnMapBoxSettings.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+        btnMapBoxSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(SettingsActivity.this, MapBoxSettingsActivity.class);
+                startActivity(i);
+            }
+        });
     }
 }

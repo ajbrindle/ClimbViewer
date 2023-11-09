@@ -3,7 +3,6 @@ package com.sk7software.climbviewer.model;
 import android.graphics.PointF;
 import android.util.Log;
 
-import com.bea.xml.stream.samples.Parse;
 import com.sk7software.climbviewer.LocationMonitor;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.geo.GeoConvert;
@@ -16,15 +15,11 @@ import org.simpleframework.xml.core.Persister;
 
 import java.io.File;
 import java.io.InputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 

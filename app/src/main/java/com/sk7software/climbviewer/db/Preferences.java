@@ -1,7 +1,5 @@
 package com.sk7software.climbviewer.db;
 
-import static java.lang.reflect.Array.getInt;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -27,6 +25,16 @@ public class Preferences {
     public static final String PREFERENCES_ON_CLIMB_ID = "PREF_ON_CLIMB_ID";
     public static final String PREFERENCES_CLIMB_START_TIME = "PREF_START_TIME";
     public static final String PREFERENCES_TRANSPARENCY = "PREF_TRANSPARENCY";
+    public static final String PREFERENCES_CLIMB_LABELS = "PREF_CLIMB_LABELS";
+    public static final String PREFERENCES_MAP_TYPE = "PREF_MAP_TYPE";
+    public static final String PREFERENCES_MAPBOX_2D_MAP = "PREF_MAPBOX_2D";
+    public static final String PREFERENCES_MAPBOX_2D_MAP_ID = "PREF_MAPBOX_2D_ID";
+    public static final String PREFERENCES_MAPBOX_FOLLOW_MAP = "PREF_MAPBOX_FOLLOW";
+    public static final String PREFERENCES_MAPBOX_FOLLOW_MAP_ID = "PREF_MAPBOX_FOLLOW_ID";
+    public static final String PREFERENCES_MAPBOX_3D_MAP = "PREF_MAPBOX_3D";
+    public static final String PREFERENCES_MAPBOX_3D_MAP_ID = "PREF_MAPBOX_3D_ID";
+    public static final String PREFERENCES_DEFAULT_ZOOM = "PREF_ZOON";
+    public static final String PREFERENCES_DEFAULT_PITCH = "PREF_PITCH";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

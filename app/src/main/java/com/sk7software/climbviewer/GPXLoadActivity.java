@@ -1,7 +1,5 @@
 package com.sk7software.climbviewer;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -21,15 +19,14 @@ import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.android.volley.AsyncRequestQueue;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.gms.common.util.Strings;
 import com.sk7software.climbviewer.db.Database;
-import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
-import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackMetadata;
@@ -42,11 +39,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import lombok.val;
 
 public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdateInterface {
     private Uri gpxUri;

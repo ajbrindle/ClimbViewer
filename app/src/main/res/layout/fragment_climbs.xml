@@ -57,7 +57,7 @@
         android:orientation="horizontal">
         <Button
             android:id="@+id/viewClimbBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="5dp"
@@ -71,7 +71,7 @@
             android:id="@+id/deleteClimb"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:backgroundTint="#ff0000"
+            android:backgroundTint="?attr/colorError"
             app:icon="@drawable/delete"
             app:iconSize="20dp"
             app:iconGravity="textStart"
