@@ -11,5 +11,6 @@ public class PaletteTest {
     public void testToHex() {
         assertEquals("#33C42A", Palette.getColourRGB(0.0));
         assertEquals("#B50008", Palette.getColourRGB(20.0));
+        assertEquals("#06B737", Palette.getColourRGB(-1.0));
     }
 }

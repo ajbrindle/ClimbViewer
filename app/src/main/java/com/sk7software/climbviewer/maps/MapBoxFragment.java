@@ -48,7 +48,9 @@ import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
 import com.sk7software.climbviewer.R;
+import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -188,6 +190,11 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     @Override
     public void setZoom(int zoom) {
         this.zoom = zoom;
+    }
+
+    @Override
+    public void setZoomForFollowing() {
+        this.zoom = 17;
     }
 
     @Override
@@ -716,6 +723,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         camera.easeTo(
                 new CameraOptions.Builder()
+//                        .center(calcCentre(point, (bearing*Math.PI/180.0)))
                         .center(Point.fromLngLat(point.getLon(), point.getLat()))
                         .bearing(Double.valueOf(bearing))
                         .zoom(Double.valueOf(this.zoom))
@@ -757,6 +765,19 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         float bearing = ClimbController.getInstance().getAttempts().get(ptType).getBearing();
 
         moveCamera(point, isMirror, zoomToPB, false, ptType, bearing, null);
+    }
+
+    private Point calcCentre(RoutePoint pos, double bearing) {
+        int fullHeight = mapView.getHeight();
+        int adjustment = (int)((fullHeight/12) * map.getMetersPerPixelAtLatitude(pos.getLat(), this.zoom));
+
+        double cE = pos.getEasting() + (adjustment * Math.sin(bearing));
+        double cN = pos.getNorthing() + (adjustment * Math.cos(bearing));
+        RoutePoint newCentre = new RoutePoint();
+        newCentre.setEasting(cE);
+        newCentre.setNorthing(cN);
+        LatLng newLL = GeoConvert.convertGridToLL(Database.getProjection(track.getProjectionId()), newCentre, track.getZone());
+        return Point.fromLngLat(newLL.longitude, newLL.latitude);
     }
 
     @Override
@@ -811,7 +832,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     public void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size) {
         String riderTrackPrefix = getRiderTrackPrefix(type, size, colour);
         LoadedLayer riderLayer = loadedLayers.get(riderTrackPrefix + LAYER);
-        if (riderLayer.isLoaded()) {
+        if (riderLayer != null && riderLayer.isLoaded()) {
             map.getStyle().setStyleLayerProperty(riderTrackPrefix + LAYER, "icon-opacity", new Value(0.0));
             riderLayer.setBeenRemoved(true);
 //            Expected<String, Value> props = map.getStyle().getStyleLayerProperties(riderTrackPrefix + LAYER);

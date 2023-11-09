@@ -447,7 +447,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
     private void setMapForFollowing() {
         map.setMapType(MapType.NORMAL, IMapFragment.PlotType.FOLLOW_ROUTE, false);
-        map.setZoom(18);
+        map.setZoomForFollowing();
         map.setTilt(1);
         map.setCentre(ClimbController.getInstance().getLastPointLL());
     }

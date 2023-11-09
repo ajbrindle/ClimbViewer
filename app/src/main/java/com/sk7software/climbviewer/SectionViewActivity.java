@@ -127,6 +127,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
                         ClimbController.getInstance().finishClimb(attempt);
                     } else {
                         ClimbController.getInstance().reset(ClimbController.PointType.ATTEMPT);
+                        ClimbController.getInstance().setLastClimbId(-99);
                     }
                 }
                 return true;
@@ -350,9 +351,8 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
         if (plotType == IMapFragment.PlotType.FULL_CLIMB) {
             mirrorPanel.setVisibility(View.GONE);
-            mirrorMap.show(false);
             map.setMapType(MapType.NORMAL, IMapFragment.PlotType.FULL_CLIMB, false);
-            map.setZoom(18);
+            map.setZoomForFollowing();
             map.setTilt(1);
             if (centre != null) {
                 map.setCentre(new LatLng(centre.getLat(), centre.getLon()));
@@ -368,7 +368,6 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
             }
         } else if (plotType == IMapFragment.PlotType.NORMAL) {
             mirrorPanel.setVisibility(View.GONE);
-            mirrorMap.show(false);
             map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
             map.setTilt(0);
         }

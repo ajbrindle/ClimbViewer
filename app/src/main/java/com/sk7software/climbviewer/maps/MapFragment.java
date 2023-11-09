@@ -172,6 +172,11 @@ public class MapFragment extends Fragment implements IMapFragment {
     }
 
     @Override
+    public void setZoomForFollowing() {
+        this.zoom = 18;
+    }
+
+    @Override
     public void setPitch(int pitch) {
         this.tilt = (float)pitch;
     }

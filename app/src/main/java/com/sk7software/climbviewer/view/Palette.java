@@ -61,6 +61,10 @@ public class Palette {
 
     public static String getColourRGB(double elevation) {
         int colourVal = Palette.getColour(elevation);
-        return "#" + Integer.toHexString(colourVal & 0x00FFFFFF).toUpperCase();
+        StringBuilder hexStr = new StringBuilder(Integer.toHexString(colourVal & 0x00FFFFFF).toUpperCase());
+        while (hexStr.length() < 6) {
+            hexStr.insert(0, "0");
+        }
+        return "#" + hexStr.toString();
     }
 }

@@ -49,6 +49,9 @@ public interface IMapFragment {
     void setTrackRider(boolean trackRider);
 
     void setZoom(int zoom);
+
+    void setZoomForFollowing();
+
     void setPitch(int pitch);
 
     void setTilt(int tiltIdx);
