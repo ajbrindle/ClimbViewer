@@ -372,6 +372,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 setMapForFollowing();
                 map.setTrackRider(true);
                 map.removeMarker(ClimbController.PointType.ROUTE, ClimbController.PointType.ROUTE.getColor(), PositionMarker.Size.MEDIUM);
+                map.plotTrack();
                 map.plotLocalSection(PositionMonitor.getInstance().getMatchingSectionIdx()-1, PositionMonitor.getInstance().getMatchingSectionIdx()+10);
                 fullRouteView.addPlot(ClimbController.PointType.ROUTE);
             }

@@ -17,11 +17,14 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
+import com.mapbox.bindgen.Expected;
+import com.mapbox.bindgen.None;
 import com.mapbox.bindgen.Value;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
 import com.mapbox.geojson.Point;
+import com.mapbox.maps.AsyncOperationResultCallback;
 import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.EdgeInsets;
 import com.mapbox.maps.MapView;
@@ -58,6 +61,7 @@ import com.sk7software.climbviewer.view.Palette;
 import com.sk7software.climbviewer.view.PositionMarker;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +87,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     private StyleExtensionImpl.Builder styleBuilder;
     Map<String, LoadedLayer> loadedLayers = new HashMap<>();
     private CameraAnimationsPlugin camera;
+    private long styleLoadedTimeout = -1;
     private static final String TAG = MapBoxFragment.class.getSimpleName();
     private static final String TRACK_PREFIX = "line-";
     private static final String RIDER_PREFIX = "rider-";
@@ -102,13 +107,24 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     @Override
     public void setMapType(MapType type, IMapFragment.PlotType plotType, boolean mirror) {
         String mapId = null;
-        switch(type) {
+        this.plotType = plotType;
+
+        if (plotType == null) {
+            plotType = PlotType.NORMAL;
+        }
+        switch(plotType) {
             case NORMAL:
+            case ROUTE:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
                 this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
                 break;
-            case HYBRID:
-            case SATELLITE:
+            case FOLLOW_ROUTE:
+            case FULL_CLIMB:
+                mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_FOLLOW_MAP_ID);
+                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
+                break;
+            case PURSUIT:
+            case CLIMB_3D:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_3D_MAP_ID);
                 this.mapType = mapId == null ? getString(R.string.mapbox_style_satellite) : MAPBOX_STYLE_PREFIX + mapId;
                 break;
@@ -116,7 +132,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
                 this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
         }
-        this.plotType = plotType;
     }
 
     @Override
@@ -154,6 +169,12 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mapView = getView().findViewById(R.id.map3dView);
+        mapView.getMapboxMap().clearData(new AsyncOperationResultCallback() {
+            @Override
+            public void run(@NonNull Expected<String, None> result) {
+                // Do nothing
+            }
+        });
         map = mapView.getMapboxMap();
         map.loadStyleUri(getString(R.string.mapbox_style_2d), new Style.OnStyleLoaded() {
             @Override
@@ -371,6 +392,18 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             buildStyle = true;
             GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
 
+            /**
+            Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.angle_up_solid);
+            Bitmap bitmap = Bitmap.createBitmap(200, 200, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            vectorDrawable.setTint(Palette.getColour(0));
+            vectorDrawable.draw(canvas);
+
+            List<ImageStretches> stretch = new ArrayList<>();
+            stretch.add(new ImageStretches(0, 0));
+            ImageExtensionImpl img = new ImageExtensionImpl.Builder("ARROW-" + IMAGE).bitmap(bitmap).stretchX(stretch).stretchY(stretch).build();
+            **/
+
             LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
             LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
             linelayer.lineWidth(width).lineColor(Expression.get("color")).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
@@ -386,18 +419,30 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
                 // As both the line and the edge use the same source, this will update both
                 GeoJsonSource lineSource = lineLayer.getSource();
                 lineSource.featureCollection(featureCollection);
+            } else {
+                checkTimeout(lineLayer);
             }
         }
 
         if (buildStyle) {
+            styleLoadedTimeout = (new Date()).getTime() + 5000;
             map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
                 @Override
                 public void onStyleLoaded(@NonNull Style style) {
                     loadedLayers.get(LOCAL_TRACK_PREFIX + LAYER).setLoaded(true);
+                    styleLoadedTimeout = -1;
                 }
             });
         }
     }
+
+    private void checkTimeout(LoadedLayer layer) {
+        if (styleLoadedTimeout > 0 && (new Date()).getTime() > styleLoadedTimeout) {
+            layer.setLoaded(true);
+            styleLoadedTimeout = -1;
+        }
+    }
+
 //    private void plotElevationLines(List<RoutePoint> pts, int minIdx, int maxIdx, int width, boolean smoothed) {
 //        boolean first = true;
 //        boolean buildStyle = false;
@@ -707,17 +752,17 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     public void moveCamera(RoutePoint point, boolean isMirror, boolean zoomToPB, boolean keepZoomAndPitch, ClimbController.PointType ptType, float bearing, ClimbViewActivity activity) {
         if (zoomToPB && ptType == ClimbController.PointType.ATTEMPT) {
             float distBetween = Math.abs(ClimbController.getInstance().getDistToPB());
-            zoom = 20;
+            zoom = 19;
 
             if (distBetween < 20) {
-                zoom = 25;
+                zoom = 24;
             } else if (distBetween > 150) {
-                zoom = 15;
+                zoom = 14;
             }
 
             if (isMirror) {
                 bearing = (bearing + 180) % 360;
-                zoom = 17;
+                zoom = 16;
             }
         }
 
