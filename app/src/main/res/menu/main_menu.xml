@@ -16,6 +16,20 @@
                     android:id="@+id/action_load_routes"
                     android:orderInCategory="3"
                     android:title="Routes" />
+                <item
+                    android:title="Strava"
+                    android:orderInCategory="4">
+                    <menu>
+                        <item
+                            android:id="@+id/action_strava_activities"
+                            android:orderInCategory="5"
+                            android:title="Activities"/>
+                        <item
+                            android:id="@+id/action_strava_routes"
+                            android:orderInCategory="6"
+                            android:title="Routes"/>
+                    </menu>
+                </item>
             </menu>
         </item>
     </group>
@@ -34,7 +48,7 @@
             </menu>
         </item>
     </group>
-    <group android:id="@+id/settings">"
+    <group android:id="@+id/settings">
         <item
             android:id="@+id/action_settings"
             android:orderInCategory="100"

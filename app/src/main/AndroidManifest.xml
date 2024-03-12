@@ -19,9 +19,21 @@
         android:theme="@style/Theme.ClimbViewer"
         android:usesCleartextTraffic="true">
         <activity
-            android:name=".MapBoxSettingsActivity"
-            android:parentActivityName=".SettingsActivity"
+            android:name=".list.StravaListActivity"
+            android:exported="false"
+            android:noHistory="true"
+            android:parentActivityName=".MainActivity"
+            android:screenOrientation="portrait"/>
+        <meta-data
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value="com.sk7software.climbviewer.MainActivity" />
+        <activity
+            android:name=".StravaAuthoriseActivity"
             android:exported="false" />
+        <activity
+            android:name=".MapBoxSettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".SettingsActivity" />
         <activity
             android:name=".GPXLoadActivity"
             android:exported="true">
