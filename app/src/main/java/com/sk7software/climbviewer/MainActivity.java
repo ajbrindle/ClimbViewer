@@ -28,6 +28,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.tabs.TabLayout;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.list.StravaListActivity;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -230,6 +231,16 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
             case R.id.action_settings:
                 Intent it = new Intent(MainActivity.this, SettingsActivity.class);
                 startActivity(it);
+                return true;
+            case R.id.action_strava_activities:
+                Intent stravaActivities = new Intent(MainActivity.this, StravaListActivity.class);
+                stravaActivities.putExtra("type", "activity");
+                startActivity(stravaActivities);
+                return true;
+            case R.id.action_strava_routes:
+                Intent stravaRoutes = new Intent(MainActivity.this, StravaListActivity.class);
+                stravaRoutes.putExtra("type", "route");
+                startActivity(stravaRoutes);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

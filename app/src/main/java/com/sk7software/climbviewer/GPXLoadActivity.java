@@ -23,21 +23,26 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.common.util.Strings;
 import com.sk7software.climbviewer.db.Database;
+import com.sk7software.climbviewer.list.StravaListActivity;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackMetadata;
 import com.sk7software.climbviewer.model.TrackSegment;
+import com.sk7software.climbviewer.model.strava.StravaActivityStream;
 import com.sk7software.climbviewer.network.FileDescription;
 import com.sk7software.climbviewer.network.FileList;
 import com.sk7software.climbviewer.network.NetworkRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,20 +87,26 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         // Determine if this has been called from the network load
         String type = getIntent().getStringExtra("gpxType");
         if (!Strings.isEmptyOrWhitespace(type)) {
-            // This is a network load
-            loadType = LoadType.NETWORK;
-            setGPXType(type);
-            Bundle fileBundle = getIntent().getBundleExtra("fileList");
-            files = fileBundle.getParcelable("files");
+            if (getIntent().getSerializableExtra("stream") != null) {
+                panelChoose.setVisibility(View.GONE);
+                btnLoad.setVisibility(View.GONE);
+                loadEmbeddedData();
+            } else {
+                // This is a network load
+                loadType = LoadType.NETWORK;
+                setGPXType(type);
+                Bundle fileBundle = getIntent().getBundleExtra("fileList");
+                files = fileBundle.getParcelable("files");
 
-            refreshFileList();
-            if ("attempts".equals(gpxType)) {
-                txtTolerance.setVisibility(View.VISIBLE);
-                seekTolerance.setProgress(1);
-                seekTolerance.setVisibility(View.VISIBLE);
+                refreshFileList();
+                if ("attempts".equals(gpxType)) {
+                    txtTolerance.setVisibility(View.VISIBLE);
+                    seekTolerance.setProgress(1);
+                    seekTolerance.setVisibility(View.VISIBLE);
+                }
+                panelChoose.setVisibility(View.GONE);
+                panelFileList.setVisibility(View.VISIBLE);
             }
-            panelChoose.setVisibility(View.GONE);
-            panelFileList.setVisibility(View.VISIBLE);
         } else {
             // Set up for loading single gpx file
             loadType = LoadType.LOCAL;
@@ -225,6 +236,44 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         });
     }
 
+    private void loadEmbeddedData() {
+        setProgress(true, "Loading data...");
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        StravaActivityStream activityStream = (StravaActivityStream) getIntent().getParcelableExtra("stream");
+                        String dateTime = getIntent().getStringExtra("dateTime");
+                        String fileType = getIntent().getStringExtra("streamType");
+                        String name = getIntent().getStringExtra("name");
+                        gpxType = (StravaListActivity.StravaType.ACTIVITY.name().equals(fileType) ? GPXType.ATTEMPT : GPXType.ROUTE);
+                        loadType = LoadType.EMBEDDED;
+                        GPXRoute gpxData = createFromStream(activityStream, dateTime);
+                        gpxData.setName("Strava Ride");
+                        GPXFile gpx = new GPXFile();
+                        gpx.setRoute(gpxData);
+                        trkFile = new TrackFile();
+                        TrackMetadata m = new TrackMetadata();
+                        Track t = new Track();
+                        TrackSegment s = new TrackSegment();
+                        m.setTime(dateTime);
+                        s.setPoints(gpxData.getPoints());
+                        t.setName(name != null ? name : gpxData.getName());
+                        t.setTrackSegment(s);
+                        trkFile.setRoute(t);
+                        trkFile.setMetadata(m);
+                        trkFile.setGridPoints();
+                        gpxFile = GPXFile.createFromTrackFile(trkFile);
+                        showItems(gpxType);
+                        setProgress(false, null);
+                    }
+                });
+            }
+        });
+    }
+
     private void loadNetworkFiles() {
         if (files == null || files.getFiles().isEmpty()) {
             goToMainActivity();
@@ -293,7 +342,7 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
     }
 
     private void doNextAction() {
-        if (loadType == LoadType.LOCAL) {
+        if (loadType == LoadType.LOCAL || loadType == LoadType.EMBEDDED) {
             goToMainActivity();
         } else {
             files.getFiles().remove(0);
@@ -387,6 +436,23 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         }
     }
 
+    private GPXRoute createFromStream(StravaActivityStream stream, String activityStartTime) {
+        OffsetDateTime now = OffsetDateTime.parse(activityStartTime, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX"));
+        GPXRoute attempt = new GPXRoute();
+        for (int i=0; i<stream.getLatlng().getSize(); i++) {
+            RoutePoint rp = new RoutePoint();
+            rp.setLat(stream.getLatlng().getData().get(i).get(0));
+            rp.setLon(stream.getLatlng().getData().get(i).get(1));
+            rp.setElevation(stream.getAltitude().getData()[i]);
+            if (stream.getTime() != null) {
+                OffsetDateTime ldt = now.plusSeconds(stream.getTime().getData()[i]);
+                rp.setTime(ldt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")) + "Z");
+            }
+            attempt.addPoint(rp);
+        }
+        return attempt;
+    }
+
     private void goToMainActivity() {
         Intent i = new Intent(this, MainActivity.class);
         startActivity(i);
@@ -424,7 +490,8 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
     }
     public enum LoadType {
         NETWORK,
-        LOCAL;
+        LOCAL,
+        EMBEDDED;
     }
 
     public enum GPXType {

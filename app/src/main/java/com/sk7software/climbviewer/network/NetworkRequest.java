@@ -3,6 +3,7 @@ package com.sk7software.climbviewer.network;
 import android.content.Context;
 import android.util.Log;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -22,6 +23,8 @@ import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.MapBoxMap;
 import com.sk7software.climbviewer.model.TrackFile;
+import com.sk7software.climbviewer.model.strava.StravaActivityStream;
+import com.sk7software.climbviewer.model.strava.StravaAuth;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,8 +33,10 @@ import org.json.JSONObject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class NetworkRequest {
 
@@ -42,6 +47,7 @@ public class NetworkRequest {
     private static final String BACKUP_URL = "http://www.sk7software.co.uk/climbviewer/backup/backup.php";
     private static final String RESTORE_URL = "http://www.sk7software.co.uk/climbviewer/backup/restore.php?id=";
     private static final String MAPBOX_URL = "https://api.mapbox.com/styles/v1/ajbrindle?access_token=";
+    private static final String REFRESH_URL = "http://www.sk7software.co.uk/strava/refresh.php";
     private static final String TAG = NetworkRequest.class.getSimpleName();
 
     public interface NetworkCallback {
@@ -268,6 +274,235 @@ public class NetworkRequest {
             getQueue(context).add(jsObjRequest);
         } catch (Exception e) {
             Log.d(TAG, "Error fetching restore data: " + e.getMessage());
+        }
+    }
+
+    public static void refreshStravaAuth(final Context context, String refreshToken, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Refreshing Strava Auth");
+        try {
+            JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                    (Request.Method.GET, REFRESH_URL + "?refreshToken=" + refreshToken,
+                            null,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        StravaAuth auth = mapper.readValue(response.toString(), StravaAuth.class);
+                                        Log.d(TAG, auth.getAccessToken());
+                                        callback.onRequestCompleted(auth);
+                                    } catch (JsonProcessingException e) {
+                                        Log.d(TAG, "Error refreshing strava auth: " + e.getMessage());
+                                        callback.onRequestCompleted(null);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    );
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error refreshing strava auth: " + e.getMessage());
+        }
+    }
+
+    public static void fetchStravaActivities(final Context context, String accessToken, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetch Activities");
+        try {
+            JsonArrayRequest jsObjRequest = new JsonArrayRequest
+                    (Request.Method.GET, "https://www.strava.com/api/v3/athlete/activities",
+                            null,
+                            new Response.Listener<JSONArray>() {
+                                @Override
+                                public void onResponse(JSONArray response) {
+                                    Log.d(TAG, response.toString());
+                                    callback.onRequestCompleted(response);
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+                    params.put("Authorization", "Bearer " + accessToken);
+                    return params;
+                }
+            };
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error refreshing strava auth: " + e.getMessage());
+        }
+    }
+
+    public static void fetchStravaActivityStream(final Context context, String accessToken, long id, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetch Activity " + id);
+        try {
+            JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                    (Request.Method.GET, "https://www.strava.com/api/v3/activities/" + id + "/streams?keys=time,distance,latlng,altitude&key_by_type=true",
+                            null,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        StravaActivityStream activityStream = mapper.readValue(response.toString(), StravaActivityStream.class);
+                                        Log.d(TAG, "Done");
+                                        callback.onRequestCompleted(activityStream);
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error converting stream: " + e.getMessage());
+                                        callback.onRequestCompleted(null);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.e(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+                    params.put("Authorization", "Bearer " + accessToken);
+                    params.put("accept", "application/json");
+                    return params;
+                }
+            };
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching activity stream: " + e.getMessage());
+        }
+    }
+
+    public static void fetchStravaAthlete(final Context context, String accessToken, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetch Athlete");
+        try {
+            JsonObjectRequest jsObjRequest = new JsonObjectRequest
+                    (Request.Method.GET, "https://www.strava.com/api/v3/athlete",
+                            null,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        Log.d(TAG, response.toString());
+                                        callback.onRequestCompleted(Integer.parseInt(response.get("id").toString()));
+                                    } catch (JSONException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+                    params.put("Authorization", "Bearer " + accessToken);
+                    return params;
+                }
+            };
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error fetching athlete: " + e.getMessage());
+        }
+    }
+
+    public static void fetchStravaRoutes(final Context context, String accessToken, long athleteId, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetch Activities");
+        try {
+            JsonArrayRequest jsObjRequest = new JsonArrayRequest
+                    (Request.Method.GET, "https://www.strava.com/api/v3/athletes/" + athleteId + "/routes",
+                            null,
+                            new Response.Listener<JSONArray>() {
+                                @Override
+                                public void onResponse(JSONArray response) {
+                                    Log.d(TAG, response.toString());
+                                    callback.onRequestCompleted(response);
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.d(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+                    params.put("Authorization", "Bearer " + accessToken);
+                    return params;
+                }
+            };
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.d(TAG, "Error fetching routes: " + e.getMessage());
+        }
+    }
+
+    public static void fetchStravaRouteStream(final Context context, String accessToken, long id, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
+        Log.d(TAG, "Fetch Route " + id);
+        try {
+            JsonArrayRequest jsObjRequest = new JsonArrayRequest
+                    (Request.Method.GET, "https://www.strava.com/api/v3/routes/" + id + "/streams?keys=time,distance,latlng,altitude",
+                            null,
+                            new Response.Listener<JSONArray>() {
+                                @Override
+                                public void onResponse(JSONArray response) {
+                                    try {
+                                        StravaActivityStream activityStream = StravaActivityStream.createFromJson(response);
+                                        Log.d(TAG, "Done");
+                                        callback.onRequestCompleted(activityStream);
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error converting stream: " + e.getMessage());
+                                        callback.onRequestCompleted(null);
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Log.e(TAG, "Error => " + error.toString());
+                                    callback.onError(error);
+                                }
+                            }
+                    ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+                    params.put("Authorization", "Bearer " + accessToken);
+                    params.put("accept", "application/json");
+                    return params;
+                }
+            };
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            getQueue(context).add(jsObjRequest);
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching activity stream: " + e.getMessage());
         }
     }
 

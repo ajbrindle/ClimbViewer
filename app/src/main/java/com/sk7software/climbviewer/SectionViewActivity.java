@@ -106,7 +106,7 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
 
         map = MapFragmentFactory.getProviderMap(this, setMapFragmentIds());
         mirrorMap = MapFragmentFactory.getProviderMap(this, setMirrorMapFragmentIds());
-        mirrorMap.setMapType(MapType.HYBRID, null, true);
+        mirrorMap.setMapType(MapType.HYBRID, IMapFragment.PlotType.PURSUIT, true);
 
         loadNextScreen(true, null);
 

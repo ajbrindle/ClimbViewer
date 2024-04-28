@@ -35,6 +35,9 @@ public class Preferences {
     public static final String PREFERENCES_MAPBOX_3D_MAP_ID = "PREF_MAPBOX_3D_ID";
     public static final String PREFERENCES_DEFAULT_ZOOM = "PREF_ZOON";
     public static final String PREFERENCES_DEFAULT_PITCH = "PREF_PITCH";
+    public static final String PREFERENCES_STRAVA_AUTH_TOKEN = "PREF_STRAVA_AUTH";
+    public static final String PREFERENCES_STRAVA_REFRESH_TOKEN = "PREF_STRAVA_REFRESH";
+    public static final String PREFERENCES_STRAVA_EXPIRY = "PREF_STRAVA_EXP";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

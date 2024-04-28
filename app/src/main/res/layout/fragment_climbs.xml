@@ -79,7 +79,7 @@
             app:iconPadding="0dp"
             android:text=""/>
     </LinearLayout>
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/monitorClimbBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -99,7 +99,7 @@
         android:id="@+id/climbListSel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/climbButtons"
         android:paddingTop="3dp"
+        android:layout_below="@+id/climbButtons"
         android:visibility="visible"/>
 </RelativeLayout>
