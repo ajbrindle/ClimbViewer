@@ -33,11 +33,16 @@ public class ClimbListActivity extends Activity {
         setContentView(R.layout.activity_climb_list);
         // Show the Up button in the action bar.
         setupActionBar();
-        populateList(false);
+        boolean filtered = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_FILTER_LIST, false);
+
         chkFilter = findViewById(R.id.chkFilter);
+        chkFilter.setChecked(filtered);
+        populateList(filtered);
+
         chkFilter.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_FILTER_LIST, chkFilter.isChecked());
                 populateList(chkFilter.isChecked());
             }
         });

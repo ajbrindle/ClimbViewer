@@ -38,6 +38,8 @@ public class Preferences {
     public static final String PREFERENCES_STRAVA_AUTH_TOKEN = "PREF_STRAVA_AUTH";
     public static final String PREFERENCES_STRAVA_REFRESH_TOKEN = "PREF_STRAVA_REFRESH";
     public static final String PREFERENCES_STRAVA_EXPIRY = "PREF_STRAVA_EXP";
+    public static final String PREFERENCES_DOWNLOADED_ROUTE = "PREF_DOWNLOADED_ROUTE";
+    public static final String PREFERENCES_FILTER_LIST = "PREF_LIST_FILTER";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

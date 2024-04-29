@@ -345,5 +345,4 @@ public class RoutesFragment extends Fragment {
 
         return Collections.emptyList();
     }
-
 }

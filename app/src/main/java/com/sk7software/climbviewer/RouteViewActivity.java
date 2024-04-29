@@ -12,6 +12,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
@@ -51,10 +52,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private ClimbView nextClimbView;
     private RelativeLayout offRoutePanel;
     private RelativeLayout routeInfoPanel;
+    private RelativeLayout downloadPanel;
     private RelativeLayout completionPanel;
     private IMapFragment map;
     private ImageButton btnShowClimbs;
     private ImageButton btnShowLabels;
+    private ImageButton btnDownload;
+    private Button btnCancel;
     private int routeId;
     private GPXRoute route;
     private float totalDist;
@@ -72,6 +76,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private int nextClimbCounter;
     private boolean showingClimbs;
     private boolean showingLabels;
+    private boolean routeDownloaded = false;
+    private boolean stylesComplete;
+    private boolean tilesComplete;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
     private static final int DEFAULT_TRANSPARENCY = 190;
@@ -155,12 +162,20 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
-        btnShowClimbs = (ImageButton) findViewById(R.id.showClimbsBtn);
-        btnShowLabels = (ImageButton) findViewById(R.id.showLabelsBtn);
+        btnShowClimbs = findViewById(R.id.showClimbsBtn);
+        btnShowLabels = findViewById(R.id.showLabelsBtn);
+        btnDownload = findViewById(R.id.downloadBtn);
+        btnCancel = findViewById(R.id.btnCancel);
         btnShowLabels.setVisibility(View.GONE);
+
+        if (Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_DOWNLOADED_ROUTE, -1) == routeId) {
+            btnDownload.setImageResource(R.drawable.download_cancel);
+            routeDownloaded = true;
+        }
 
         if (!ignoreLocationUpdates) {
             btnShowClimbs.setVisibility(View.GONE);
+            btnDownload.setVisibility(View.GONE);
 
             if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB)) {
                 // if monitoring climbs, get distance of start of each climb from the start of the route
@@ -228,6 +243,34 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
+        btnDownload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!routeDownloaded) {
+                    stylesComplete = false;
+                    tilesComplete = false;
+                    downloadPanel.setVisibility(View.VISIBLE);
+                    map.downloadRoute(routeId, RouteViewActivity.this);
+                    btnDownload.setImageResource(R.drawable.download_cancel);
+                    routeDownloaded = true;
+                } else {
+                    map.clearDownload();
+                    btnDownload.setImageResource(R.drawable.download);
+                    routeDownloaded = false;
+                }
+            }
+        });
+
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                map.clearDownload();
+                btnDownload.setImageResource(R.drawable.download);
+                routeDownloaded = false;
+                downloadPanel.setVisibility(View.GONE);
+            }
+        });
+
         SeekBar transparency = findViewById(R.id.profileTransparency);
         transparency.setProgress(transparencyVal);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -245,6 +288,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
         offRoutePanel = findViewById(R.id.panelOffRoute);
         offRoutePanel.setVisibility(View.GONE);
+        downloadPanel = findViewById(R.id.panelDownload);
+        downloadPanel.setVisibility(View.GONE);
 
         ImageButton btnEdit = (ImageButton)findViewById(R.id.btnEdit);
         ImageButton btnOK = (ImageButton)findViewById(R.id.btnOK);
@@ -642,6 +687,31 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
         if (!found) {
             map.clearClimbMarkers();
+        }
+    }
+
+    @Override
+    public void updateProgressMessage(String message) {
+        if (message.startsWith("Style")) {
+            TextView t = findViewById(R.id.txtStyleProgress);
+            t.setText(message);
+            if (message.endsWith("COMPLETE")) {
+                stylesComplete = true;
+            }
+        } else {
+            TextView t = findViewById(R.id.txtTileProgress);
+            t.setText(message);
+            if (message.endsWith("COMPLETE")) {
+                tilesComplete = true;
+            }
+        }
+        if (stylesComplete && tilesComplete) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    downloadPanel.setVisibility(View.GONE);
+                }
+            });
         }
     }
 }
