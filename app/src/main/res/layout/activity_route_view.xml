@@ -134,6 +134,22 @@
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
+            <TextView
+                android:text=""
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large"
+                android:background="@color/white"
+                android:textColor="#ff555555"
+                android:fontFamily="@font/oswald_bold"
+                android:singleLine="true"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:scrollHorizontally="true"
+                android:visibility="gone"
+                android:id="@+id/txtSong" />
+
             <SeekBar
                 android:id="@+id/profileTransparency"
                 android:layout_width="match_parent"

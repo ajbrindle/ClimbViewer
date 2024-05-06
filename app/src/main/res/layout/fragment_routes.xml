@@ -108,7 +108,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/routeButtons"
         android:paddingTop="3dp"
-        android:visibility="visible"/>
+        android:visibility="invisible"/>
 
 
 </RelativeLayout>

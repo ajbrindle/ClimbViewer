@@ -101,5 +101,5 @@
         android:layout_height="wrap_content"
         android:paddingTop="3dp"
         android:layout_below="@+id/climbButtons"
-        android:visibility="visible"/>
+        android:visibility="invisible"/>
 </RelativeLayout>

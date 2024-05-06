@@ -1,5 +1,6 @@
 package com.sk7software.climbviewer;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.ColorMatrixColorFilter;
@@ -7,6 +8,7 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
@@ -18,6 +20,7 @@ import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -46,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
+public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface, SpotifyTrackUpdateInterface {
 
     private ClimbView fullRouteView;
     private ClimbView nextClimbView;
@@ -343,11 +346,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             panel.showSummary(completionPanel, lastClimbId, this);
         }
 
+        SpotifyBroadcastReceiver.setActivity(this);
         Map<MapProvider, Integer> mapFragments = setMapFragmentIds();
         map = MapFragmentFactory.getProviderMap(this, mapFragments);
 
         if (ClimbController.getInstance().isRouteInProgress()) {
             setMapForFollowing();
+            updateTrackReceiverService(true);
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
         } else {
             map.setMapType(MapType.NORMAL, IMapFragment.PlotType.ROUTE, false);
@@ -364,6 +369,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     @Override
     protected void onResume() {
         super.onResume();
+        SpotifyBroadcastReceiver.setActivity(this);
+        updateTrackReceiverService(true);
         Log.d(TAG, "RouteViewActivity resume");
     }
 
@@ -371,6 +378,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     protected void onStop() {
         Log.d(TAG, "RouteViewActivity stopped");
         super.onStop();
+        updateTrackReceiverService(false);
     }
 
     @Override
@@ -713,5 +721,74 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 }
             });
         }
+    }
+
+    private void updateTrackReceiverService(boolean start) {
+        if (!Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_SHOW_SONG, false)) {
+            return;
+        }
+
+        Intent i = new Intent(getApplicationContext(), SpotifyBroadcastReceiver.class);
+
+        if (start) {
+            if (!isServiceRunning(SpotifyBroadcastReceiver.class)) {
+                startService(i);
+                Log.d(TAG, "Track display service started");
+                Toast.makeText(getApplicationContext(), "Track display service started", Toast.LENGTH_SHORT);
+            }
+        } else {
+            stopService(i);
+            Log.d(TAG, "Track display service stopped");
+            Toast.makeText(getApplicationContext(), "Track display service stopped", Toast.LENGTH_SHORT);
+        }
+    }
+
+    private boolean isServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void trackChanged(String artist, String track) {
+        if (ignoreLocationUpdates || !ClimbController.getInstance().isRouteInProgress()) {
+            return;
+        }
+
+        StringBuilder songDisplay = new StringBuilder();
+        for (int i=0; i<4; i++) {
+            songDisplay.append("  \u266a  \u266b  ");
+            songDisplay.append(track);
+            songDisplay.append(" / ");
+            songDisplay.append(artist);
+            songDisplay.append("  \u266a  \u266b ");
+        }
+        TextView txtSong = findViewById(R.id.txtSong);
+        txtSong.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 28);
+        txtSong.setText(songDisplay.toString());
+        txtSong.setSelected(true);
+        txtSong.setVisibility(View.VISIBLE);
+
+        // Thread to remove from display
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SONG_TIME, 30) * 1000);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            txtSong.setVisibility(View.GONE);
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    // Do nothing
+                }
+            }
+        }).start();
     }
 }

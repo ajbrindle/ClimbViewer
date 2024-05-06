@@ -76,6 +76,31 @@
         android:layout_marginTop="5dp"
         android:text="Sort climbs by rating" />
 
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/swiSong"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:text="Show Spotify now playing" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/txtSongTime"
+        android:layout_marginTop="15dp"
+        android:text="Track Display Time: 30s"
+        android:visibility="gone"/>
+
+    <SeekBar
+        android:id="@+id/seekSongTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:max="60"
+        android:min="10"
+        android:progress="30"
+        android:visibility="gone"/>
+
     <RadioGroup
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
