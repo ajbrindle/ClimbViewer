@@ -352,10 +352,6 @@ public class ClimbView extends View {
         p.setAlpha(transparency);
 
         if (profileBitmap == null) {
-            // Plot points onto bitmap first, then copy that to the display canvas
-            profileBitmap = Bitmap.createBitmap(canvas.getWidth(), canvas.getHeight(), Bitmap.Config.ARGB_8888);
-            Canvas bitmapCanvas = new Canvas(profileBitmap);
-
             int viewWidth = xRight - xLeft;
 
             if (points == null) {
@@ -366,7 +362,9 @@ public class ClimbView extends View {
                 // Height might have changed
                 viewHeight = height;
             }
-
+            // Plot points onto bitmap first, then copy that to the display canvas
+            profileBitmap = Bitmap.createBitmap(canvas.getWidth(), viewHeight, Bitmap.Config.ARGB_8888);
+            Canvas bitmapCanvas = new Canvas(profileBitmap);
             plotPoints(points, bitmapCanvas);
         }
 
