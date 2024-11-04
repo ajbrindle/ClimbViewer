@@ -58,6 +58,9 @@ public class RoutePoint {
     @Attribute(required = false)
     private double smoothedElevation;
 
+    @Attribute(required = false)
+    private float speed;
+
     public void setENFromLL(Projection proj, int zone) {
         RoutePoint tmpPt = GeoConvert.convertLLToGrid(proj, this, zone);
         this.setEasting(tmpPt.getEasting());

@@ -6,17 +6,21 @@ import android.content.Intent;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -44,6 +48,8 @@ import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,9 +88,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private boolean routeDownloaded = false;
     private boolean stylesComplete;
     private boolean tilesComplete;
+    private ViewGroup[] vgPanels;
+    private int panelCounter = 0;
+    private int panelGroup = 0;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
     private static final int DEFAULT_TRANSPARENCY = 190;
+    private static final int NUM_PANEL_GROUPS = 3;
     private static final float[] NEGATIVE = {
             -1.0f, 0, 0, 0, 255, // red
             0, -1.0f, 0, 0, 255, // green
@@ -122,6 +132,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         txtRouteName = (EditText) findViewById(R.id.txtRouteName);
         txtRouteName.setText(route.getName());
         txtRouteName.setEnabled(false);
+        vgPanels = new ViewGroup[NUM_PANEL_GROUPS];
+        vgPanels[0] = (ViewGroup)findViewById(R.id.panels1);
+        vgPanels[1] = (ViewGroup)findViewById(R.id.panels2);
+        vgPanels[2] = (ViewGroup)findViewById(R.id.panels3);
 
         ClimbController.getInstance().loadRoute(route);
 
@@ -437,7 +451,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
 
             fullRouteView.invalidate();
-            updateDistAndElevation();
+            updatePanels(point);
 
             RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getSnappedPosition();
             if (map != null && snappedPos != null) {
@@ -540,10 +554,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         if (!ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = findViewById(R.id.panel1Label);
-            TextView label2 = findViewById(R.id.panel2Label);
-            TextView txtDist = findViewById(R.id.txtPanel1);
-            TextView txtElev = findViewById(R.id.txtPanel2);
+            TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+            TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+            TextView txtDist = vgPanels[0].findViewById(R.id.txtPanel1);
+            TextView txtElev = vgPanels[0].findViewById(R.id.txtPanel2);
 
             label1.setText("DISTANCE");
             label2.setText("ELEV GAIN");
@@ -553,14 +567,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
     }
 
-    private void updateDistAndElevation() {
+    private void updatePanels(RoutePoint point) {
         Log.d(TAG, "Update panels");
         if (ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = findViewById(R.id.panel1Label);
-            TextView label2 = findViewById(R.id.panel2Label);
-            TextView txtDist = findViewById(R.id.txtPanel1);
-            TextView txtElev = findViewById(R.id.txtPanel2);
-
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();
 
@@ -596,30 +605,38 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
 
             if (nextClimb > 0) {
+                // Display next climb data in the panels (and don't animate them)
+                TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+                TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+                TextView txtMain1 = vgPanels[0].findViewById(R.id.txtPanel1);
+                TextView txtMain2 = vgPanels[0].findViewById(R.id.txtPanel2);
+
                 label1.setText("NEXT CLIMB");
-                DisplayFormatter.setDistanceText((float)minDist, "km", txtDist, true);
+                DisplayFormatter.setDistanceText((float)minDist, "km", txtMain1, true);
 
                 nextClimbCounter++;
 
                 if (nextClimbCounter % 15 < 5) {
                     label2.setText("RATING");
-                    txtElev.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
+                    txtMain2.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
                 } else if (nextClimbCounter % 15 < 10) {
                     label2.setText("DIST");
-                    DisplayFormatter.setDistanceText(nextClimbLength, "km", txtElev, true);
+                    DisplayFormatter.setDistanceText(nextClimbLength, "km", txtMain2, true);
                 } else {
                     label2.setText("HEIGHT");
-                    DisplayFormatter.setDistanceText(nextClimbHeight, "m", txtElev, true);
+                    DisplayFormatter.setDistanceText(nextClimbHeight, "m", txtMain2, true);
+                }
+                vgPanels[0].setVisibility(View.VISIBLE);
+                panelGroup = 0;
+                panelCounter = 0;
+                for (int i=1; i<NUM_PANEL_GROUPS; i++) {
+                    vgPanels[i].setVisibility(View.GONE);
                 }
             } else {
-                label1.setText("TO GO");
-                label2.setText("ELEV LEFT");
                 loadNextClimbWarning = false;
                 fullRouteView.setVisibility(View.VISIBLE);
                 nextClimbView.setVisibility(View.GONE);
-
-                DisplayFormatter.setDistanceText(totalDist - distDone, "km", txtDist, false);
-                DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txtElev, false);
+                setPanelData(point, distDone, elevDone);
             }
 
             // If in last 25m, flag screen to close after 5 more updates
@@ -633,6 +650,67 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
             }
         }
+    }
+
+    private void setPanelData(RoutePoint point, float distDone, float elevDone) {
+        ImageView chargeImg = vgPanels[1].findViewById(R.id.charge);
+        chargeImg.setVisibility(View.GONE);
+
+        setPanelsToGoAndElev(distDone, elevDone);
+        setPanelsTimeAndBattery(chargeImg);
+        setPanelsSpeedAndElev(point);
+
+        // Animate every 10th interval
+        if (panelCounter++ % 10 == 9) {
+            panelCounter = 0;
+            panelGroup++;
+            if (panelGroup >= NUM_PANEL_GROUPS) {
+                panelGroup = 0;
+            }
+            animatePanels();
+        }
+    }
+
+    private void setPanelsToGoAndElev(float distDone, float elevDone) {
+        TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[0].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[0].findViewById(R.id.txtPanel2);
+
+        label1.setText("TO GO");
+        label2.setText("ELEV LEFT");
+        DisplayFormatter.setDistanceText(totalDist - distDone, "km", txt1, false);
+        DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txt2, false);
+    }
+
+    private void setPanelsTimeAndBattery(ImageView chargeImg) {
+        TextView label1 = vgPanels[1].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[1].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[1].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[1].findViewById(R.id.txtPanel2);
+
+        label1.setText("TIME");
+        label2.setText("BATTERY");
+        txt1.setText(DateTimeFormatter.ofPattern("HH:mm").format(LocalDateTime.now()));
+        BatteryManager bm = (BatteryManager) this.getSystemService(BATTERY_SERVICE);
+        int batteryLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        boolean isCharging = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS) == BatteryManager.BATTERY_STATUS_CHARGING;
+        txt2.setText(batteryLevel + "%");
+        if (isCharging) {
+            chargeImg.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setPanelsSpeedAndElev(RoutePoint point) {
+        TextView label1 = vgPanels[2].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[2].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[2].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[2].findViewById(R.id.txtPanel2);
+
+        label1.setText("SPEED");
+        label2.setText("ELEV");
+        txt1.setText(DisplayFormatter.formatDecimal(point.getSpeed(), 1) + " km/h");
+        txt2.setText(DisplayFormatter.formatDecimal((float)point.getElevation(), 0) + " m");
     }
 
     private double calcDistBetweenPoints(RoutePoint current, LatLng last) {
@@ -654,6 +732,28 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     public void clearCompletionPanel() {
         completionPanel.setVisibility(View.GONE);
         routeInfoPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void animatePanels() {
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+
+        ViewGroup slideIn = vgPanels[panelGroup];
+        ViewGroup slideOut = vgPanels[(panelGroup == 0 ? NUM_PANEL_GROUPS-1 : panelGroup-1)];
+
+        TranslateAnimation animate2 = new TranslateAnimation(
+                size.x,0,0,0);
+        animate2.setDuration(250);
+        slideIn.startAnimation(animate2);
+        slideIn.setVisibility(View.VISIBLE);
+
+        TranslateAnimation animate1 = new TranslateAnimation(
+                0, -size.x,0,0);
+        animate1.setDuration(250);
+        slideOut.startAnimation(animate1);
+        slideOut.setVisibility(View.GONE);
     }
 
     private Double getDistFromStart(GPXRoute climb) {

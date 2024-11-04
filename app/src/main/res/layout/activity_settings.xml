@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/txtScreenDelay"
-        android:layout_marginTop="15dp"
+        android:layout_marginTop="10dp"
         android:text="Time Between Screens: 15s"/>
 
     <SeekBar
@@ -43,7 +43,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/txtClimbWarn"
-        android:layout_marginTop="15dp"
+        android:layout_marginTop="10dp"
         android:text="Warn About Upcoming Climbs: 1000m"/>
 
     <SeekBar
@@ -59,35 +59,31 @@
         android:id="@+id/swiAutoMonitor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:text="Auto-monitor climbs on route" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbTolerance"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:text="Assume climbs complete when started" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiClimbSort"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:text="Sort climbs by rating" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiSong"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
         android:text="Show Spotify now playing" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/txtSongTime"
-        android:layout_marginTop="15dp"
+        android:layout_marginTop="5dp"
         android:text="Track Display Time: 30s"
         android:visibility="gone"/>
 

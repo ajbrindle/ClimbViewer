@@ -215,6 +215,7 @@ public class LocationMonitor {
                         point.setElevation(loc.getAltitude());
                         point.setAccuracy(loc.hasAccuracy() ? loc.getAccuracy() : 0);
                         point.setBearing(loc.getBearing());
+                        point.setSpeed(loc.getSpeed() * 3600 / 1000);
 
                         DecimalFormat formatter = new DecimalFormat("#.###");
                         Log.d(TAG, "Location: " + formatter.format(point.getEasting()) + ", " + formatter.format(point.getNorthing()));
