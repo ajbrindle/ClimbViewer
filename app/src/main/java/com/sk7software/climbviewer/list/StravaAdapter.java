@@ -53,7 +53,8 @@ public class StravaAdapter extends ArrayAdapter<StravaItem> {
                 img.setImageResource(R.drawable.ic_biking_solid);
                 img.setColorFilter(R.color.purple_200);
             } else {
-                img.setVisibility(View.INVISIBLE);
+                img.setImageResource(R.drawable.circle_regular);
+                img.setColorFilter(R.color.reddish);
             }
         }
 

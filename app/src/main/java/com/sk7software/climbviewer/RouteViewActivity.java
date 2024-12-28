@@ -568,7 +568,6 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     }
 
     private void updatePanels(RoutePoint point) {
-        Log.d(TAG, "Update panels");
         if (ClimbController.getInstance().isRouteInProgress()) {
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();

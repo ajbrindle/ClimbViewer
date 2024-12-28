@@ -186,6 +186,7 @@ public class StravaListActivity extends Activity implements ActivityUpdateInterf
                             i.putExtra("dateTime", activityDateTime);
                             i.putExtra("gpxType", "stream");
                             i.putExtra("streamType", type.name());
+                            i.putExtra("activityId", String.valueOf(activityId));
                             setProgress(false, null);
                             startActivity(i);
                         }

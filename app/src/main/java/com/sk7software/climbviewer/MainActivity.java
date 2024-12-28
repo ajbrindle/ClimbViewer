@@ -242,6 +242,11 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
                 stravaRoutes.putExtra("type", "route");
                 startActivity(stravaRoutes);
                 return true;
+            case R.id.action_strava_signout:
+                Preferences.getInstance().clearStringPreference(Preferences.PREFERENCES_STRAVA_AUTH_TOKEN);
+                Preferences.getInstance().clearStringPreference(Preferences.PREFERENCES_STRAVA_REFRESH_TOKEN);
+                Preferences.getInstance().clearStringPreference(Preferences.PREFERENCES_STRAVA_EXPIRY);
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
