@@ -74,6 +74,12 @@
         android:text="Sort climbs by rating" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/swiVoicePrompt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Play voice prompts" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/swiSong"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

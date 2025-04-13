@@ -37,6 +37,7 @@ public class SettingsActivity extends AppCompatActivity {
         int mapType = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_MAP_TYPE, 1);
         boolean song = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_SHOW_SONG, false);
         int songSecs = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SONG_TIME, 30);
+        boolean voice = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false);
 
         SeekBar smoothDist = findViewById(R.id.seekSmoothDistance);
         SeekBar delayS = findViewById(R.id.seekScreenDelay);
@@ -46,6 +47,7 @@ public class SettingsActivity extends AppCompatActivity {
         SwitchMaterial ultraTolerance = findViewById(R.id.swiClimbTolerance);
         SwitchMaterial climbSort = findViewById(R.id.swiClimbSort);
         SwitchMaterial songDisplay = findViewById(R.id.swiSong);
+        SwitchMaterial playVoice = findViewById(R.id.swiVoicePrompt);
 
         TextView smoothLabel = findViewById(R.id.txtSmoothDistance);
         TextView delayLabel = findViewById(R.id.txtScreenDelay);
@@ -163,6 +165,14 @@ public class SettingsActivity extends AppCompatActivity {
                 Preferences.getInstance().addPreference(Preferences.PREFERENCES_SHOW_SONG, isChecked);
                 songLabel.setVisibility(isChecked ? View.VISIBLE : View.GONE);
                 songTime.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        playVoice.setChecked(voice);
+        playVoice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_VOICE, isChecked);
             }
         });
 

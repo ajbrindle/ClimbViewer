@@ -8,6 +8,7 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.BatteryManager;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
@@ -55,7 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface, SpotifyTrackUpdateInterface {
+public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface, SpotifyTrackUpdateInterface, TextToSpeech.OnInitListener {
 
     private ClimbView fullRouteView;
     private ClimbView nextClimbView;
@@ -91,6 +92,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private ViewGroup[] vgPanels;
     private int panelCounter = 0;
     private int panelGroup = 0;
+    private int numVoicePrompts = 0;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
     private static final int DEFAULT_TRANSPARENCY = 190;
@@ -305,6 +307,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
         offRoutePanel = findViewById(R.id.panelOffRoute);
         offRoutePanel.setVisibility(View.GONE);
+        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE)) {
+            VoicePromptUtil.init(this, this);
+        }
         downloadPanel = findViewById(R.id.panelDownload);
         downloadPanel.setVisibility(View.GONE);
 
@@ -393,6 +398,9 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         Log.d(TAG, "RouteViewActivity stopped");
         super.onStop();
         updateTrackReceiverService(false);
+        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE)) {
+            VoicePromptUtil.getInstance().destroy();
+        }
     }
 
     @Override
@@ -465,6 +473,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             // Hide elevation data and show "off route" warning and restart monitoring
             Log.d(TAG, "NOT ON ROUTE");
             offRoutePanel.setVisibility(View.VISIBLE);
+            speakOffRoute(justLeftRoute);
             if (justLeftRoute) {
                 PositionMonitor.getInstance().resetRejoin();
                 justLeftRoute = false;
@@ -600,6 +609,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     nextClimbView.setTransparency(transparencyVal);
                     setClimbViewHeight(nextClimbView);
                     nextClimbView.invalidate();
+                    speakNextClimb(gc.getName(), nextClimbLength, nextClimbHeight, Database.getInstance().getClimbRating(nextClimb));
                 }
             }
 
@@ -889,5 +899,35 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 }
             }
         }).start();
+    }
+
+    private void speakOffRoute(boolean first) {
+        if (numVoicePrompts > 75 || !Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false)) {
+            return;
+        }
+
+        if (first) {
+            VoicePromptUtil.getInstance().saySomething("You are off route. Please rejoin the route.", TextToSpeech.QUEUE_FLUSH);
+            numVoicePrompts = 0;
+        } else if (numVoicePrompts % 15 == 0) {
+            VoicePromptUtil.getInstance().saySomething("You are still off route.", TextToSpeech.QUEUE_ADD);
+        }
+        numVoicePrompts++;
+    }
+
+    private void speakNextClimb(String name, float length, float height, long rating) {
+        if (!Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false)) {
+            return;
+        }
+
+        VoicePromptUtil.getInstance().saySomething("The next climb is " + name + "." +
+                " It is " + DisplayFormatter.formatDecimal(length/1000.0f, 1) + " kilometres long, " +
+                " with a height gain of " + DisplayFormatter.formatDecimal(height, 0) + " metres." +
+                " It has a rating of " + rating , TextToSpeech.QUEUE_FLUSH);
+    }
+
+    @Override
+    public void onInit(int status) {
+        VoicePromptUtil.getInstance().onInit(status);
     }
 }
