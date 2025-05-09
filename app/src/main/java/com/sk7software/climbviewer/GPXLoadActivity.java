@@ -23,19 +23,16 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.common.util.Strings;
 import com.sk7software.climbviewer.db.Database;
-import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.StravaListActivity;
 import com.sk7software.climbviewer.model.ClimbAttempt;
 import com.sk7software.climbviewer.model.GPXFile;
 import com.sk7software.climbviewer.model.GPXMetadata;
 import com.sk7software.climbviewer.model.GPXRoute;
-import com.sk7software.climbviewer.model.PlaylistItem;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackMetadata;
 import com.sk7software.climbviewer.model.TrackSegment;
-import com.sk7software.climbviewer.model.strava.StravaActivity;
 import com.sk7software.climbviewer.model.strava.StravaActivityStream;
 import com.sk7software.climbviewer.network.FileDescription;
 import com.sk7software.climbviewer.network.FileList;
@@ -43,7 +40,6 @@ import com.sk7software.climbviewer.network.NetworkRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -64,7 +60,6 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
     private LoadType loadType;
     private GPXType gpxType;
     private LinearLayout panelFileList;
-    private Button btnActivityUpdate;
     private static final String TAG = GPXLoadActivity.class.getSimpleName();
 
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -80,8 +75,6 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
         Button btnLoad = (Button)findViewById(R.id.btnLoad);
         Button btnLoadSel = (Button)findViewById(R.id.btnCommit);
         Button btnCancel = (Button)findViewById(R.id.btnCancelLoad);
-        Button btnPlaylist = (Button)findViewById(R.id.btnPlaylist);
-        btnActivityUpdate = (Button)findViewById(R.id.btnActivityUpdate);
         RadioButton radRoute = (RadioButton) findViewById(R.id.radRoute);
         RadioButton radClimb = (RadioButton) findViewById(R.id.radClimb);
         RadioButton radAttempt = (RadioButton) findViewById(R.id.radAttempt);
@@ -192,95 +185,6 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
                 goToMainActivity();
             }
         });
-
-        final String activityId = getIntent().getStringExtra("activityId");
-        final String accessToken = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_STRAVA_AUTH_TOKEN);
-        if (Strings.isEmptyOrWhitespace(activityId)) {
-            btnPlaylist.setVisibility(View.GONE);
-        }
-
-        btnPlaylist.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!Strings.isEmptyOrWhitespace(activityId)) {
-                    setProgress(true, "Fetching tracks from activity...");
-                    // Fetch the activity details
-                    NetworkRequest.fetchStravaActivity(getApplicationContext(), accessToken, Long.parseLong(activityId), null, new NetworkRequest.NetworkCallback() {
-                        @Override
-                        public void onRequestCompleted(Object callbackData) {
-                            // Fetch tracks played between start and end time of activity
-                            setProgress(false, null);
-                            TextView playlist = (TextView) findViewById(R.id.txtPlaylistItems);
-                            StravaActivity activity = (StravaActivity) callbackData;
-
-                            // Calc start and end time in local time
-                            LocalDateTime start = LocalDateTime.parse(activity.getStartTime(), DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
-                            LocalDateTime end = start.plusSeconds(activity.getDuration());
-                            String startStr = start.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                            String endStr = end.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                            playlist.setText(activity.getDescription());
-                            playlist.setVisibility(View.VISIBLE);
-
-                            // Fetch tracks played during this time
-                            fetchPlayedTracks(startStr, endStr);
-                        }
-
-                        @Override
-                        public void onError(Exception e) {
-                            setProgress(false, null);
-                        }
-                    });
-                }
-            }
-        });
-
-        btnActivityUpdate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                TextView playlist = (TextView) findViewById(R.id.txtPlaylistItems);
-                String activityDescription = playlist.getText().toString();
-                setProgress(true, "Updating activity...");
-                NetworkRequest.updateStravaActivity(getApplicationContext(), accessToken, Long.parseLong(activityId), activityDescription, new NetworkRequest.NetworkCallback() {
-                    @Override
-                    public void onRequestCompleted(Object callbackData) {
-                        setProgress(false, null);
-                        Log.d(TAG, "Activity updated");
-                    }
-                    @Override
-                    public void onError(Exception e) {
-                        setProgress(false, null);
-                        Log.e(TAG, "Error updating activity: " + e.getMessage());
-                    }
-                });
-            }
-        });
-    }
-
-    private void fetchPlayedTracks(String start, String end) {
-        setProgress(true, "Looking for played tracks...");
-        NetworkRequest.fetchActivityPlaylist(ApplicationContextProvider.getContext(), start, end, null, new NetworkRequest.NetworkCallback() {
-            @Override
-            public void onRequestCompleted(Object callbackData) {
-                List<PlaylistItem> items = (List<PlaylistItem>) callbackData;
-                if (!items.isEmpty()) {
-                    StringBuilder itemsStr = new StringBuilder();
-                    for (PlaylistItem item : items) {
-                        itemsStr.append(item.getArtist() + " - " + item.getTitle());
-                        itemsStr.append("\r\n");
-                    }
-                    TextView playlist = (TextView) findViewById(R.id.txtPlaylistItems);
-                    playlist.setText(playlist.getText() + "\r\nTracks played on this activity:\r\n" + itemsStr.toString());
-                    playlist.setVisibility(View.VISIBLE);
-                    btnActivityUpdate.setVisibility(View.VISIBLE);
-                }
-                setProgress(false, null);
-            }
-            @Override
-            public void onError(Exception e) {
-                setProgress(false, null);
-                Log.e(TAG, "Error getting playlist: " + e.getMessage());
-            }
-        });
     }
 
     private void refreshFileList() {
@@ -340,7 +244,12 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        StravaActivityStream activityStream = (StravaActivityStream) getIntent().getParcelableExtra("stream");
+                        StravaActivityStream activityStream = null;
+                        if ("yes".equals(getIntent().getSerializableExtra("stream").toString())) {
+                            activityStream = StravaActivityStream.getLastStream();
+                        } else {
+                            activityStream = (StravaActivityStream) getIntent().getParcelableExtra("stream");
+                        }
                         String dateTime = getIntent().getStringExtra("dateTime");
                         String fileType = getIntent().getStringExtra("streamType");
                         String name = getIntent().getStringExtra("name");

@@ -544,7 +544,7 @@ public class NetworkRequest {
     }
 
     public static void fetchStravaActivity(final Context context, String accessToken, long id, ActivityUpdateInterface uiUpdate, final NetworkCallback callback) {
-        Log.d(TAG, "Fetch Activity " + id);
+        Log.d(TAG, "Fetch Strava item " + id);
         try {
             JsonObjectRequest jsObjRequest = new JsonObjectRequest
                     (Request.Method.GET, "https://www.strava.com/api/v3/activities/" + id,
@@ -579,53 +579,10 @@ public class NetworkRequest {
                     return params;
                 }
             };
-            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
+            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(10000, 1, 1));
             getQueue(context).add(jsObjRequest);
         } catch (Exception e) {
             Log.e(TAG, "Error fetching activity stream: " + e.getMessage());
-        }
-    }
-
-    public static void updateStravaActivity(final Context context, String accessToken, long id, String description, final NetworkCallback callback) {
-        Log.d(TAG, "Update Activity " + id);
-        try {
-            JSONObject postData = new JSONObject();
-            postData.put("description", description);
-            JsonObjectRequest jsObjRequest = new JsonObjectRequest
-                    (Request.Method.PUT, "https://www.strava.com/api/v3/activities/" + id,
-                            postData,
-                            new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject response) {
-                                    try {
-                                        Log.d(TAG, "Done");
-                                        callback.onRequestCompleted(null);
-                                    } catch (Exception e) {
-                                        Log.e(TAG, "Error updating activity: " + e.getMessage());
-                                        callback.onRequestCompleted(null);
-                                    }
-                                }
-                            },
-                            new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError error) {
-                                    Log.e(TAG, "Error => " + error.toString());
-                                    callback.onError(error);
-                                }
-                            }
-                    ) {
-                @Override
-                public Map<String, String> getHeaders() throws AuthFailureError {
-                    Map<String, String> params = new HashMap<String, String>();
-                    params.put("Authorization", "Bearer " + accessToken);
-                    params.put("Content-Type", "application/json");
-                    return params;
-                }
-            };
-            jsObjRequest.setRetryPolicy(new DefaultRetryPolicy(5000, 1, 1));
-            getQueue(context).add(jsObjRequest);
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating activity description: " + e.getMessage());
         }
     }
 

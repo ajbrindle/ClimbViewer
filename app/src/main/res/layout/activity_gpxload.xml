@@ -121,31 +121,7 @@
                     android:text="Cancel"
                     android:layout_weight="1"
                     android:layout_margin="5dp"/>
-                <Button
-                    android:id="@+id/btnPlaylist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Playlist"
-                    android:layout_weight="1"
-                    android:layout_margin="5dp"/>
             </LinearLayout>
-            <TextView
-                android:id="@+id/txtPlaylistItems"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Playlist Items"
-                android:overScrollMode="always"
-                android:layout_marginLeft="5dp"
-                android:layout_marginTop="5dp"
-                android:layout_marginRight="5dp"
-                android:visibility="gone"/>
-            <Button
-                android:id="@+id/btnActivityUpdate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Add to Activity"
-                android:layout_margin="5dp"
-                android:visibility="gone"/>
         </LinearLayout>
     </ScrollView>
 

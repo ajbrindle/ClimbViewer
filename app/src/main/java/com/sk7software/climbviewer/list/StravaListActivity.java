@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -181,8 +180,9 @@ public class StravaListActivity extends Activity implements ActivityUpdateInterf
                     public void onRequestCompleted(Object callbackData) {
                         if (callbackData != null) {
                             StravaActivityStream activityStream = (StravaActivityStream)callbackData;
+                            StravaActivityStream.setLastStream(activityStream);
                             Intent i = new Intent(StravaListActivity.this, GPXLoadActivity.class);
-                            i.putExtra("stream", (Parcelable) activityStream);
+                            i.putExtra("stream", "yes");
                             i.putExtra("dateTime", activityDateTime);
                             i.putExtra("gpxType", "stream");
                             i.putExtra("streamType", type.name());
@@ -215,8 +215,9 @@ public class StravaListActivity extends Activity implements ActivityUpdateInterf
                     public void onRequestCompleted(Object callbackData) {
                         if (callbackData != null) {
                             StravaActivityStream activityStream = (StravaActivityStream)callbackData;
+                            StravaActivityStream.setLastStream(activityStream);
                             Intent i = new Intent(StravaListActivity.this, GPXLoadActivity.class);
-                            i.putExtra("stream", (Parcelable) activityStream);
+                            i.putExtra("stream", "yes");
                             i.putExtra("dateTime", activityDateTime);
                             i.putExtra("gpxType", "stream");
                             i.putExtra("streamType", type.name());
