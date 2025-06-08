@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal"
+    tools:context=".BTCadenceActivity">
+
+    <TextView
+        android:id="@+id/statusTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="App Status: Idle"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"
+        android:padding="8dp"
+        android:background="#E0E0E0"
+        android:textColor="#333333"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/cadenceValueTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cadence: -- RPM"
+        android:textSize="24sp"
+        android:textColor="#009688"
+        android:layout_marginBottom="24dp"
+        android:textStyle="bold"/>
+
+    <Button
+        android:id="@+id/scanButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Scan for BLE Devices"
+        android:layout_marginBottom="12dp"
+        android:padding="12dp"
+        android:textColor="#FFFFFF"/>
+
+    <TextView
+        android:id="@+id/scanningStatusTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scanning: Idle"
+        android:layout_marginBottom="8dp"
+        android:textStyle="italic"/>
+
+    <ListView
+        android:id="@+id/devicesListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5"
+        android:padding="4dp"
+        android:divider="#CCCCCC"
+        android:dividerHeight="1dp"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/disconnectButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Disconnect BLE"
+        android:layout_marginBottom="12dp"
+        android:padding="12dp"
+        android:backgroundTint="#F44336"
+        android:textColor="#FFFFFF"/>
+
+</LinearLayout>

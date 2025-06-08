@@ -38,6 +38,7 @@ public class SettingsActivity extends AppCompatActivity {
         boolean song = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_SHOW_SONG, false);
         int songSecs = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SONG_TIME, 30);
         boolean voice = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false);
+        boolean cadence = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_USE_CADENCE, false);
 
         SeekBar smoothDist = findViewById(R.id.seekSmoothDistance);
         SeekBar delayS = findViewById(R.id.seekScreenDelay);
@@ -48,6 +49,7 @@ public class SettingsActivity extends AppCompatActivity {
         SwitchMaterial climbSort = findViewById(R.id.swiClimbSort);
         SwitchMaterial songDisplay = findViewById(R.id.swiSong);
         SwitchMaterial playVoice = findViewById(R.id.swiVoicePrompt);
+        SwitchMaterial useCadence = findViewById(R.id.swiCadence);
 
         TextView smoothLabel = findViewById(R.id.txtSmoothDistance);
         TextView delayLabel = findViewById(R.id.txtScreenDelay);
@@ -205,6 +207,30 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent i = new Intent(SettingsActivity.this, MapBoxSettingsActivity.class);
+                startActivity(i);
+            }
+        });
+
+        Button btnCadenceSettings = findViewById(R.id.btnCadenceSettings);
+        if (cadence) {
+            btnCadenceSettings.setVisibility(View.VISIBLE);
+        } else {
+            btnCadenceSettings.setVisibility(View.GONE);
+        }
+
+        useCadence.setChecked(cadence);
+        useCadence.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, isChecked);
+                btnCadenceSettings.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        btnCadenceSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(SettingsActivity.this, BTCadenceActivity.class);
                 startActivity(i);
             }
         });

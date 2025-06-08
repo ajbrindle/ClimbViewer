@@ -43,6 +43,8 @@ public class Preferences {
     public static final String PREFERENCES_SHOW_SONG = "PREF_SHOW_SONG";
     public static final String PREFERENCES_SONG_TIME = "PREF_SONG_TIME";
     public static final String PREFERENCES_VOICE = "PREF_VOICE";
+    public static final String PREFERENCES_USE_CADENCE = "PREF_USE CADENCE";
+    public static final String PREFERENCE_SELECTED_BLE_DEVICE = "PREF_SELECTED_BLE_DEVICE";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_marginLeft="5dp"
@@ -103,6 +104,30 @@
         android:progress="30"
         android:visibility="gone"/>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swiCadence"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Connect Cadence Sensor" />
+        <Button
+            android:id="@+id/btnCadenceSettings"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/gear_solid"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="0dp"
+            android:layout_marginLeft="5dp"
+            android:text=""
+            android:visibility="gone"/>
+    </LinearLayout>
+
     <RadioGroup
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -135,5 +160,4 @@
         android:id="@+id/btnMapBoxSettings"
         android:text="MapBox Settings"
         android:visibility="gone"/>
-
 </LinearLayout>
