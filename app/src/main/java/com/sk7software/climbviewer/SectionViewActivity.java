@@ -16,8 +16,10 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.common.util.Strings;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.maps.IMapFragment;
 import com.sk7software.climbviewer.maps.MapFragmentFactory;
 import com.sk7software.climbviewer.maps.MapProvider;
@@ -156,15 +158,25 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
     }
     @Override
     protected void onResume() {
+        Log.d(TAG, "SectionViewActivity onResume");
         super.onResume();
         loadTime = new Date().getTime();
         monitor = LocationMonitor.getInstance(this);
+        // Check if cadence sensor is connected
+        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_USE_CADENCE, false)) {
+            String macAddress = Preferences.getInstance().getStringPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE_ADDRESS);
+            Log.d(TAG, "Reconnecting BLE");
+            if (!Strings.isEmptyOrWhitespace(macAddress)) {
+                BTCadenceController.getInstance().reset(macAddress, this, this);
+            }
+        }
     }
 
     @Override
     protected void onStop() {
         Log.d(TAG, "SectionViewActivity onStop");
         super.onStop();
+        BTCadenceController.getInstance().cleanup();
     }
 
     private void setClimbViewHeight() {
@@ -375,6 +387,17 @@ public class SectionViewActivity extends AppCompatActivity implements ActivityUp
         if (!firstLoad) {
             map.updateMap();
             map.plotTrack();
+        }
+    }
+
+    @Override
+    public void updateDeviceData(int value) {
+        if (BTCadenceController.getInstance().isAvailable()) {
+            TextView txtCadence = findViewById(R.id.txtCadence);
+            TextView txtRPM = findViewById(R.id.txtRPM);
+            txtCadence.setText(value >= 0 ? String.valueOf(value) : "--");
+            txtCadence.setVisibility(View.VISIBLE);
+            txtRPM.setVisibility(View.VISIBLE);
         }
     }
 }

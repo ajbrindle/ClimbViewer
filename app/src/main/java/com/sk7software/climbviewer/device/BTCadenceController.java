@@ -12,10 +12,12 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Parcel;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.db.Preferences;
 
@@ -24,15 +26,19 @@ import java.util.UUID;
 public class BTCadenceController {
     private static BTCadenceController INSTANCE = null;
     private static final String TAG = BTCadenceController.class.getSimpleName();
+    private boolean available = false;
+    private boolean connected = false;
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothGatt bluetoothGatt;
     private BluetoothDevice selectedDevice;
     private CadenceMeasurementParser cadenceParser;
+    private ActivityUpdateInterface activity;
     private Handler reconnectHandler = new Handler(Looper.getMainLooper());
     private Runnable reconnectRunnable;
     private boolean shouldAttemptReconnect = false; // Flag to control auto-reconnect
     private int reconnectAttemptCount = 0;
+    private int cadenceRPM = 0;
     private static final int MAX_RECONNECT_ATTEMPTS = -1;
     private static final long RECONNECT_DELAY_MS = 3000;
     private static final UUID CSC_SERVICE_UUID = UUID.fromString("00001816-0000-1000-8000-00805f9b34fb");
@@ -48,50 +54,102 @@ public class BTCadenceController {
         return INSTANCE;
     }
 
-    public boolean initialise() {
+    private BTCadenceController() {
         bluetoothManager = (BluetoothManager) ApplicationContextProvider.getContext().getSystemService(Context.BLUETOOTH_SERVICE);
         if (bluetoothManager != null) {
             bluetoothAdapter = bluetoothManager.getAdapter();
             if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-                // Handle Bluetooth not enabled or not available
-                return false;
+                available = false;
             }
         } else {
-            return false;
+            available = false;
         }
-        return true;
+        cadenceParser = new CadenceMeasurementParser();
+        available = true;
     }
 
-    public void connect(final Context context) {
-        try {
-            bluetoothGatt = selectedDevice.connectGatt(context, false, gattCallback);
-            // store selected device in preferences
-            Parcel parcel = Parcel.obtain();
-            selectedDevice.writeToParcel(parcel, 0);
-            byte[] byteArray = parcel.marshall();
-            // encode byteArray as base64
-            String encodedDevice = android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT);
-            Preferences.getInstance().addPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE, encodedDevice);
-            reconnectRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if (shouldAttemptReconnect && selectedDevice != null && bluetoothGatt != null) {
-                        if (MAX_RECONNECT_ATTEMPTS > 0 && reconnectAttemptCount < MAX_RECONNECT_ATTEMPTS) {
-                            reconnectAttemptCount++;
-                            Log.d(TAG, "Attempting to reconnect to " + selectedDevice.getName() + " (Attempt " + reconnectAttemptCount + ")");
-                            bluetoothGatt.connect(); // Use connect() on existing GATT object
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public static String getSelectedDeviceName() {
+        String deviceName = Preferences.getInstance().getStringPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE_NAME);
+        if (deviceName == null || deviceName.isEmpty()) {
+            return null;
+        }
+        return deviceName;
+    }
+    public static String getSelectedDeviceAddr() {
+        String deviceAddr = Preferences.getInstance().getStringPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE_ADDRESS);
+        if (deviceAddr == null || deviceAddr.isEmpty()) {
+            return null;
+        }
+        return deviceAddr;
+    }
+
+    public boolean connectToMacAddress(Context context, String macAddress, ActivityUpdateInterface activity) throws SecurityException {
+        this.activity = activity;
+
+        // Validate MAC address format
+        if (!BluetoothAdapter.checkBluetoothAddress(macAddress)) {
+            Log.e(TAG, "Invalid MAC Address format: " + macAddress);
+            return false;
+        }
+
+        // If a GATT connection is already active for this device, reuse it
+        if (selectedDevice != null && selectedDevice.getAddress().equals(macAddress) && bluetoothGatt != null) {
+            Log.d(TAG, "Attempting to reconnect to existing GATT connection for: " + macAddress);
+            shouldAttemptReconnect = true;
+            return bluetoothGatt.connect();
+        }
+
+        // Close any existing GATT connection before attempting a new one
+        if (bluetoothGatt != null) {
+            bluetoothGatt.close();
+            bluetoothGatt = null;
+        }
+
+        // Get BluetoothDevice object from MAC address
+        final BluetoothDevice device = bluetoothAdapter.getRemoteDevice(macAddress);
+        if (device == null) {
+            Log.e(TAG, "Device not found for MAC address: " + macAddress);
+            return false;
+        }
+
+        // Store the device we are connecting to
+        selectedDevice = device;
+
+        // Connect to the GATT server hosted by the BLE device
+        // autoConnect = true: The system will automatically reconnect if connection is lost.
+        // This is generally preferred for long-term, background connections.
+        Log.d(TAG, "Connecting to GATT server for MAC: " + macAddress + " with autoConnect=true");
+        bluetoothGatt = device.connectGatt(context, true, gattCallback);
+        shouldAttemptReconnect = true;
+
+        reconnectRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (shouldAttemptReconnect && selectedDevice != null && bluetoothGatt != null) {
+                    if (MAX_RECONNECT_ATTEMPTS < 0 || reconnectAttemptCount < MAX_RECONNECT_ATTEMPTS) {
+                        reconnectAttemptCount++;
+                        try {
+                            Log.d(TAG, "Attempting to reconnect to device (Attempt " + reconnectAttemptCount + ")");
+                            bluetoothGatt.connect();
                             reconnectHandler.postDelayed(this, RECONNECT_DELAY_MS); // Schedule next attempt
-                        } else {
-                            shouldAttemptReconnect = false; // Stop trying
-                            closeGatt(); // Clean up GATT object
+                        } catch (SecurityException e) {
+                            Log.e(TAG, "SecurityException during reconnect: " + e.getMessage());
+                            shouldAttemptReconnect = false;
+                            closeGatt();
                         }
+                    } else {
+                        Log.w(TAG, "Max reconnect attempts reached. Stopping auto-reconnect.");
+                        shouldAttemptReconnect = false;
+                        closeGatt();
                     }
                 }
-            };
-        } catch (SecurityException e) {
-            // Handle connection failure
-            return;
-        }
+            }
+        };
+        return true;
     }
 
     // BluetoothGattCallback for managing GATT interactions
@@ -104,6 +162,7 @@ public class BTCadenceController {
                 Log.d(TAG, "Connected to GATT server.");
                 // Reset reconnect attempts on successful connection
                 cancelReconnectAttempts();
+                connected = true;
 
                 try {
                     gatt.discoverServices();
@@ -115,6 +174,7 @@ public class BTCadenceController {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 // Device disconnected
                 Log.d(TAG, "Disconnected from GATT server.");
+                connected = false;
 
                 // --- Reconnect Logic Trigger ---
                 if (shouldAttemptReconnect && selectedDevice != null && bluetoothGatt != null) {
@@ -184,16 +244,39 @@ public class BTCadenceController {
                     @Override
                     public void run() {
                         if (currentCadenceRPM >= 0) { // Parser returns 0 or positive for valid RPM
-                            Log.d(TAG, "Cadence: " + currentCadenceRPM + " RPM");
+                            //Log.d(TAG, "Cadence: " + currentCadenceRPM + " RPM");
+                            cadenceRPM = currentCadenceRPM;
+                            if (activity != null) {
+                                activity.updateDeviceData(currentCadenceRPM);
+                            }
                         } else { // Handle cases where parser returns a special value (e.g., -1 for no crank data)
-                            Log.d(TAG, "Cadence: -- RPM");
+                            //Log.d(TAG, "Cadence: -- RPM");
+                            cadenceRPM = -1;
+                            if (activity != null) {
+                                activity.updateDeviceData(-1);
+                            }
                         }
                     }
                 });
             }
         }
-
     };
+
+    public int getCadenceRPM() {
+        return cadenceRPM;
+    }
+
+    public void cleanup() {
+        try {
+            Log.d(TAG, "Cleaning up BTCadenceController resources.");
+            disconnectBleDevice();
+            selectedDevice = null;
+            reconnectAttemptCount = 0;
+            connected = false;
+        } catch (SecurityException e) {
+            Log.e(TAG, "SecurityException during cleanup: " + e.getMessage());
+        }
+    }
 
     private void disconnectBleDevice() {
         if (bluetoothGatt == null) {
@@ -206,7 +289,11 @@ public class BTCadenceController {
     }
 
     private void cancelReconnectAttempts() {
+        if (reconnectHandler == null) {
+            return;
+        }
         reconnectHandler.removeCallbacks(reconnectRunnable);
+        reconnectHandler.removeCallbacksAndMessages(null);
         reconnectAttemptCount = 0;
         Log.d(TAG, "Reconnect attempts canceled.");
     }
@@ -222,5 +309,20 @@ public class BTCadenceController {
         }
         bluetoothGatt = null;
         selectedDevice = null;
+    }
+
+    public void reset(final String macAddress, final AppCompatActivity c, final ActivityUpdateInterface a) {
+        BTCadenceController.getInstance().cleanup();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // Allow time for cleanup to happen
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {}
+                BTCadenceController.getInstance().connectToMacAddress(c, macAddress, a);
+            }
+        }).start();
+
     }
 }

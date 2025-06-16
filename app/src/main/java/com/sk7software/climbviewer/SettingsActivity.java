@@ -2,6 +2,7 @@ package com.sk7software.climbviewer;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.maps.MapProvider;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -21,7 +23,7 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String DELAY_LABEL = "Time Between Screens: ";
     private static final String WARN_LABEL = "Warn About Upcoming Climbs: ";
     private static final String SONG_LABEL = "Track Display Time: ";
-
+    private static final String TAG = SettingsActivity.class.getSimpleName();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,6 +57,7 @@ public class SettingsActivity extends AppCompatActivity {
         TextView delayLabel = findViewById(R.id.txtScreenDelay);
         TextView warnLabel = findViewById(R.id.txtClimbWarn);
         TextView songLabel = findViewById(R.id.txtSongTime);
+        TextView btDeviceLabel = findViewById(R.id.txtSensorName);
 
         if (song) {
             songTime.setVisibility(View.VISIBLE);
@@ -213,9 +216,30 @@ public class SettingsActivity extends AppCompatActivity {
 
         Button btnCadenceSettings = findViewById(R.id.btnCadenceSettings);
         if (cadence) {
-            btnCadenceSettings.setVisibility(View.VISIBLE);
+            btnCadenceSettings.setEnabled(true);
+            String deviceName = BTCadenceController.getSelectedDeviceName();
+            if (deviceName != null) {
+                try {
+                    btDeviceLabel.setVisibility(View.VISIBLE);
+                    if (deviceName != null && !deviceName.isEmpty()) {
+                        btDeviceLabel.setText(deviceName + " (" + BTCadenceController.getSelectedDeviceAddr() + ")");
+                    } else {
+                        btDeviceLabel.setText("Unknown Device");
+                        cadence = false;
+                        Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                    }
+                } catch (SecurityException e) {
+                    cadence = false;
+                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                    Log.e(TAG, "Error retrieving device name: " + e.getMessage());
+                }
+            } else {
+                cadence = false;
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                btDeviceLabel.setVisibility(View.GONE);
+            }
         } else {
-            btnCadenceSettings.setVisibility(View.GONE);
+            btnCadenceSettings.setEnabled(false);
         }
 
         useCadence.setChecked(cadence);
@@ -223,7 +247,7 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
                 Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, isChecked);
-                btnCadenceSettings.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+                btnCadenceSettings.setEnabled(isChecked);
             }
         });
 

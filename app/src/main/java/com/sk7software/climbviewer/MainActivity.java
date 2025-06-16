@@ -28,6 +28,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.tabs.TabLayout;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.list.StravaListActivity;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -316,6 +317,7 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
     private void stopAllMonitors() {
         PositionMonitor.getInstance().stopAllMonitors();
         LocationMonitor.stopListener();
+        BTCadenceController.getInstance().cleanup();
         monitor = null;
     }
 

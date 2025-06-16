@@ -110,11 +110,11 @@ public class CadenceMeasurementParser {
         if (deltaTimeSeconds > 0 && deltaRevolutions > 0) {
             cadenceRPM = (int) Math.round((deltaRevolutions / deltaTimeSeconds) * 60.0);
             lastCalculatedTimestamp = System.currentTimeMillis();
-            Log.d(TAG, String.format("RPM Calculated: %d (Delta Revolutions: %d, Delta Time: %.3f s)", cadenceRPM, deltaRevolutions, deltaTimeSeconds));
+            //Log.d(TAG, String.format("RPM Calculated: %d (Delta Revolutions: %d, Delta Time: %.3f s)", cadenceRPM, deltaRevolutions, deltaTimeSeconds));
         } else if (deltaTimeSeconds > 0 && deltaRevolutions == 0) {
             // If time passed but no revolutions, cadence is 0
             cadenceRPM = 0;
-            Log.d(TAG, "RPM is 0: No revolutions in delta time.");
+            //Log.d(TAG, "RPM is 0: No revolutions in delta time.");
         } else {
             // Should ideally not happen if sensor sends proper updates
             Log.w(TAG, "Invalid delta time or revolutions: " + deltaTimeSeconds + "s, " + deltaRevolutions + " revs");

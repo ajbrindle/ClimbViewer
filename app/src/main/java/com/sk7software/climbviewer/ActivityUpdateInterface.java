@@ -7,4 +7,5 @@ public interface ActivityUpdateInterface {
     default void setProgress(boolean showProgressDialog, String progressMessage) {}
     default void clearCompletionPanel() {}
     default void updateProgressMessage(String message) {}
+    default void updateDeviceData(int value){}
 }

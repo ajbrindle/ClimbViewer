@@ -29,9 +29,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.common.util.Strings;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.maps.IMapFragment;
@@ -390,17 +392,30 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         super.onResume();
         SpotifyBroadcastReceiver.setActivity(this);
         updateTrackReceiverService(true);
+
+        if (!ignoreLocationUpdates) {
+            // Check if cadence sensor is connected
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_USE_CADENCE, false)) {
+                String macAddress = Preferences.getInstance().getStringPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE_ADDRESS);
+                Log.d(TAG, "Reconnecting BLE");
+                if (!Strings.isEmptyOrWhitespace(macAddress)) {
+                    BTCadenceController.getInstance().reset(macAddress, this, this);
+                }
+            }
+        }
+
         Log.d(TAG, "RouteViewActivity resume");
     }
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "RouteViewActivity stopped");
+        Log.d(TAG, "RouteViewActivity onStop");
         super.onStop();
         updateTrackReceiverService(false);
         if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE)) {
             VoicePromptUtil.getInstance().destroy();
         }
+        Log.d(TAG, "RouteViewActivity stopped");
     }
 
     @Override
@@ -829,6 +844,17 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     downloadPanel.setVisibility(View.GONE);
                 }
             });
+        }
+    }
+
+    @Override
+    public void updateDeviceData(int value) {
+        if (BTCadenceController.getInstance().isAvailable()) {
+            TextView txtCadence = findViewById(R.id.txtCadence);
+            TextView txtRPM = findViewById(R.id.txtRPM);
+            txtCadence.setText(value >= 0 ? String.valueOf(value) : "--");
+            txtCadence.setVisibility(View.VISIBLE);
+            txtRPM.setVisibility(View.VISIBLE);
         }
     }
 
