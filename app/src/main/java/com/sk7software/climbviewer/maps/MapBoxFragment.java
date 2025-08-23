@@ -79,7 +79,6 @@ import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
-import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.Palette;
@@ -494,72 +493,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         }
     }
 
-//    private void plotElevationLines(List<RoutePoint> pts, int minIdx, int maxIdx, int width, boolean smoothed) {
-//        boolean first = true;
-//        boolean buildStyle = false;
-//        int count = 1;
-//        List<Feature> features = new ArrayList<>();
-//
-//        for (int i=minIdx+1; i<=maxIdx; i++) {
-//            String name = LOCAL_TRACK_PREFIX + count + "-";
-//
-//            List<Point> line = new ArrayList<>();
-//            line.add(Point.fromLngLat(pts.get(i - 1).getLon(), pts.get(i - 1).getLat()));
-//            line.add(Point.fromLngLat(pts.get(i).getLon(), pts.get(i).getLat()));
-//            LineString lineString = LineString.fromLngLats(line);
-//            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
-//
-//            double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
-//            if (!smoothed) {
-//                elevDiff = pts.get(i).getElevation() - pts.get(i - 1).getElevation();
-//            }
-//            double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
-//            double gradient = elevDiff * 100 / distBetween;
-//
-//            if (!isLayerAdded(name)) {
-//                buildStyle = true;
-//                GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
-//
-//                LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
-//                LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
-//                linelayer.lineWidth(width).lineColor(Palette.getColour(gradient)).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
-//                lineBorder.lineWidth(width+4).lineColor("#000000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
-//
-//                String behind;
-//
-//                if (first) {
-//                    behind = TRACK_PREFIX + LAYER;
-//                    first = false;
-//                } else {
-//                    behind = LOCAL_TRACK_PREFIX + (count - 1) + "-" + LAYER;
-//                }
-//                styleBuilder.addSource(trackJsonSource);
-//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(linelayer, null, behind));
-//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(lineBorder, null, name + LAYER));
-//                addLoadedLayer(name, trackJsonSource, false);
-//            } else {
-//                LoadedLayer lineLayer = loadedLayers.get(name + LAYER);
-//                if (lineLayer.isLoaded()) {
-//                    map.getStyle().setStyleLayerProperty(name + LAYER, "line-color", new Value(Palette.getColourRGB(gradient)));
-//                    GeoJsonSource lineSource = lineLayer.getSource();
-//                    lineSource.featureCollection(featureCollection);
-//                }
-//            }
-//            count++;
-//        }
-//
-//        if (buildStyle) {
-//            final int endIndex = count-1;
-//            map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
-//                @Override
-//                public void onStyleLoaded(@NonNull Style style) {
-//                    for (int i=1; i<=endIndex; i++) {
-//                        loadedLayers.get(LOCAL_TRACK_PREFIX + i + "-" + LAYER).setLoaded(true);
-//                    }
-//                }
-//            });
-//        }
-//    }
 
     private String addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {
         String name = text.toString();
@@ -950,25 +883,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         GeoJsonSource symbolJsonSource = riderLayer.getSource();
         symbolJsonSource.geometry(Point.fromLngLat(ll.longitude, ll.latitude));
-    }
-
-    private static void animateMarker(Marker marker, List<LatLng> positions, LatLngInterpolator latLngInterpolator) {
-//        if (positions.isEmpty()) {
-//            return;
-//        }
-//
-//        LatLng[] lls = new LatLng[positions.size()];
-//        lls = positions.toArray(lls);
-//        TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
-//            @Override
-//            public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
-//                return latLngInterpolator.interpolate(fraction, startValue, endValue);
-//            }
-//        };
-//        Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
-//        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, lls);
-//        animator.setDuration(MARKER_ANIMATION_MS);
-//        animator.start();
     }
 
     @Override

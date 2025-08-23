@@ -92,6 +92,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private boolean stylesComplete;
     private boolean tilesComplete;
     private ViewGroup[] vgPanels;
+    private ViewGroup dataPanel;
     private int panelCounter = 0;
     private int panelGroup = 0;
     private int numVoicePrompts = 0;
@@ -140,6 +141,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         vgPanels[0] = (ViewGroup)findViewById(R.id.panels1);
         vgPanels[1] = (ViewGroup)findViewById(R.id.panels2);
         vgPanels[2] = (ViewGroup)findViewById(R.id.panels3);
+        dataPanel = findViewById(R.id.dataPanel);
 
         ClimbController.getInstance().loadRoute(route);
 
@@ -596,6 +598,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();
 
+            TextView txtSpeed = dataPanel.findViewById(R.id.dataSpeed);
+            txtSpeed.setText(DisplayFormatter.formatDecimal(point.getSpeed(), 1));
+            dataPanel.setVisibility(View.VISIBLE);
+
             // Determine if within threshold distance of any climbs
             double minDist = Double.MAX_VALUE;
             int nextClimb = -1;
@@ -682,7 +688,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
 
         setPanelsToGoAndElev(distDone, elevDone);
         setPanelsTimeAndBattery(chargeImg);
-        setPanelsSpeedAndElev(point);
+        setPanelsGradAndElev(point);
 
         // Animate every 10th interval
         if (panelCounter++ % 10 == 9) {
@@ -725,15 +731,15 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
     }
 
-    private void setPanelsSpeedAndElev(RoutePoint point) {
+    private void setPanelsGradAndElev(RoutePoint point) {
         TextView label1 = vgPanels[2].findViewById(R.id.panel1Label);
         TextView label2 = vgPanels[2].findViewById(R.id.panel2Label);
         TextView txt1 = vgPanels[2].findViewById(R.id.txtPanel1);
         TextView txt2 = vgPanels[2].findViewById(R.id.txtPanel2);
 
-        label1.setText("SPEED");
+        label1.setText("GRAD");
         label2.setText("ELEV");
-        txt1.setText(DisplayFormatter.formatDecimal(point.getSpeed(), 1) + " km/h");
+        txt1.setText(DisplayFormatter.formatDecimal(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getCurrentGradient(), 1) + "%");
         txt2.setText(DisplayFormatter.formatDecimal((float)point.getElevation(), 0) + " m");
     }
 
@@ -850,11 +856,8 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     @Override
     public void updateDeviceData(int value) {
         if (BTCadenceController.getInstance().isAvailable()) {
-            TextView txtCadence = findViewById(R.id.txtCadence);
-            TextView txtRPM = findViewById(R.id.txtRPM);
-            txtCadence.setText(value >= 0 ? String.valueOf(value) : "--");
-            txtCadence.setVisibility(View.VISIBLE);
-            txtRPM.setVisibility(View.VISIBLE);
+            TextView txtCadence = dataPanel.findViewById(R.id.dataCadence);
+            txtCadence.setText(value >= 0 ? String.valueOf(value) : "-- ");
         }
     }
 

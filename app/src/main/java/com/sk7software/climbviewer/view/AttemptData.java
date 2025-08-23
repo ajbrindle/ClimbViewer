@@ -139,6 +139,11 @@ public class AttemptData {
         double length = Math.sqrt(Math.pow(p2.getEasting() - p1.getEasting(), 2.0) +
                 Math.pow(p2.getNorthing() - p1.getNorthing(), 2.0));
         double elevDiff = p2.getSmoothedElevation() - p1.getSmoothedElevation();
+        if (p2.getSmoothedElevation() == 0 && p1.getSmoothedElevation() == 0 &&
+                p2.getElevation() != 0 || p1.getElevation() != 0) {
+            // Use unsmoothed elevation instead
+            elevDiff = p2.getElevation() - p1.getElevation();
+        }
         return (float)(100.0 * elevDiff / length);
     }
 
