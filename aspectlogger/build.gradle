@@ -10,15 +10,15 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.4.0'
-        classpath 'org.aspectj:aspectjtools:1.9.4'
+        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath 'org.aspectj:aspectjtools:1.9.22.1'
     }
 }
 
 apply plugin: 'com.android.library'
 
 dependencies {
-    implementation 'org.aspectj:aspectjrt:1.9.4'
+    implementation 'org.aspectj:aspectjrt:1.9.22.1'
 }
 
 android {

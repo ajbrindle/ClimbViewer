@@ -16,7 +16,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/txtRoute"
-            android:textSize="18sp"
+            android:textSize="22sp"
+            android:backgroundTint="@color/white"
             android:layout_marginBottom="5dp"
             android:layout_marginTop="5dp"
             android:padding="4dp"
@@ -26,7 +27,9 @@
             android:maxLines="1"
             android:minLines="1"
             android:singleLine="true"
-            android:text="No route selected"/>
+            android:text="No route selected"
+            android:fontFamily="@font/oswald_bold"
+            android:textColor="@color/black"/>
 
         <Button
             android:id="@+id/btnChange"
@@ -43,70 +46,96 @@
             app:iconPadding="0dp"
             android:text="" />
     </LinearLayout>
-    <LinearLayout
-        android:id="@+id/routeButtons"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/mapView"
+        android:name="com.sk7software.climbviewer.maps.MapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
         android:layout_below="@+id/layoutTitles"
-        android:layout_marginLeft="5dp"
-        android:layout_marginRight="5dp"
-        android:layout_centerHorizontal="true"
-        android:orientation="horizontal">
-        <Button
-            android:id="@+id/viewRouteBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="5dp"
-            app:icon="@drawable/view"
-            app:iconSize="20dp"
-            app:iconGravity="textStart"
-            app:iconTint="@color/white"
-            app:iconPadding="2dp"
-            android:text="View" />
-        <Button
-            android:id="@+id/findClimbsBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="5dp"
-            app:icon="@drawable/find_climbs"
-            app:iconSize="20dp"
-            app:iconGravity="textStart"
-            app:iconTint="@color/white"
-            app:iconPadding="2dp"
-            android:text="Find Climbs"/>
-        <Button
-            android:id="@+id/deleteRoute"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="?attr/colorError"
-            app:icon="@drawable/delete"
-            app:iconSize="20dp"
-            app:iconGravity="textStart"
-            app:iconTint="@color/white"
-            app:iconPadding="0dp"
-            android:text=""/>
-    </LinearLayout>
-    <Button
-        android:id="@+id/followRouteBtn"
+        android:layout_above="@+id/allButtons"
+        tools:layout="@layout/fragment_map"
+        android:visibility="visible" />
+
+    <LinearLayout
+        android:id="@+id/allButtons"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/routeButtons"
-        android:layout_centerHorizontal="true"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
         android:layout_marginTop="10dp"
-        android:textSize="24sp"
-        app:icon="@drawable/follow_route"
-        app:iconSize="32dp"
-        app:iconGravity="textStart"
-        app:iconTint="@color/white"
-        app:iconPadding="2dp"
-        android:text="Follow Route"/>
+        android:orientation="vertical"
+        android:layout_alignParentBottom="true">
+        <TextView
+            android:id="@+id/txtRouteDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:layout_marginBottom="5dp"
+            android:gravity="center"/>
+        <LinearLayout
+            android:id="@+id/routeButtons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/viewRouteBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                app:icon="@drawable/view"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white"
+                app:iconPadding="2dp"
+                android:text="View" />
+            <Button
+                android:id="@+id/findClimbsBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                app:icon="@drawable/find_climbs"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white"
+                app:iconPadding="2dp"
+                android:text="Find Climbs"/>
+            <Button
+                android:id="@+id/deleteRoute"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="?attr/colorError"
+                app:icon="@drawable/delete"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white"
+                app:iconPadding="0dp"
+                android:text=""/>
+        </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/followRouteBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/routeButtons"
+            android:layout_centerHorizontal="true"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:textSize="24sp"
+            app:icon="@drawable/follow_route"
+            app:iconSize="32dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/white"
+            app:iconPadding="2dp"
+            android:text="Follow Route"/>
+    </LinearLayout>
     <ListView
         android:id="@+id/routeListSel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/routeButtons"
+        android:layout_below="@+id/allButtons"
         android:paddingTop="3dp"
         android:visibility="invisible"/>
 

@@ -359,7 +359,8 @@ public class PositionMonitor {
         NONE,
         ROUTE,
         CLIMB,
-        CURRENT_CLIMB
+        CURRENT_CLIMB,
+        NOW
     }
 
     @Getter

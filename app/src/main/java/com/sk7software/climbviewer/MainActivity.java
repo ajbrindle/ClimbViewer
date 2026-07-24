@@ -12,7 +12,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,12 +23,13 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.view.MenuCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.material.tabs.TabLayout;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.list.StravaListActivity;
+import com.sk7software.climbviewer.maps.MapFragment;
 import com.sk7software.climbviewer.model.BackupData;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
@@ -46,9 +46,6 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
     private TabLayout tabLayout;
     private ViewPager2 viewPager2;
     private MainViewPager mainViewPager;
-    private SwitchMaterial mapSwitch;
-    private SwitchMaterial elevationSwitch;
-    private SwitchMaterial pursuitSwitch;
     private LocationMonitor monitor;
     RelativeLayout completionPanel;
     private AlertDialog.Builder progressDialogBuilder;
@@ -111,29 +108,13 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
             }
         });
 
-        mapSwitch = findViewById(R.id.swiMap);
-        elevationSwitch = findViewById(R.id.swiClimb);
-        pursuitSwitch = findViewById(R.id.swiPursuit);
-        setUpSwitch(mapSwitch, Preferences.PREFERNECE_2D);
-        setUpSwitch(elevationSwitch, Preferences.PREFERNECE_ELEVATION);
-        setUpSwitch(pursuitSwitch, Preferences.PREFERNECE_PURSUIT);
-
-        boolean mapSet = Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D);
-        mapSwitch.setChecked(mapSet);
-        mapSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                Preferences.getInstance().addPreference(Preferences.PREFERNECE_2D, isChecked);
-            }
-        });
-
         if (lastClimbId > 0) {
             // Show summary panel before resuming route
             SummaryPanel panel = new SummaryPanel();
             panel.showSummary(completionPanel, lastClimbId, this);
         }
 
-        Log.d(TAG, "Stop location listener");
-        LocationMonitor.stopListener();
+//        LocationMonitor.stopListener();
     }
 
     @Override
@@ -303,17 +284,6 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
         }
     }
 
-    @DebugTrace
-    private void setUpSwitch(SwitchMaterial swi, String pref) {
-        boolean prefSet = Preferences.getInstance().getBooleanPreference(pref);
-        swi.setChecked(prefSet);
-        swi.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                Preferences.getInstance().addPreference(pref, isChecked);
-            }
-        });
-    }
-
     private void stopAllMonitors() {
         PositionMonitor.getInstance().stopAllMonitors();
         LocationMonitor.stopListener();
@@ -403,6 +373,7 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
     @Override
     public void locationChanged(RoutePoint point){
         PositionMonitor.getInstance().locationChanged(point);
+        plotLocation(point);
 
         if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.ROUTE) && PositionMonitor.getInstance().isOnRoute()) {
             // Stop monitoring route, as this will now be managed from the route view
@@ -419,6 +390,17 @@ public class MainActivity extends AppCompatActivity implements ActivityUpdateInt
             showClimb(PositionMonitor.getInstance().getOnClimbId(), true, null);
         } else if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB) && PositionMonitor.getInstance().getOnClimbId() > 0) {
             showClimb(PositionMonitor.getInstance().getOnClimbId(), false, null);
+        }
+    }
+
+    private void plotLocation(RoutePoint point) {
+        // Update map if visible
+        int pos = tabLayout.getSelectedTabPosition();
+        if (pos == 1) {
+            MapFragment frag = (MapFragment)mainViewPager.getFragmentAtPosition(pos);
+            if (frag != null) {
+                frag.showPosition(new LatLng(point.getLat(), point.getLon()));
+            }
         }
     }
 

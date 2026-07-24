@@ -70,6 +70,8 @@ public class CadenceMeasurementParser {
         long currentLastCrankEventTime = (value[offset + 1] & 0xFF) << 8 | (value[offset] & 0xFF);
         // offset += 2; // Not strictly needed as we're at the end for cadence
 
+        // Log.d(TAG, String.format("Current Crank Data - Cumulative Revolutions: %d, Last Event Time: %d (1/1024s)",
+        //        currentCumulativeCrankRevolutions, currentLastCrankEventTime));
         // --- Calculate Delta and Handle Rollover ---
         long deltaRevolutions;
         long deltaTimeUnits; // in 1/1024 seconds
@@ -82,6 +84,9 @@ public class CadenceMeasurementParser {
             lastCalculatedTimestamp = System.currentTimeMillis();
             return 0; // Can't calculate RPM from the first data point
         }
+
+        //Log.d(TAG, String.format("Previous Crank Data - Cumulative Revolutions: %d, Last Event Time: %d (1/1024s)",
+        //        previousCumulativeCrankRevolutions, previousLastCrankEventTime));
 
         // Calculate delta revolutions, handling 16-bit rollover (max 65535)
         if (currentCumulativeCrankRevolutions < previousCumulativeCrankRevolutions) {
@@ -104,10 +109,10 @@ public class CadenceMeasurementParser {
         previousLastCrankEventTime = currentLastCrankEventTime;
 
         // Calculate RPM
-        double deltaTimeSeconds = deltaTimeUnits / 1024.0; // Convert 1/1024s to seconds
+        double deltaTimeSeconds = (double)deltaTimeUnits / 1024.0; // Convert 1/1024s to seconds
 
         int cadenceRPM = 0;
-        if (deltaTimeSeconds > 0 && deltaRevolutions > 0) {
+        if (deltaTimeSeconds > 0.0 && deltaRevolutions > 0) {
             cadenceRPM = (int) Math.round((deltaRevolutions / deltaTimeSeconds) * 60.0);
             lastCalculatedTimestamp = System.currentTimeMillis();
             //Log.d(TAG, String.format("RPM Calculated: %d (Delta Revolutions: %d, Delta Time: %.3f s)", cadenceRPM, deltaRevolutions, deltaTimeSeconds));
@@ -116,7 +121,9 @@ public class CadenceMeasurementParser {
             cadenceRPM = 0;
             //Log.d(TAG, "RPM is 0: No revolutions in delta time.");
         } else {
-            // Should ideally not happen if sensor sends proper updates
+            // Should ideally not happen if sensor sends proper updates so reset as a precaution
+            previousCumulativeCrankRevolutions = -1;
+            previousLastCrankEventTime = -1;
             Log.w(TAG, "Invalid delta time or revolutions: " + deltaTimeSeconds + "s, " + deltaRevolutions + " revs");
         }
 

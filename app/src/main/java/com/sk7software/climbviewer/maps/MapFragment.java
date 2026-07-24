@@ -597,6 +597,15 @@ public class MapFragment extends Fragment implements IMapFragment {
         }
     }
 
+    @Override
+    public void setTrack(GPXRoute track) {
+        this.track = track;
+        if (mapReady) {
+            map.clear();
+            plotTrack();
+        }
+    }
+
     private static void animateMarker(Marker marker, List<LatLng> positions, LatLngInterpolator latLngInterpolator) {
         if (positions.isEmpty()) {
             return;

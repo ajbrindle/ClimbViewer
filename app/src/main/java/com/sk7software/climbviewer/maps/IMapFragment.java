@@ -58,7 +58,7 @@ public interface IMapFragment {
     void setTilt(int tiltIdx);
 
     void setCentre(LatLng centre);
-
+    void setTrack(GPXRoute track);
     void plotTrack();
 
     void plotLocalSection(int minIdx, int maxIdx);

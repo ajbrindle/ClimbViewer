@@ -858,6 +858,14 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     }
 
     @Override
+    public void setTrack(GPXRoute track) {
+        this.track = track;
+        if (mapReady) {
+            plotTrack();
+        }
+    }
+
+    @Override
     public void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size) {
         String riderTrackPrefix = getRiderTrackPrefix(type, size, colour);
         LoadedLayer riderLayer = loadedLayers.get(riderTrackPrefix + LAYER);
