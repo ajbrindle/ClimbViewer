@@ -2,14 +2,20 @@ package com.sk7software.climbviewer;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Display;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
@@ -22,11 +28,15 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.ClimbListActivity;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.view.ClimbView;
+import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.ScreenController;
+import com.sk7software.util.aspectlogger.DebugTrace;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +56,11 @@ public class ClimbsFragment extends Fragment {
     private Button deleteClimbButton;
     private Button showClimbListButton;
     private MaterialButton monitorButton;
+    private SwitchMaterial mapSwitch;
+    private SwitchMaterial elevationSwitch;
+    private SwitchMaterial pursuitSwitch;
+    private ClimbView climbView;
+    TextView climbDetails;
     private List<ValueAnimator> animations;
     private MainActivity mainActivity;
 
@@ -73,6 +88,24 @@ public class ClimbsFragment extends Fragment {
         deleteClimbButton = view.findViewById(R.id.deleteClimb);
         monitorButton = view.findViewById(R.id.monitorClimbBtn);
         txtClimb = view.findViewById(R.id.txtClimb);
+        climbView = view.findViewById(R.id.climbView);
+        climbDetails = view.findViewById(R.id.txtClimbDetails);
+
+        mapSwitch = view.findViewById(R.id.swiMap);
+        elevationSwitch = view.findViewById(R.id.swiClimb);
+        pursuitSwitch = view.findViewById(R.id.swiPursuit);
+        setUpSwitch(mapSwitch, Preferences.PREFERNECE_2D);
+        setUpSwitch(elevationSwitch, Preferences.PREFERNECE_ELEVATION);
+        setUpSwitch(pursuitSwitch, Preferences.PREFERNECE_PURSUIT);
+
+        boolean mapSet = Preferences.getInstance().getBooleanPreference(Preferences.PREFERNECE_2D);
+        mapSwitch.setChecked(mapSet);
+        mapSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERNECE_2D, isChecked);
+            }
+        });
+
 
         ActivityResultLauncher<Intent> listResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -129,6 +162,20 @@ public class ClimbsFragment extends Fragment {
         });
 
         reselectClimb();
+
+        climbView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                if (motionEvent.getAction() == MotionEvent.ACTION_DOWN || motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
+                    climbView.setShowGradientAt((int)motionEvent.getX());
+                } else if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+                    climbView.setShowGradientAt(-1);
+                }
+                climbView.invalidate();
+                return true;
+            }
+        });
+
         allClimbs = Arrays.asList(Database.getInstance().getClimbs());
         return view;
     }
@@ -201,8 +248,39 @@ public class ClimbsFragment extends Fragment {
             enableClimbButtons(true);
             Preferences.getInstance().addPreference(Preferences.PREFERENCES_LAST_SELECTED_CLIMB, currentClimbId);
             Log.d(TAG, "Current climb: " + currentClimb + ":" + currentClimbId);
+            loadClimb();
         }
     }
+
+    private void loadClimb() {
+        GPXRoute gc = Database.getInstance().getClimb(currentClimbId);
+        gc.setPointsDist();
+        gc.calcSmoothedPoints();
+        float climbLength = gc.getPoints().get(gc.getPoints().size()-1).getDistFromStart();
+        float climbHeight = (float)gc.getElevationChange();
+        climbView.clearPoints();
+        climbView.setClimb(gc, 10);
+        setClimbViewHeight();
+        climbView.invalidate();
+        climbDetails.setText("Length: " + DisplayFormatter.formatDecimal(climbLength / 1000, 1) + "km, Height: " + DisplayFormatter.formatDecimal(climbHeight, 0) + "m");
+
+    }
+    private void setClimbViewHeight() {
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+
+        int s=0;
+        int resource = ApplicationContextProvider.getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resource > 0) {
+            s = ApplicationContextProvider.getContext().getResources().getDimensionPixelSize(resource);
+        }
+
+        Log.d(TAG, "Setting route view height: " + (size.y - s)/4 + "/" + size.y + " (" + s + ")");
+        climbView.setHeight((size.y - s)/4, false);
+    }
+
     private void showClimb(int climbId, Intent nextIntent) {
         ClimbController.getInstance().loadClimb(Database.getInstance().getClimb(climbId));
 
@@ -233,8 +311,20 @@ public class ClimbsFragment extends Fragment {
                 txtClimb.setText(currentClimb);
                 climbListAdapter.notifyDataSetChanged();
                 enableClimbButtons(true);
+                loadClimb();
             }
         }
+    }
+
+    @DebugTrace
+    private void setUpSwitch(SwitchMaterial swi, String pref) {
+        boolean prefSet = Preferences.getInstance().getBooleanPreference(pref);
+        swi.setChecked(prefSet);
+        swi.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                Preferences.getInstance().addPreference(pref, isChecked);
+            }
+        });
     }
 
     private Intent getNextScreen() {

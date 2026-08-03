@@ -67,7 +67,6 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         climb = Database.getInstance().getClimb(climbId);
         ClimbController.getInstance().loadClimb(climb);
 
-
         txtClimbName = (EditText) findViewById(R.id.txtClimbName);
         txtClimbName.setText(climb.getName());
         txtClimbName.setEnabled(false);
@@ -237,26 +236,11 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
                     map.setMapType(MapType.NORMAL, IMapFragment.PlotType.NORMAL, false);
                     map.setTilt(0);
                     map.updateMap();
-
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    map.plotTrack();
-                                }
-                            });
-                        }
-                    }).start();
+                    delayAndPlot(1000);
                 }
             }
         });
+        delayAndPlot(3000);
     }
 
     private Map<MapProvider, Integer> setMapFragmentIds() {
@@ -377,5 +361,25 @@ public class ClimbViewActivity extends AppCompatActivity implements DrawableUpda
         int height = (size.y - s) / 2;
         Log.d(TAG, "Setting climb view height: " + height + "/" + size.y + " (" + s + ")");
         elevationView.setHeight(height, false);
+    }
+
+    private void delayAndPlot(final int delay) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.d(TAG, "Replot climb");
+                        map.plotTrack();
+                    }
+                });
+            }
+        }).start();
     }
 }

@@ -30,7 +30,7 @@ public class StravaAuthoriseActivity extends AppCompatActivity {
     private static final String STRAVA_AUTHORISATION_URL = "https://www.strava.com/oauth/authorize" +
             "?client_id=" + BuildConfig.STRAVA_CLIENT_ID +
             "&response_type=code" +
-            "&scope=activity:read,activity:read_all" +
+            "&scope=activity:read,activity:read_all,activity:write" +
             "&redirect_uri=" + getEncodedURL(REDIRECT_URI) +
             "&approval_prompt=auto";
     @Override

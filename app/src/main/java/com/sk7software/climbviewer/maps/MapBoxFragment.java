@@ -20,6 +20,17 @@ import com.google.maps.android.ui.IconGenerator;
 import com.mapbox.bindgen.Expected;
 import com.mapbox.bindgen.None;
 import com.mapbox.bindgen.Value;
+import com.mapbox.common.NetworkRestriction;
+import com.mapbox.common.TileRegion;
+import com.mapbox.common.TileRegionCallback;
+import com.mapbox.common.TileRegionError;
+import com.mapbox.common.TileRegionLoadOptions;
+import com.mapbox.common.TileRegionLoadProgress;
+import com.mapbox.common.TileRegionLoadProgressCallback;
+import com.mapbox.common.TileRegionsCallback;
+import com.mapbox.common.TileStore;
+import com.mapbox.common.TileStoreOptions;
+import com.mapbox.common.TilesetDescriptor;
 import com.mapbox.geojson.Feature;
 import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.geojson.LineString;
@@ -27,9 +38,21 @@ import com.mapbox.geojson.Point;
 import com.mapbox.maps.AsyncOperationResultCallback;
 import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.EdgeInsets;
+import com.mapbox.maps.GlyphsRasterizationMode;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.MapboxMap;
+import com.mapbox.maps.OfflineManager;
+import com.mapbox.maps.ResourceOptions;
+import com.mapbox.maps.ResourceOptionsManager;
 import com.mapbox.maps.Style;
+import com.mapbox.maps.StylePack;
+import com.mapbox.maps.StylePackCallback;
+import com.mapbox.maps.StylePackError;
+import com.mapbox.maps.StylePackLoadOptions;
+import com.mapbox.maps.StylePackLoadProgress;
+import com.mapbox.maps.StylePackLoadProgressCallback;
+import com.mapbox.maps.TileStoreUsageMode;
+import com.mapbox.maps.TilesetDescriptorOptions;
 import com.mapbox.maps.extension.observable.eventdata.CameraChangedEventData;
 import com.mapbox.maps.extension.style.StyleContract;
 import com.mapbox.maps.extension.style.StyleExtensionImpl;
@@ -47,14 +70,15 @@ import com.mapbox.maps.plugin.animation.CameraAnimationsUtils;
 import com.mapbox.maps.plugin.animation.Cancelable;
 import com.mapbox.maps.plugin.animation.MapAnimationOptions;
 import com.mapbox.maps.plugin.delegates.listeners.OnCameraChangeListener;
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ApplicationContextProvider;
+import com.sk7software.climbviewer.BuildConfig;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
 import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.geo.GeoConvert;
-import com.sk7software.climbviewer.geo.LatLngInterpolator;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.view.Palette;
@@ -88,6 +112,10 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     Map<String, LoadedLayer> loadedLayers = new HashMap<>();
     private CameraAnimationsPlugin camera;
     private long styleLoadedTimeout = -1;
+    private TileStore tileStore;
+    private OfflineManager offlineManager;
+    private com.mapbox.common.Cancelable stylePackCancelable;
+    private com.mapbox.common.Cancelable tileSetCancelable;
     private static final String TAG = MapBoxFragment.class.getSimpleName();
     private static final String TRACK_PREFIX = "line-";
     private static final String RIDER_PREFIX = "rider-";
@@ -106,31 +134,32 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
     @Override
     public void setMapType(MapType type, IMapFragment.PlotType plotType, boolean mirror) {
-        String mapId = null;
         this.plotType = plotType;
 
         if (plotType == null) {
             plotType = PlotType.NORMAL;
         }
+        this.mapType = getStyleURL(plotType);
+    }
+
+    private String getStyleURL(IMapFragment.PlotType plotType) {
+        String mapId = null;
         switch(plotType) {
             case NORMAL:
             case ROUTE:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
-                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
-                break;
+                return mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
             case FOLLOW_ROUTE:
             case FULL_CLIMB:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_FOLLOW_MAP_ID);
-                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
-                break;
+                return mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
             case PURSUIT:
             case CLIMB_3D:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_3D_MAP_ID);
-                this.mapType = mapId == null ? getString(R.string.mapbox_style_satellite) : MAPBOX_STYLE_PREFIX + mapId;
-                break;
+                return mapId == null ? getString(R.string.mapbox_style_satellite) : MAPBOX_STYLE_PREFIX + mapId;
             default:
                 mapId = Preferences.getInstance().getStringPreference(Preferences.PREFERENCES_MAPBOX_2D_MAP_ID);
-                this.mapType = mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
+                return mapId == null ? getString(R.string.mapbox_style_2d) : MAPBOX_STYLE_PREFIX + mapId;
         }
     }
 
@@ -162,6 +191,30 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         marker = new HashMap<>();
+        tileStore = TileStore.create();
+        ResourceOptions resourceOptions = new ResourceOptions.Builder()
+                .accessToken(BuildConfig.MAPBOX_PUBLIC_TOKEN)
+                .tileStore(tileStore)
+                .tileStoreUsageMode(TileStoreUsageMode.READ_ONLY)
+                .build();
+        offlineManager = new OfflineManager(resourceOptions);
+        ResourceOptionsManager.Companion.getDefault(ApplicationContextProvider.getContext(), getString(R.string.mapbox_access_token)).update(r -> {
+            r.tileStore(tileStore).tileStoreUsageMode(TileStoreUsageMode.READ_ONLY);
+            return null;
+        });
+        tileStore.getAllTileRegions(new TileRegionsCallback() {
+            @Override
+            public void run(@NonNull Expected<TileRegionError, List<TileRegion>> regions) {
+                if (regions.isValue()) {
+                    for (TileRegion region : regions.getValue()) {
+                        Log.d(TAG, "Region: " + region.getId());
+                    }
+                } else if (regions.isError()) {
+                    Log.e(TAG, "Tile region error: " + regions.getError().getMessage());
+                }
+            }
+        });
+
         return inflater.inflate(R.layout.fragment_map_box, container, false);
     }
 
@@ -169,13 +222,8 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mapView = getView().findViewById(R.id.map3dView);
-        mapView.getMapboxMap().clearData(new AsyncOperationResultCallback() {
-            @Override
-            public void run(@NonNull Expected<String, None> result) {
-                // Do nothing
-            }
-        });
         map = mapView.getMapboxMap();
+
         map.loadStyleUri(getString(R.string.mapbox_style_2d), new Style.OnStyleLoaded() {
             @Override
             public void onStyleLoaded(@NonNull Style style) {
@@ -250,7 +298,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
             trackOpacity = 0.0;
         }
 
-        List<Point> trackCoordinates = getTrackAndZoom();
+        List<Point> trackCoordinates = getTrackAndZoom(true);
 
         LineString lineString = LineString.fromLngLats(trackCoordinates);
         FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[] {Feature.fromGeometry(lineString)});
@@ -287,7 +335,7 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         return styleBuilder.build();
     }
 
-    private List<Point> getTrackAndZoom() {
+    private List<Point> getTrackAndZoom(boolean setCamera) {
         List<Point> trackCoordinates = new ArrayList<>();
         for (RoutePoint pt : track.getPoints()) {
             trackCoordinates.add(Point.fromLngLat(pt.getLon(), pt.getLat()));
@@ -295,7 +343,9 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         EdgeInsets padding = new EdgeInsets(100,100,100,100);
 
-        map.setCamera(map.cameraForCoordinates(trackCoordinates, padding, 0.0, 0.0));
+        if (setCamera) {
+            map.setCamera(map.cameraForCoordinates(trackCoordinates, padding, 0.0, 0.0));
+        }
         return trackCoordinates;
     }
 
@@ -443,72 +493,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         }
     }
 
-//    private void plotElevationLines(List<RoutePoint> pts, int minIdx, int maxIdx, int width, boolean smoothed) {
-//        boolean first = true;
-//        boolean buildStyle = false;
-//        int count = 1;
-//        List<Feature> features = new ArrayList<>();
-//
-//        for (int i=minIdx+1; i<=maxIdx; i++) {
-//            String name = LOCAL_TRACK_PREFIX + count + "-";
-//
-//            List<Point> line = new ArrayList<>();
-//            line.add(Point.fromLngLat(pts.get(i - 1).getLon(), pts.get(i - 1).getLat()));
-//            line.add(Point.fromLngLat(pts.get(i).getLon(), pts.get(i).getLat()));
-//            LineString lineString = LineString.fromLngLats(line);
-//            FeatureCollection featureCollection = FeatureCollection.fromFeatures(new Feature[]{Feature.fromGeometry(lineString)});
-//
-//            double elevDiff = pts.get(i).getSmoothedElevation() - pts.get(i - 1).getSmoothedElevation();
-//            if (!smoothed) {
-//                elevDiff = pts.get(i).getElevation() - pts.get(i - 1).getElevation();
-//            }
-//            double distBetween = pts.get(i).getDistFromStart() - pts.get(i - 1).getDistFromStart();
-//            double gradient = elevDiff * 100 / distBetween;
-//
-//            if (!isLayerAdded(name)) {
-//                buildStyle = true;
-//                GeoJsonSource trackJsonSource = new GeoJsonSource.Builder(name + SOURCE).featureCollection(featureCollection).build();
-//
-//                LineLayer linelayer = new LineLayer(name + LAYER, name + SOURCE);
-//                LineLayer lineBorder = new LineLayer(name + LAYER + "-edge", name + SOURCE);
-//                linelayer.lineWidth(width).lineColor(Palette.getColour(gradient)).lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
-//                lineBorder.lineWidth(width+4).lineColor("#000000").lineCap(LineCap.ROUND).lineJoin(LineJoin.MITER).lineOpacity(1.0);
-//
-//                String behind;
-//
-//                if (first) {
-//                    behind = TRACK_PREFIX + LAYER;
-//                    first = false;
-//                } else {
-//                    behind = LOCAL_TRACK_PREFIX + (count - 1) + "-" + LAYER;
-//                }
-//                styleBuilder.addSource(trackJsonSource);
-//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(linelayer, null, behind));
-//                styleBuilder.addLayerAtPosition(styleBuilder.layerAtPosition(lineBorder, null, name + LAYER));
-//                addLoadedLayer(name, trackJsonSource, false);
-//            } else {
-//                LoadedLayer lineLayer = loadedLayers.get(name + LAYER);
-//                if (lineLayer.isLoaded()) {
-//                    map.getStyle().setStyleLayerProperty(name + LAYER, "line-color", new Value(Palette.getColourRGB(gradient)));
-//                    GeoJsonSource lineSource = lineLayer.getSource();
-//                    lineSource.featureCollection(featureCollection);
-//                }
-//            }
-//            count++;
-//        }
-//
-//        if (buildStyle) {
-//            final int endIndex = count-1;
-//            map.loadStyle(styleBuilder.build(), new Style.OnStyleLoaded() {
-//                @Override
-//                public void onStyleLoaded(@NonNull Style style) {
-//                    for (int i=1; i<=endIndex; i++) {
-//                        loadedLayers.get(LOCAL_TRACK_PREFIX + i + "-" + LAYER).setLoaded(true);
-//                    }
-//                }
-//            });
-//        }
-//    }
 
     private String addIcon(IconGenerator iconFactory, CharSequence text, LatLng position) {
         String name = text.toString();
@@ -874,6 +858,14 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
     }
 
     @Override
+    public void setTrack(GPXRoute track) {
+        this.track = track;
+        if (mapReady) {
+            plotTrack();
+        }
+    }
+
+    @Override
     public void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size) {
         String riderTrackPrefix = getRiderTrackPrefix(type, size, colour);
         LoadedLayer riderLayer = loadedLayers.get(riderTrackPrefix + LAYER);
@@ -899,25 +891,6 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
 
         GeoJsonSource symbolJsonSource = riderLayer.getSource();
         symbolJsonSource.geometry(Point.fromLngLat(ll.longitude, ll.latitude));
-    }
-
-    private static void animateMarker(Marker marker, List<LatLng> positions, LatLngInterpolator latLngInterpolator) {
-//        if (positions.isEmpty()) {
-//            return;
-//        }
-//
-//        LatLng[] lls = new LatLng[positions.size()];
-//        lls = positions.toArray(lls);
-//        TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
-//            @Override
-//            public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
-//                return latLngInterpolator.interpolate(fraction, startValue, endValue);
-//            }
-//        };
-//        Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
-//        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, lls);
-//        animator.setDuration(MARKER_ANIMATION_MS);
-//        animator.start();
     }
 
     @Override
@@ -963,5 +936,107 @@ public class MapBoxFragment extends Fragment implements IMapFragment{
         private boolean loaded;
         private boolean pending;
 
+    }
+
+    public void downloadRoute(final int routeId, ActivityUpdateInterface activity) {
+        if (routeId <= 0) return;
+        clearDownload();
+
+        String style = getStyleURL(this.plotType);
+        stylePackCancelable = offlineManager.loadStylePack(
+                style,
+                new StylePackLoadOptions.Builder()
+                        .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+                        .build(),
+                new StylePackLoadProgressCallback() {
+                    @Override
+                    public void run(@NonNull StylePackLoadProgress progress) {
+                        Log.d(TAG, "Loaded style: " + progress.getCompletedResourceCount() + "/" + progress.getRequiredResourceCount());
+                        activity.updateProgressMessage("Styles..." + progress.getCompletedResourceCount() + "/" + progress.getRequiredResourceCount());
+                    }
+                },
+                new StylePackCallback() {
+                    @Override
+                    public void run(@NonNull Expected<StylePackError, StylePack> stylePack) {
+                        if (stylePack.isValue()) {
+                            Log.d(TAG, "Style completed successfully");
+                            activity.updateProgressMessage("Styles...COMPLETE");
+                        } else if (stylePack.isError()) {
+                            Log.e(TAG, "Style pack failed to load: " + stylePack.getError().getMessage());
+                            activity.updateProgressMessage("Styles...ERROR");
+                        }
+                    }
+                }
+        );
+
+        TilesetDescriptor tilesetDescriptor = offlineManager.createTilesetDescriptor(
+                new TilesetDescriptorOptions.Builder()
+                        .styleURI(style)
+                        .minZoom((byte)0)
+                        .maxZoom((byte)17)
+                        .build()
+        );
+
+        List<TilesetDescriptor> descriptors = new ArrayList<>();
+        descriptors.add(tilesetDescriptor);
+
+        tileSetCancelable = tileStore.loadTileRegion(
+                "downloadedRegion",
+                new TileRegionLoadOptions.Builder()
+                        .geometry(LineString.fromLngLats(getTrackAndZoom(false)))
+                        .descriptors(descriptors)
+                        .metadata(new Value("downloadMetadata"))
+                        .acceptExpired(true)
+                        .networkRestriction(NetworkRestriction.NONE)
+                        .build(),
+                new TileRegionLoadProgressCallback() {
+                    @Override
+                    public void run(@NonNull TileRegionLoadProgress progress) {
+                        Log.d(TAG, "Tile progress: " + progress.getCompletedResourceCount() + "/" + progress.getRequiredResourceCount());
+                        activity.updateProgressMessage("Tiles..." + progress.getCompletedResourceCount() + "/" + progress.getRequiredResourceCount());
+                    }
+                },
+                new TileRegionCallback() {
+                    @Override
+                    public void run(@NonNull Expected<TileRegionError, TileRegion> region) {
+                        if (region.isValue()) {
+                            Preferences.getInstance().addPreference(Preferences.PREFERENCES_DOWNLOADED_ROUTE, routeId);
+                            activity.updateProgressMessage("Tiles...COMPLETE");
+                            Log.d(TAG, "Tile download completed");
+                        } else if (region.isError()) {
+                            Log.e(TAG, "Tile download error: " + region.getError().getMessage());
+                            activity.updateProgressMessage("Tiles...ERROR");
+                        }
+                    }
+                }
+        );
+    }
+
+    public void clearDownload() {
+        String style = getStyleURL(this.plotType);
+
+        if (stylePackCancelable != null) {
+            stylePackCancelable.cancel();
+            stylePackCancelable = null;
+        }
+        if (tileSetCancelable != null) {
+            tileSetCancelable.cancel();
+            tileSetCancelable = null;
+        }
+
+        tileStore.removeTileRegion("downloadedRegion");
+        tileStore.setOption(TileStoreOptions.DISK_QUOTA, new Value((byte)0));
+        offlineManager.removeStylePack(style);
+        map.clearData(map.getResourceOptions(), new AsyncOperationResultCallback() {
+            @Override
+            public void run(@NonNull Expected<String, None> result) {
+                if (result.isValue()) {
+                    Log.d(TAG, "Tiles cleared");
+                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_DOWNLOADED_ROUTE, -1);
+                } else if (result.isError()) {
+                    Log.e(TAG, "Tile clear error: " + result.getError());
+                }
+            }
+        });
     }
 }

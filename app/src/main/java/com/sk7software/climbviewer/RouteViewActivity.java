@@ -1,28 +1,39 @@
 package com.sk7software.climbviewer;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Point;
 import android.graphics.PointF;
+import android.os.BatteryManager;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.TranslateAnimation;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.common.util.Strings;
 import com.google.android.gms.maps.model.LatLng;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.geo.GeoConvert;
 import com.sk7software.climbviewer.geo.Projection;
 import com.sk7software.climbviewer.maps.IMapFragment;
@@ -40,21 +51,26 @@ import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.climbviewer.view.SummaryPanel;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface {
+public class RouteViewActivity extends AppCompatActivity implements ActivityUpdateInterface, SpotifyTrackUpdateInterface, TextToSpeech.OnInitListener {
 
     private ClimbView fullRouteView;
     private ClimbView nextClimbView;
     private RelativeLayout offRoutePanel;
     private RelativeLayout routeInfoPanel;
+    private RelativeLayout downloadPanel;
     private RelativeLayout completionPanel;
     private IMapFragment map;
     private ImageButton btnShowClimbs;
     private ImageButton btnShowLabels;
+    private ImageButton btnDownload;
+    private Button btnCancel;
     private int routeId;
     private GPXRoute route;
     private float totalDist;
@@ -72,9 +88,18 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     private int nextClimbCounter;
     private boolean showingClimbs;
     private boolean showingLabels;
+    private boolean routeDownloaded = false;
+    private boolean stylesComplete;
+    private boolean tilesComplete;
+    private ViewGroup[] vgPanels;
+    private ViewGroup dataPanel;
+    private int panelCounter = 0;
+    private int panelGroup = 0;
+    private int numVoicePrompts = 0;
 
     private static final String TAG = RouteViewActivity.class.getSimpleName();
     private static final int DEFAULT_TRANSPARENCY = 190;
+    private static final int NUM_PANEL_GROUPS = 3;
     private static final float[] NEGATIVE = {
             -1.0f, 0, 0, 0, 255, // red
             0, -1.0f, 0, 0, 255, // green
@@ -112,6 +137,11 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         txtRouteName = (EditText) findViewById(R.id.txtRouteName);
         txtRouteName.setText(route.getName());
         txtRouteName.setEnabled(false);
+        vgPanels = new ViewGroup[NUM_PANEL_GROUPS];
+        vgPanels[0] = (ViewGroup)findViewById(R.id.panels1);
+        vgPanels[1] = (ViewGroup)findViewById(R.id.panels2);
+        vgPanels[2] = (ViewGroup)findViewById(R.id.panels3);
+        dataPanel = findViewById(R.id.dataPanel);
 
         ClimbController.getInstance().loadRoute(route);
 
@@ -155,12 +185,20 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
-        btnShowClimbs = (ImageButton) findViewById(R.id.showClimbsBtn);
-        btnShowLabels = (ImageButton) findViewById(R.id.showLabelsBtn);
+        btnShowClimbs = findViewById(R.id.showClimbsBtn);
+        btnShowLabels = findViewById(R.id.showLabelsBtn);
+        btnDownload = findViewById(R.id.downloadBtn);
+        btnCancel = findViewById(R.id.btnCancel);
         btnShowLabels.setVisibility(View.GONE);
+
+        if (Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_DOWNLOADED_ROUTE, -1) == routeId) {
+            btnDownload.setImageResource(R.drawable.download_cancel);
+            routeDownloaded = true;
+        }
 
         if (!ignoreLocationUpdates) {
             btnShowClimbs.setVisibility(View.GONE);
+            btnDownload.setVisibility(View.GONE);
 
             if (PositionMonitor.getInstance().getMonitoring().contains(PositionMonitor.MonitorType.CLIMB)) {
                 // if monitoring climbs, get distance of start of each climb from the start of the route
@@ -228,6 +266,34 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
         });
 
+        btnDownload.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (!routeDownloaded) {
+                    stylesComplete = false;
+                    tilesComplete = false;
+                    downloadPanel.setVisibility(View.VISIBLE);
+                    map.downloadRoute(routeId, RouteViewActivity.this);
+                    btnDownload.setImageResource(R.drawable.download_cancel);
+                    routeDownloaded = true;
+                } else {
+                    map.clearDownload();
+                    btnDownload.setImageResource(R.drawable.download);
+                    routeDownloaded = false;
+                }
+            }
+        });
+
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                map.clearDownload();
+                btnDownload.setImageResource(R.drawable.download);
+                routeDownloaded = false;
+                downloadPanel.setVisibility(View.GONE);
+            }
+        });
+
         SeekBar transparency = findViewById(R.id.profileTransparency);
         transparency.setProgress(transparencyVal);
         transparency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -245,6 +311,11 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         });
         offRoutePanel = findViewById(R.id.panelOffRoute);
         offRoutePanel.setVisibility(View.GONE);
+        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE)) {
+            VoicePromptUtil.init(this, this);
+        }
+        downloadPanel = findViewById(R.id.panelDownload);
+        downloadPanel.setVisibility(View.GONE);
 
         ImageButton btnEdit = (ImageButton)findViewById(R.id.btnEdit);
         ImageButton btnOK = (ImageButton)findViewById(R.id.btnOK);
@@ -298,11 +369,13 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             panel.showSummary(completionPanel, lastClimbId, this);
         }
 
+        SpotifyBroadcastReceiver.setActivity(this);
         Map<MapProvider, Integer> mapFragments = setMapFragmentIds();
         map = MapFragmentFactory.getProviderMap(this, mapFragments);
 
         if (ClimbController.getInstance().isRouteInProgress()) {
             setMapForFollowing();
+            updateTrackReceiverService(true);
             fullRouteView.addPlot(ClimbController.PointType.ROUTE);
         } else {
             map.setMapType(MapType.NORMAL, IMapFragment.PlotType.ROUTE, false);
@@ -319,13 +392,32 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     @Override
     protected void onResume() {
         super.onResume();
+        SpotifyBroadcastReceiver.setActivity(this);
+        updateTrackReceiverService(true);
+
+        if (!ignoreLocationUpdates) {
+            // Check if cadence sensor is connected
+            if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_USE_CADENCE, false)) {
+                String macAddress = Preferences.getInstance().getStringPreference(Preferences.PREFERENCE_SELECTED_BLE_DEVICE_ADDRESS);
+                Log.d(TAG, "Reconnecting BLE");
+                if (!Strings.isEmptyOrWhitespace(macAddress)) {
+                    BTCadenceController.getInstance().reset(macAddress, this, this);
+                }
+            }
+        }
+
         Log.d(TAG, "RouteViewActivity resume");
     }
 
     @Override
     protected void onStop() {
-        Log.d(TAG, "RouteViewActivity stopped");
+        Log.d(TAG, "RouteViewActivity onStop");
         super.onStop();
+        updateTrackReceiverService(false);
+        if (Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE)) {
+            VoicePromptUtil.getInstance().destroy();
+        }
+        Log.d(TAG, "RouteViewActivity stopped");
     }
 
     @Override
@@ -384,7 +476,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             }
 
             fullRouteView.invalidate();
-            updateDistAndElevation();
+            updatePanels(point);
 
             RoutePoint snappedPos = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getSnappedPosition();
             if (map != null && snappedPos != null) {
@@ -398,6 +490,7 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
             // Hide elevation data and show "off route" warning and restart monitoring
             Log.d(TAG, "NOT ON ROUTE");
             offRoutePanel.setVisibility(View.VISIBLE);
+            speakOffRoute(justLeftRoute);
             if (justLeftRoute) {
                 PositionMonitor.getInstance().resetRejoin();
                 justLeftRoute = false;
@@ -487,10 +580,10 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
 
         if (!ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = findViewById(R.id.panel1Label);
-            TextView label2 = findViewById(R.id.panel2Label);
-            TextView txtDist = findViewById(R.id.txtPanel1);
-            TextView txtElev = findViewById(R.id.txtPanel2);
+            TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+            TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+            TextView txtDist = vgPanels[0].findViewById(R.id.txtPanel1);
+            TextView txtElev = vgPanels[0].findViewById(R.id.txtPanel2);
 
             label1.setText("DISTANCE");
             label2.setText("ELEV GAIN");
@@ -500,16 +593,14 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         }
     }
 
-    private void updateDistAndElevation() {
-        Log.d(TAG, "Update panels");
+    private void updatePanels(RoutePoint point) {
         if (ClimbController.getInstance().isRouteInProgress()) {
-            TextView label1 = findViewById(R.id.panel1Label);
-            TextView label2 = findViewById(R.id.panel2Label);
-            TextView txtDist = findViewById(R.id.txtPanel1);
-            TextView txtElev = findViewById(R.id.txtPanel2);
-
             float distDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getDist();
             float elevDone = ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getElevDone();
+
+            TextView txtSpeed = dataPanel.findViewById(R.id.dataSpeed);
+            txtSpeed.setText(DisplayFormatter.formatDecimal(point.getSpeed(), 1));
+            dataPanel.setVisibility(View.VISIBLE);
 
             // Determine if within threshold distance of any climbs
             double minDist = Double.MAX_VALUE;
@@ -539,34 +630,43 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                     nextClimbView.setTransparency(transparencyVal);
                     setClimbViewHeight(nextClimbView);
                     nextClimbView.invalidate();
+                    speakNextClimb(gc.getName(), nextClimbLength, nextClimbHeight, Database.getInstance().getClimbRating(nextClimb));
                 }
             }
 
             if (nextClimb > 0) {
+                // Display next climb data in the panels (and don't animate them)
+                TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+                TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+                TextView txtMain1 = vgPanels[0].findViewById(R.id.txtPanel1);
+                TextView txtMain2 = vgPanels[0].findViewById(R.id.txtPanel2);
+
                 label1.setText("NEXT CLIMB");
-                DisplayFormatter.setDistanceText((float)minDist, "km", txtDist, true);
+                DisplayFormatter.setDistanceText((float)minDist, "km", txtMain1, true);
 
                 nextClimbCounter++;
 
                 if (nextClimbCounter % 15 < 5) {
                     label2.setText("RATING");
-                    txtElev.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
+                    txtMain2.setText(String.valueOf(Database.getInstance().getClimbRating(nextClimb)));
                 } else if (nextClimbCounter % 15 < 10) {
                     label2.setText("DIST");
-                    DisplayFormatter.setDistanceText(nextClimbLength, "km", txtElev, true);
+                    DisplayFormatter.setDistanceText(nextClimbLength, "km", txtMain2, true);
                 } else {
                     label2.setText("HEIGHT");
-                    DisplayFormatter.setDistanceText(nextClimbHeight, "m", txtElev, true);
+                    DisplayFormatter.setDistanceText(nextClimbHeight, "m", txtMain2, true);
+                }
+                vgPanels[0].setVisibility(View.VISIBLE);
+                panelGroup = 0;
+                panelCounter = 0;
+                for (int i=1; i<NUM_PANEL_GROUPS; i++) {
+                    vgPanels[i].setVisibility(View.GONE);
                 }
             } else {
-                label1.setText("TO GO");
-                label2.setText("ELEV LEFT");
                 loadNextClimbWarning = false;
                 fullRouteView.setVisibility(View.VISIBLE);
                 nextClimbView.setVisibility(View.GONE);
-
-                DisplayFormatter.setDistanceText(totalDist - distDone, "km", txtDist, false);
-                DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txtElev, false);
+                setPanelData(point, distDone, elevDone);
             }
 
             // If in last 25m, flag screen to close after 5 more updates
@@ -580,6 +680,67 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
                 Preferences.getInstance().clearIntPreference(Preferences.PREFERENCES_ROUTE_START_IDX);
             }
         }
+    }
+
+    private void setPanelData(RoutePoint point, float distDone, float elevDone) {
+        ImageView chargeImg = vgPanels[1].findViewById(R.id.charge);
+        chargeImg.setVisibility(View.GONE);
+
+        setPanelsToGoAndElev(distDone, elevDone);
+        setPanelsTimeAndBattery(chargeImg);
+        setPanelsGradAndElev(point);
+
+        // Animate every 10th interval
+        if (panelCounter++ % 10 == 9) {
+            panelCounter = 0;
+            panelGroup++;
+            if (panelGroup >= NUM_PANEL_GROUPS) {
+                panelGroup = 0;
+            }
+            animatePanels();
+        }
+    }
+
+    private void setPanelsToGoAndElev(float distDone, float elevDone) {
+        TextView label1 = vgPanels[0].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[0].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[0].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[0].findViewById(R.id.txtPanel2);
+
+        label1.setText("TO GO");
+        label2.setText("ELEV LEFT");
+        DisplayFormatter.setDistanceText(totalDist - distDone, "km", txt1, false);
+        DisplayFormatter.setDistanceText(totalElevGain - elevDone, "m", txt2, false);
+    }
+
+    private void setPanelsTimeAndBattery(ImageView chargeImg) {
+        TextView label1 = vgPanels[1].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[1].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[1].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[1].findViewById(R.id.txtPanel2);
+
+        label1.setText("TIME");
+        label2.setText("BATTERY");
+        txt1.setText(DateTimeFormatter.ofPattern("HH:mm").format(LocalDateTime.now()));
+        BatteryManager bm = (BatteryManager) this.getSystemService(BATTERY_SERVICE);
+        int batteryLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        boolean isCharging = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS) == BatteryManager.BATTERY_STATUS_CHARGING;
+        txt2.setText(batteryLevel + "%");
+        if (isCharging) {
+            chargeImg.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setPanelsGradAndElev(RoutePoint point) {
+        TextView label1 = vgPanels[2].findViewById(R.id.panel1Label);
+        TextView label2 = vgPanels[2].findViewById(R.id.panel2Label);
+        TextView txt1 = vgPanels[2].findViewById(R.id.txtPanel1);
+        TextView txt2 = vgPanels[2].findViewById(R.id.txtPanel2);
+
+        label1.setText("GRAD");
+        label2.setText("ELEV");
+        txt1.setText(DisplayFormatter.formatDecimal(ClimbController.getInstance().getAttempts().get(ClimbController.PointType.ROUTE).getCurrentGradient(), 1) + "%");
+        txt2.setText(DisplayFormatter.formatDecimal((float)point.getElevation(), 0) + " m");
     }
 
     private double calcDistBetweenPoints(RoutePoint current, LatLng last) {
@@ -601,6 +762,28 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
     public void clearCompletionPanel() {
         completionPanel.setVisibility(View.GONE);
         routeInfoPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void animatePanels() {
+        WindowManager wm = (WindowManager) ApplicationContextProvider.getContext().getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+
+        ViewGroup slideIn = vgPanels[panelGroup];
+        ViewGroup slideOut = vgPanels[(panelGroup == 0 ? NUM_PANEL_GROUPS-1 : panelGroup-1)];
+
+        TranslateAnimation animate2 = new TranslateAnimation(
+                size.x,0,0,0);
+        animate2.setDuration(250);
+        slideIn.startAnimation(animate2);
+        slideIn.setVisibility(View.VISIBLE);
+
+        TranslateAnimation animate1 = new TranslateAnimation(
+                0, -size.x,0,0);
+        animate1.setDuration(250);
+        slideOut.startAnimation(animate1);
+        slideOut.setVisibility(View.GONE);
     }
 
     private Double getDistFromStart(GPXRoute climb) {
@@ -643,5 +826,137 @@ public class RouteViewActivity extends AppCompatActivity implements ActivityUpda
         if (!found) {
             map.clearClimbMarkers();
         }
+    }
+
+    @Override
+    public void updateProgressMessage(String message) {
+        if (message.startsWith("Style")) {
+            TextView t = findViewById(R.id.txtStyleProgress);
+            t.setText(message);
+            if (message.endsWith("COMPLETE")) {
+                stylesComplete = true;
+            }
+        } else {
+            TextView t = findViewById(R.id.txtTileProgress);
+            t.setText(message);
+            if (message.endsWith("COMPLETE")) {
+                tilesComplete = true;
+            }
+        }
+        if (stylesComplete && tilesComplete) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    downloadPanel.setVisibility(View.GONE);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void updateDeviceData(int value) {
+        if (BTCadenceController.getInstance().isAvailable()) {
+            TextView txtCadence = dataPanel.findViewById(R.id.dataCadence);
+            txtCadence.setText(value >= 0 ? String.valueOf(value) : "-- ");
+        }
+    }
+
+    private void updateTrackReceiverService(boolean start) {
+        if (!Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_SHOW_SONG, false)) {
+            return;
+        }
+
+        Intent i = new Intent(getApplicationContext(), SpotifyBroadcastReceiver.class);
+
+        if (start) {
+            if (!isServiceRunning(SpotifyBroadcastReceiver.class)) {
+                startService(i);
+                Log.d(TAG, "Track display service started");
+                Toast.makeText(getApplicationContext(), "Track display service started", Toast.LENGTH_SHORT);
+            }
+        } else {
+            stopService(i);
+            Log.d(TAG, "Track display service stopped");
+            Toast.makeText(getApplicationContext(), "Track display service stopped", Toast.LENGTH_SHORT);
+        }
+    }
+
+    private boolean isServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void trackChanged(String artist, String track) {
+        if (ignoreLocationUpdates || !ClimbController.getInstance().isRouteInProgress()) {
+            return;
+        }
+
+        StringBuilder songDisplay = new StringBuilder();
+        for (int i=0; i<4; i++) {
+            songDisplay.append("  \u266a  \u266b  ");
+            songDisplay.append(track);
+            songDisplay.append(" / ");
+            songDisplay.append(artist);
+            songDisplay.append("  \u266a  \u266b ");
+        }
+        TextView txtSong = findViewById(R.id.txtSong);
+        txtSong.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 28);
+        txtSong.setText(songDisplay.toString());
+        txtSong.setSelected(true);
+        txtSong.setVisibility(View.VISIBLE);
+
+        // Thread to remove from display
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SONG_TIME, 30) * 1000);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            txtSong.setVisibility(View.GONE);
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    // Do nothing
+                }
+            }
+        }).start();
+    }
+
+    private void speakOffRoute(boolean first) {
+        if (numVoicePrompts > 75 || !Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false)) {
+            return;
+        }
+
+        if (first) {
+            VoicePromptUtil.getInstance().saySomething("You are off route. Please rejoin the route.", TextToSpeech.QUEUE_FLUSH);
+            numVoicePrompts = 0;
+        } else if (numVoicePrompts % 15 == 0) {
+            VoicePromptUtil.getInstance().saySomething("You are still off route.", TextToSpeech.QUEUE_ADD);
+        }
+        numVoicePrompts++;
+    }
+
+    private void speakNextClimb(String name, float length, float height, long rating) {
+        if (!Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false)) {
+            return;
+        }
+
+        VoicePromptUtil.getInstance().saySomething("The next climb is " + name + "." +
+                " It is " + DisplayFormatter.formatDecimal(length/1000.0f, 1) + " kilometres long, " +
+                " with a height gain of " + DisplayFormatter.formatDecimal(height, 0) + " metres." +
+                " It has a rating of " + rating , TextToSpeech.QUEUE_FLUSH);
+    }
+
+    @Override
+    public void onInit(int status) {
+        VoicePromptUtil.getInstance().onInit(status);
     }
 }

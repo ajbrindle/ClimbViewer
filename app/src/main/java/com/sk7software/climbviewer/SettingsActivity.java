@@ -2,6 +2,7 @@ package com.sk7software.climbviewer;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.sk7software.climbviewer.db.Preferences;
+import com.sk7software.climbviewer.device.BTCadenceController;
 import com.sk7software.climbviewer.maps.MapProvider;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -20,7 +22,8 @@ public class SettingsActivity extends AppCompatActivity {
     private static final String SMOOTH_LABEL = "Profile Smooth Distance: ";
     private static final String DELAY_LABEL = "Time Between Screens: ";
     private static final String WARN_LABEL = "Warn About Upcoming Climbs: ";
-
+    private static final String SONG_LABEL = "Track Display Time: ";
+    private static final String TAG = SettingsActivity.class.getSimpleName();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,17 +37,32 @@ public class SettingsActivity extends AppCompatActivity {
         int warn = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_CLIMB_WARNING, 1000);
         boolean sortRating = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_CLIMB_SORT_RATING, false);
         int mapType = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_MAP_TYPE, 1);
+        boolean song = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_SHOW_SONG, false);
+        int songSecs = Preferences.getInstance().getIntPreference(Preferences.PREFERENCES_SONG_TIME, 30);
+        boolean voice = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_VOICE, false);
+        boolean cadence = Preferences.getInstance().getBooleanPreference(Preferences.PREFERENCES_USE_CADENCE, false);
 
         SeekBar smoothDist = findViewById(R.id.seekSmoothDistance);
         SeekBar delayS = findViewById(R.id.seekScreenDelay);
         SeekBar climbWarn = findViewById(R.id.seekClimbWarn);
+        SeekBar songTime = findViewById(R.id.seekSongTime);
         SwitchMaterial autoMonitor = findViewById(R.id.swiAutoMonitor);
         SwitchMaterial ultraTolerance = findViewById(R.id.swiClimbTolerance);
         SwitchMaterial climbSort = findViewById(R.id.swiClimbSort);
+        SwitchMaterial songDisplay = findViewById(R.id.swiSong);
+        SwitchMaterial playVoice = findViewById(R.id.swiVoicePrompt);
+        SwitchMaterial useCadence = findViewById(R.id.swiCadence);
 
         TextView smoothLabel = findViewById(R.id.txtSmoothDistance);
         TextView delayLabel = findViewById(R.id.txtScreenDelay);
         TextView warnLabel = findViewById(R.id.txtClimbWarn);
+        TextView songLabel = findViewById(R.id.txtSongTime);
+        TextView btDeviceLabel = findViewById(R.id.txtSensorName);
+
+        if (song) {
+            songTime.setVisibility(View.VISIBLE);
+            songLabel.setVisibility(View.VISIBLE);
+        }
 
         RadioButton radGoogle = findViewById(R.id.radGoogle);
         RadioButton radMapbox = findViewById(R.id.radMapBox);
@@ -59,6 +77,7 @@ public class SettingsActivity extends AppCompatActivity {
         smoothLabel.setText(SMOOTH_LABEL + smooth + "m");
         delayLabel.setText(DELAY_LABEL + delay + "s");
         warnLabel.setText(WARN_LABEL + warn + "m");
+        songLabel.setText(SONG_LABEL + songSecs + "s");
 
         smoothDist.setProgress(smooth);
         smoothDist.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -126,6 +145,42 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
+        songTime.setProgress(songSecs);
+        songTime.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_SONG_TIME, i);
+                songLabel.setText(SONG_LABEL + i + "s");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        songDisplay.setChecked(song);
+        songDisplay.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_SHOW_SONG, isChecked);
+                songLabel.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+                songTime.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        playVoice.setChecked(voice);
+        playVoice.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_VOICE, isChecked);
+            }
+        });
+
         final Button btnMapBoxSettings = findViewById(R.id.btnMapBoxSettings);
         if (provider == MapProvider.MAPBOX) {
             btnMapBoxSettings.setVisibility(View.VISIBLE);
@@ -155,6 +210,51 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Intent i = new Intent(SettingsActivity.this, MapBoxSettingsActivity.class);
+                startActivity(i);
+            }
+        });
+
+        Button btnCadenceSettings = findViewById(R.id.btnCadenceSettings);
+        if (cadence) {
+            btnCadenceSettings.setEnabled(true);
+            String deviceName = BTCadenceController.getSelectedDeviceName();
+            if (deviceName != null) {
+                try {
+                    btDeviceLabel.setVisibility(View.VISIBLE);
+                    if (deviceName != null && !deviceName.isEmpty()) {
+                        btDeviceLabel.setText(deviceName + " (" + BTCadenceController.getSelectedDeviceAddr() + ")");
+                    } else {
+                        btDeviceLabel.setText("Unknown Device");
+                        cadence = false;
+                        Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                    }
+                } catch (SecurityException e) {
+                    cadence = false;
+                    Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                    Log.e(TAG, "Error retrieving device name: " + e.getMessage());
+                }
+            } else {
+                cadence = false;
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, false);
+                btDeviceLabel.setVisibility(View.GONE);
+            }
+        } else {
+            btnCadenceSettings.setEnabled(false);
+        }
+
+        useCadence.setChecked(cadence);
+        useCadence.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                Preferences.getInstance().addPreference(Preferences.PREFERENCES_USE_CADENCE, isChecked);
+                btnCadenceSettings.setEnabled(isChecked);
+            }
+        });
+
+        btnCadenceSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(SettingsActivity.this, BTCadenceActivity.class);
                 startActivity(i);
             }
         });

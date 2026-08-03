@@ -218,6 +218,13 @@
                 mapbox:mapbox_mapSurface="texture_view"
                 android:visibility="visible" />
 
+            <include layout="@layout/data_panel"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/dataPanel"
+                android:visibility="visible"/>
 
             <RelativeLayout
                 android:id="@+id/mirror"

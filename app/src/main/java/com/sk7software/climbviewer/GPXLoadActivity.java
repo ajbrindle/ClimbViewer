@@ -244,7 +244,12 @@ public class GPXLoadActivity extends AppCompatActivity implements ActivityUpdate
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        StravaActivityStream activityStream = (StravaActivityStream) getIntent().getParcelableExtra("stream");
+                        StravaActivityStream activityStream = null;
+                        if ("yes".equals(getIntent().getSerializableExtra("stream").toString())) {
+                            activityStream = StravaActivityStream.getLastStream();
+                        } else {
+                            activityStream = (StravaActivityStream) getIntent().getParcelableExtra("stream");
+                        }
                         String dateTime = getIntent().getStringExtra("dateTime");
                         String fileType = getIntent().getStringExtra("streamType");
                         String name = getIntent().getStringExtra("name");

@@ -3,6 +3,8 @@ package com.sk7software.climbviewer;
 import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -19,17 +21,25 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.button.MaterialButton;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.db.Preferences;
 import com.sk7software.climbviewer.list.RouteListActivity;
+import com.sk7software.climbviewer.maps.IMapFragment;
+import com.sk7software.climbviewer.maps.MapType;
 import com.sk7software.climbviewer.model.GPXRoute;
 import com.sk7software.climbviewer.model.RoutePoint;
 import com.sk7software.climbviewer.model.Track;
 import com.sk7software.climbviewer.model.TrackFile;
 import com.sk7software.climbviewer.model.TrackSegment;
+import com.sk7software.climbviewer.view.DisplayFormatter;
 import com.sk7software.climbviewer.view.ScreenController;
 import com.sk7software.util.aspectlogger.DebugTrace;
 
@@ -46,7 +56,9 @@ public class RoutesFragment extends Fragment {
     private MaterialButton followRouteButton;
     private Button deleteRouteButton;
     private Button findClimbsButton;
-    private final ArrayList<HashMap<String,String>> routeList = new ArrayList<>();
+    private TextView txtRouteDetails;
+    private IMapFragment map;
+    private final ArrayList<HashMap<String, String>> routeList = new ArrayList<>();
     private ListView routeListView;
     private TextView txtRoute;
     private SimpleAdapter routeListAdapter;
@@ -57,10 +69,10 @@ public class RoutesFragment extends Fragment {
     private MainActivity mainActivity;
 
     private static final String TAG = RoutesFragment.class.getSimpleName();
+
     public RoutesFragment() {
         // Required empty public constructor
     }
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -73,7 +85,7 @@ public class RoutesFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_routes, container, false);
-        mainActivity = (MainActivity)getActivity();
+        mainActivity = (MainActivity) getActivity();
 
         showRouteListButton = view.findViewById(R.id.btnChange);
         followRouteButton = view.findViewById(R.id.followRouteBtn);
@@ -81,6 +93,7 @@ public class RoutesFragment extends Fragment {
         deleteRouteButton = view.findViewById(R.id.deleteRoute);
         findClimbsButton = view.findViewById(R.id.findClimbsBtn);
         txtRoute = view.findViewById(R.id.txtRoute);
+        txtRouteDetails = view.findViewById(R.id.txtRouteDetails);
 
         ActivityResultLauncher<Intent> listResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -92,7 +105,7 @@ public class RoutesFragment extends Fragment {
                 });
 
         routeListView = view.findViewById(R.id.routeListSel);
-        HashMap<String,String> routeMap = new HashMap<String,String>();
+        HashMap<String, String> routeMap = new HashMap<String, String>();
         if (currentRoute != null && currentRoute.length() > 0) {
             routeMap.put("value", currentRoute);
             txtRoute.setText(currentRoute);
@@ -153,6 +166,9 @@ public class RoutesFragment extends Fragment {
 
         reselectRoute();
         allRoutes = Arrays.asList(Database.getInstance().getRoutes());
+        map = (IMapFragment) this.getChildFragmentManager().findFragmentById(R.id.mapView);
+        map.setMapType(MapType.NORMAL, IMapFragment.PlotType.ROUTE, false);
+        loadRoute();
         return view;
     }
 
@@ -184,7 +200,7 @@ public class RoutesFragment extends Fragment {
         int textSizeFrom = 24;
         int textSizeTo = 8;
         int buttonHeight = followRouteButton.getHeight();
-        float iconMultiplier = (float)followRouteButton.getIconSize()/(float)textSizeFrom;
+        float iconMultiplier = (float) followRouteButton.getIconSize() / (float) textSizeFrom;
         ValueAnimator textAnimator = ValueAnimator.ofObject(new ArgbEvaluator(), textSizeFrom, textSizeTo);
         textAnimator.setDuration(2000);
         textAnimator.setRepeatMode(ValueAnimator.REVERSE);
@@ -192,15 +208,16 @@ public class RoutesFragment extends Fragment {
         textAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(@NonNull ValueAnimator valueAnimator) {
-                int animatedValue = (int)valueAnimator.getAnimatedValue();
+                int animatedValue = (int) valueAnimator.getAnimatedValue();
                 followRouteButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, animatedValue);
-                followRouteButton.setIconSize((int)((float)animatedValue * iconMultiplier));
+                followRouteButton.setIconSize((int) ((float) animatedValue * iconMultiplier));
                 followRouteButton.setHeight(buttonHeight);
             }
         });
         animations.add(textAnimator);
         textAnimator.start();
     }
+
     private void handleListResult(ActivityResult result) {
         // Check which request we're responding to
         int resultCode = result.getResultCode();
@@ -218,6 +235,50 @@ public class RoutesFragment extends Fragment {
             enableRouteButtons(true);
             Preferences.getInstance().addPreference(Preferences.PREFERENCES_LAST_SELECTED_ROUTE, currentRouteId);
             Log.d(TAG, "Current route: " + currentRoute + ":" + currentRouteId);
+            loadRoute();
+        }
+    }
+
+    private void loadRoute() {
+        if (currentRouteId > 0) {
+            GPXRoute route = Database.getInstance().getRoute(currentRouteId);
+            ClimbController.getInstance().loadRoute(route);
+            map.setTrack(route);
+
+            RoutePoint lastPt = null;
+            float totalDist = 0;
+            float totalElevGain = 0;
+
+            for (RoutePoint p : route.getPoints()) {
+                if (lastPt == null) {
+                    lastPt = p;
+                    continue;
+                }
+
+                totalDist += Math.sqrt(Math.pow(p.getEasting() - lastPt.getEasting(), 2) + Math.pow(p.getNorthing() - lastPt.getNorthing(), 2));
+                if (p.getElevation() > lastPt.getElevation()) {
+                    totalElevGain += p.getElevation() - lastPt.getElevation();
+                }
+
+                lastPt = p;
+            }
+            txtRouteDetails.setText("Distance: " + DisplayFormatter.formatDecimal(totalDist / 1000, 1) + "km " +
+                    ", Elevation Gain: " + DisplayFormatter.formatDecimal(totalElevGain, 0) + "m");
+            if (ActivityCompat.checkSelfPermission(mainActivity, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(mainActivity, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity);
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                map.showPosition(new LatLng(location.getLatitude(), location.getLongitude()));
+                            } else {
+                                Log.d(TAG, "Location is null");
+                            }
+                        }
+                    });
         }
     }
 
@@ -272,6 +333,12 @@ public class RoutesFragment extends Fragment {
             nextIntent.putExtra("id", currentRouteId);
             nextIntent.putExtra("startIdx", startIdx);
             startActivity(nextIntent);
+        }
+    }
+
+    public void showLocation(LatLng point) {
+        if (currentRouteId > 0) {
+            map.showPosition(point);
         }
     }
 
@@ -345,5 +412,4 @@ public class RoutesFragment extends Fragment {
 
         return Collections.emptyList();
     }
-
 }

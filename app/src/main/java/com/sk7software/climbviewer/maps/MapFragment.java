@@ -30,6 +30,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.RoundCap;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.ui.IconGenerator;
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ApplicationContextProvider;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
@@ -596,6 +597,15 @@ public class MapFragment extends Fragment implements IMapFragment {
         }
     }
 
+    @Override
+    public void setTrack(GPXRoute track) {
+        this.track = track;
+        if (mapReady) {
+            map.clear();
+            plotTrack();
+        }
+    }
+
     private static void animateMarker(Marker marker, List<LatLng> positions, LatLngInterpolator latLngInterpolator) {
         if (positions.isEmpty()) {
             return;
@@ -613,5 +623,13 @@ public class MapFragment extends Fragment implements IMapFragment {
         ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, lls);
         animator.setDuration(MARKER_ANIMATION_MS);
         animator.start();
+    }
+
+    public void downloadRoute(int routeId, ActivityUpdateInterface activity) {
+        // Not implemented for Google Maps
+    }
+
+    public void clearDownload() {
+        // Not implemented for Goodle Maps
     }
 }

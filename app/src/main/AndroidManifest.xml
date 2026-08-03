@@ -8,6 +8,13 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
         android:name=".ApplicationContextProvider"
@@ -111,6 +118,14 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.sk7software.climbviewer.MainActivity" />
         </activity>
+        <activity android:name=".BTCadenceActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:screenOrientation="portrait">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.sk7software.climbviewer.SettingsActivity" />
+        </activity>
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -151,6 +166,7 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.sk7software.climbviewer.MapBoxSettingsActivity" />
         </activity>
+        <service android:name=".SpotifyBroadcastReceiver"></service>
     </application>
 
 </manifest>

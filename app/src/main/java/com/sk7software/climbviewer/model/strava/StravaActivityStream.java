@@ -35,6 +35,7 @@ public class StravaActivityStream implements Serializable, Parcelable {
     private DistanceStream distance;
     private ElevationStream altitude;
     private TimeStream time;
+    private static StravaActivityStream lastStream;
 
     private static final String LATLNG = "latlng";
     private static final String DISTANCE = "distance";
@@ -74,6 +75,7 @@ public class StravaActivityStream implements Serializable, Parcelable {
         }
         return stream;
     }
+
     protected StravaActivityStream(Parcel in) {
         latlng = in.readParcelable(LatLngStream.class.getClassLoader());
         distance = in.readParcelable(DistanceStream.class.getClassLoader());
@@ -104,5 +106,13 @@ public class StravaActivityStream implements Serializable, Parcelable {
         parcel.writeParcelable(distance, i);
         parcel.writeParcelable(altitude, i);
         parcel.writeParcelable(time, i);
+    }
+
+    public static StravaActivityStream getLastStream() {
+        return lastStream;
+    }
+
+    public static void setLastStream(StravaActivityStream lastStream) {
+        StravaActivityStream.lastStream = lastStream;
     }
 }

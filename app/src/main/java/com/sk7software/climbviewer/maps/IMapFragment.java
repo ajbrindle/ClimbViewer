@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.sk7software.climbviewer.ActivityUpdateInterface;
 import com.sk7software.climbviewer.ClimbController;
 import com.sk7software.climbviewer.ClimbViewActivity;
 import com.sk7software.climbviewer.model.GPXRoute;
@@ -57,7 +58,7 @@ public interface IMapFragment {
     void setTilt(int tiltIdx);
 
     void setCentre(LatLng centre);
-
+    void setTrack(GPXRoute track);
     void plotTrack();
 
     void plotLocalSection(int minIdx, int maxIdx);
@@ -88,4 +89,6 @@ public interface IMapFragment {
     void removeMarker(ClimbController.PointType type, int colour, PositionMarker.Size size);
 
     void showPosition(LatLng ll);
+    void downloadRoute(int routeId, ActivityUpdateInterface activity);
+    void clearDownload();
 }

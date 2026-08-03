@@ -6,12 +6,18 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 
 import com.sk7software.climbviewer.R;
 import com.sk7software.climbviewer.db.Database;
 import com.sk7software.climbviewer.model.GPXRoute;
+import com.sk7software.climbviewer.view.DisplayFormatter;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class RouteListActivity extends Activity {
 
@@ -26,15 +32,27 @@ public class RouteListActivity extends Activity {
 
         // Populate list
         final ListView lv = findViewById(R.id.routeList);
-        final GPXRoute[] items = Database.getInstance().getRoutes();
+        final List<Map<String, String>> items = new ArrayList<>();
+        GPXRoute[] routes = Database.getInstance().getRoutes();
+        for (GPXRoute rt : routes) {
+            GPXRoute route = Database.getInstance().getRoute(rt.getId());
+            route.setPointsDist();
+            float dist = route.getPoints().get(route.getPoints().size()-1).getDistFromStart();
+            Map<String, String> r = new HashMap<>();
+            r.put("name", route.getName());
+            r.put("value", DisplayFormatter.formatDecimal(dist/1000.0f, 1) + "km");
+            r.put("id", String.valueOf(route.getId()));
+            items.add(r);
+        }
 
-        ArrayAdapter<GPXRoute> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, android.R.id.text1, items);
+        SimpleAdapter adapter = new SimpleAdapter(this, items, R.layout.list_item,
+                new String[]{"name", "value", "id"}, new int[]{R.id.firstLine, R.id.secondLine, R.id.dummyId});
         lv.setAdapter(adapter);
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent i = new Intent();
-                i.putExtra("route", items[position].getName());
-                i.putExtra("id", items[position].getId());
+                i.putExtra("route", items.get(position).get("name"));
+                i.putExtra("id", Integer.parseInt(items.get(position).get("id")));
                 i.putExtra("pos", String.valueOf(position));
                 setResult(ROUTE_LIST_OK, i);
                 finish();

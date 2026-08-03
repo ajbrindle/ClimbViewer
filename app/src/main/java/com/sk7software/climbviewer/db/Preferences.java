@@ -38,6 +38,14 @@ public class Preferences {
     public static final String PREFERENCES_STRAVA_AUTH_TOKEN = "PREF_STRAVA_AUTH";
     public static final String PREFERENCES_STRAVA_REFRESH_TOKEN = "PREF_STRAVA_REFRESH";
     public static final String PREFERENCES_STRAVA_EXPIRY = "PREF_STRAVA_EXP";
+    public static final String PREFERENCES_DOWNLOADED_ROUTE = "PREF_DOWNLOADED_ROUTE";
+    public static final String PREFERENCES_FILTER_LIST = "PREF_LIST_FILTER";
+    public static final String PREFERENCES_SHOW_SONG = "PREF_SHOW_SONG";
+    public static final String PREFERENCES_SONG_TIME = "PREF_SONG_TIME";
+    public static final String PREFERENCES_VOICE = "PREF_VOICE";
+    public static final String PREFERENCES_USE_CADENCE = "PREF_USE CADENCE";
+    public static final String PREFERENCE_SELECTED_BLE_DEVICE_ADDRESS = "PREF_SELECTED_BLE_DEVICE_ADDRESS";
+    public static final String PREFERENCE_SELECTED_BLE_DEVICE_NAME = "PREF_SELECTED_BLE_DEVICE_NAME";
     public static final String PREFS_SET = "Y";
     private static Preferences instance;
     private final SharedPreferences prefs;

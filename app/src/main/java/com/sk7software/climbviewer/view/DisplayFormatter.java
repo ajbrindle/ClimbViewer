@@ -44,4 +44,10 @@ public class DisplayFormatter {
         int secs = (int)(time % 60);
         txt.setText(mins + ":" + String.format("%02d", secs));
     }
+
+    public static String formatDecimal(float decimal, int dp) {
+        DecimalFormat df = new DecimalFormat();
+        df.setMaximumFractionDigits(dp);
+        return df.format(decimal);
+    }
 }

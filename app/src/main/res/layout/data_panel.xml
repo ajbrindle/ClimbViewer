@@ -1,0 +1,70 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:id="@+id/dataLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_margin="4dp"
+        android:background="@drawable/layout_stats_border"
+        android:orientation="vertical"
+        android:baselineAligned="true"
+        android:padding="4dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_gravity="end">
+            <TextView
+                android:id="@+id/dataSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:maxLines="1"
+                android:text="--- "
+                android:textSize="44sp"
+                android:textColor="#00FFFF"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/lblSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:maxLines="1"
+                android:text="KM/H"
+                android:textColor="#00FFFF"
+                android:textSize="12sp"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_gravity="end">
+            <TextView
+                android:id="@+id/dataCadence"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:maxLines="1"
+                android:text="-- "
+                android:textSize="44sp"
+                android:textColor="#00FFFF"
+                android:textStyle="bold" />
+            <TextView
+                android:id="@+id/lblCadence"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/oswald_bold"
+                android:maxLines="1"
+                android:text="RPM"
+                android:textColor="#00FFFF"
+                android:textSize="12sp"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
